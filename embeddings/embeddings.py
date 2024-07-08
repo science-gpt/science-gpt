@@ -1,0 +1,1 @@
+from langchain_community.embeddings.ollama import OllamaEmbeddings
