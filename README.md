@@ -1,1 +1,1 @@
-# science-gpt-prototype
+# science-gpt
