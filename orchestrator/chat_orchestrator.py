@@ -1,4 +1,4 @@
-from retrieval import prompts
+from prompt import base_prompt
 from langchain_community.vectorstores.chroma import Chroma
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
