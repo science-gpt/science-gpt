@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableBranch
 
+
 class ChatOrchestrator:
     def __init__(self, config) -> None:
         pass
-
