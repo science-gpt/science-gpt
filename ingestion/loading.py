@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+
 from langchain.document_loaders.pdf import PyPDFDirectoryLoader
 
 
