@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 
 from langchain_community.chat_models.azureml_endpoint import (
-    AzureMLChatOnlineEndpoint, CustomOpenAIChatContentFormatter)
+    AzureMLChatOnlineEndpoint,
+    CustomOpenAIChatContentFormatter,
+)
 from langchain_community.llms.azureml_endpoint import AzureMLEndpointApiType
 
 from models.config import ModelConfig
