@@ -1,4 +1,5 @@
 from langchain_community.embeddings.ollama import OllamaEmbeddings
+
 from abc import ABC, abstractmethod
 
 class Embedding(ABC):
@@ -25,7 +26,7 @@ class Embedding(ABC):
     @abstractmethod
     def __call__(self, text: str, id: str):
         pass
-    
+  
     def __init__(self, id: str, content: str):
         self.id = id
         self.content = content

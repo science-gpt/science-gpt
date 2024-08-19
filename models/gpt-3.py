@@ -1,17 +1,22 @@
-from models.config import ModelConfig
-from langchain_community.chat_models.azureml_endpoint import AzureMLChatOnlineEndpoint, CustomOpenAIChatContentFormatter
+from abc import ABC, abstractmethod
+
+from langchain_community.chat_models.azureml_endpoint import (
+    AzureMLChatOnlineEndpoint,
+    CustomOpenAIChatContentFormatter,
+)
 from langchain_community.llms.azureml_endpoint import AzureMLEndpointApiType
 
-from abc import ABC, abstractmethod
+from models.config import ModelConfig
+
 
 class ChatModel(ABC):
     def __init__(self, config: ModelConfig) -> None:
         self.config = config
 
-
     @abstractmethod
     def __call__(self, path: str):
         pass
+
 
 class AzureMLChatModel(ChatModel):
     def __init__(self, config: ModelConfig):
