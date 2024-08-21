@@ -1,3 +1,5 @@
 notebooks/outputs
 **/__pycache__/
 secrets.toml
+venv/*
+.github/*
