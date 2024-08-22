@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 
-
 class PromptComponent(ABC):
     """
     A class to represent a prompt.
@@ -84,6 +83,8 @@ class PromptDecorator(PromptComponent):
                 Prompt (str): The prompt string that corresponds to the user specied
                 query to feed to the LLM to complete the task
         """
+        # RAG -> RagString
+        # format(decorate = RagString)
         return self._prompt.get_prompt(query).format(decorate=self.PromptTemplate)
 
 
@@ -120,4 +121,4 @@ class ConcretePrompt(PromptComponent):
     """
 
     def get_prompt(self, query):
-        return self.PromptTemplate.format(query=query, decorate="")
+        return self.PromptTemplate.format(query=query, decorate="{decorate}")
