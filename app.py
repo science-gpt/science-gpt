@@ -63,7 +63,7 @@ with st.sidebar:
     st.write(f"Total Cost: ${format(st.session_state.cost, '.5f')}")
 
 
-if prompt := st.chat_input("Text here..."):
+if prompt := st.chat_input("Write your query here..."):
     with st.chat_message("User"):
         st.markdown(prompt)
 
