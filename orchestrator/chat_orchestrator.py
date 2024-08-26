@@ -5,7 +5,6 @@ import toml
 from models.models import OpenAIChatModel
 from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
-from retrieval import prompts
 
 
 class ChatOrchestrator:
@@ -17,7 +16,7 @@ class ChatOrchestrator:
 
         self.llm = OpenAIChatModel(self.config)
 
-    def load_secrets(self):
+    def load_secrets(self, model: str = "gpt-3.5"):
         """
         Load secrets from toml file into config object.
         """
@@ -28,12 +27,25 @@ class ChatOrchestrator:
         self.config.model_auth["api_key"] = secrets["gpt35-api"]["api_key"]
         self.config.model_auth["url"] = secrets["gpt35-api"]["azure_endpoint"]
 
-    def triage_query(self, query: str) -> str:
+    # TODO - Implemement test connection method
+    def test_connection(self, local=False):
+        """
+        Test connection to the local or remote chat model.
+        """
+
+        if local:
+            response = "Local models are not yet supported."
+        else:
+            response = self.llm.test_connection()
+
+        return response
+
+    def triage_query(self, query: str, chat_history=None) -> str:
         """
         Given a user query, the orchestrator detects user intent and leverages
         appropriate agents to provide a response.
         """
 
-        response = self.llm(query)
+        response, cb = self.llm(query)
 
-        return response.content
+        return response.content, cb.total_cost

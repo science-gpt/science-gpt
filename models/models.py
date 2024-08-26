@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
 
+from langchain_community.callbacks import (  # without specifying the model version, flat-rate 0.002 USD per 1k input and output tokens is used
+    get_openai_callback,
+)
 from langchain_openai import AzureChatOpenAI
 
 from orchestrator.config import SystemConfig
@@ -27,4 +30,9 @@ class OpenAIChatModel(ChatModel):
         )
 
     def __call__(self, query: str):
-        return self.model.invoke(query)
+        with get_openai_callback() as cb:
+            response = self.model.invoke(query)
+            return response, cb
+
+    def test_connection(self):
+        return self.model.test_connection()
