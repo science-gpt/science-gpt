@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class Database(ABC):
     """
     A class to represent a database.
@@ -20,6 +21,7 @@ class Database(ABC):
     store_embeddings(embeddings):
         stores embeddings in the database
     """
+
     _connection: Connection = None
 
     @abstractmethod
