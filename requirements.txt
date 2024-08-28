@@ -1,9 +1,11 @@
 # ONLY ADD PRODUCTION PACKAGES HERE
 # use requirements-dev.txt for dev packages
-langchain
-langchain-community
-langchain-core
+langchain==0.2.14
+langchain-community==0.2.12
+langchain-core==0.2.33
+langchain-text-splitters==0.2.1
 langchain-openai
+langsmith
 pydantic
 streamlit
 toml
