@@ -1,1 +1,2 @@
 deptry
+pre-commit
