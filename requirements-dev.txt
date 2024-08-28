@@ -1,2 +1,3 @@
 deptry
 pre-commit
+-r requirements.txt

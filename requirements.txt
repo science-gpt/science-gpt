@@ -1,6 +1,11 @@
+# ONLY ADD PRODUCTION PACKAGES HERE
+# use requirements-dev.txt for dev packages
 langchain
 langchain-community
 langchain-core
+langchain-openai
 pydantic
 streamlit
 toml
+hydra-core
+omegaconf
