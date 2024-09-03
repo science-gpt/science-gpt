@@ -52,7 +52,7 @@ class ContextRetrieval(PromptDecorator):
             )
         )
     
-class FilteredRetrieval(PromptDecorator):
+class FilteredContextRetrieval(PromptDecorator):
     _prompt: PromptComponent = None
     PromptTemplate: str = """
     {decorate}
