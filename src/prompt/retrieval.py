@@ -1,6 +1,8 @@
-from src.prompt.base_prompt import PromptDecorator, PromptComponent
 from langchain.vectorstores.chroma import Chroma
+
 from src.models.config import ModelConfig
+from src.prompt.base_prompt import PromptComponent, PromptDecorator
+
 
 class TestRetrieval(PromptDecorator):
     _prompt: PromptComponent = None
@@ -14,10 +16,12 @@ class TestRetrieval(PromptDecorator):
         self._prompt = prompt
 
     def get_prompt(self, query: str) -> str:
-        return self._prompt.get_prompt(query).format(decorate=self.PromptTemplate.format(
-            context="context \n context \n context",
-            decorate="{decorate}"   
-        ))
+        return self._prompt.get_prompt(query).format(
+            decorate=self.PromptTemplate.format(
+                context="context \n context \n context", decorate="{decorate}"
+            )
+        )
+
 
 class ContextRetrieval(PromptDecorator):
     _prompt: PromptComponent = None
@@ -28,17 +32,22 @@ class ContextRetrieval(PromptDecorator):
     {context}
     """
 
-    def __init__(self, prompt: PromptComponent, config: ModelConfig, embedding_function) -> None:
+    def __init__(
+        self, prompt: PromptComponent, config: ModelConfig, embedding_function
+    ) -> None:
         self._prompt = prompt
         self.emb_fn = embedding_function
         self.config = config
 
         # set db
-        if config.vectorstore == 'chromadb':
-            self.db = Chroma(persist_directory=config.chroma_path, embedding_function=embedding_function)
+        if config.vectorstore == "chromadb":
+            self.db = Chroma(
+                persist_directory=config.chroma_path,
+                embedding_function=embedding_function,
+            )
 
-        # set search 
-        if self.config.search_strategy == 'similarity':
+        # set search
+        if self.config.search_strategy == "similarity":
             self.search = self.db.similarity_search_with_score
 
     def get_prompt(self, query: str) -> str:
@@ -47,11 +56,11 @@ class ContextRetrieval(PromptDecorator):
         context_text = "\n\n---\n\n".join([doc.page_content for doc, _score in results])
         return self._prompt.get_prompt(query).format(
             decorate=self.PromptTemplate.format(
-                context=context_text,
-                decorate = "{decorate}"
+                context=context_text, decorate="{decorate}"
             )
         )
-    
+
+
 class FilteredContextRetrieval(PromptDecorator):
     _prompt: PromptComponent = None
     PromptTemplate: str = """
@@ -61,12 +70,14 @@ class FilteredContextRetrieval(PromptDecorator):
     {examples}
     """
 
-    def __init__(self, 
-                 prompt: PromptComponent, 
-                 config: ModelConfig,
-                 meta: str,
-                 filters: list[str],
-                 embedding_function) -> None:
+    def __init__(
+        self,
+        prompt: PromptComponent,
+        config: ModelConfig,
+        meta: str,
+        filters: list[str],
+        embedding_function,
+    ) -> None:
         self._prompt = prompt
         self.emb_fn = embedding_function
         self.config = config
@@ -74,24 +85,26 @@ class FilteredContextRetrieval(PromptDecorator):
         self.filters = filters
 
         # set db
-        if config.vectorstore == 'chromadb':
-            self.db = Chroma(persist_directory=config.chroma_path, embedding_function=embedding_function)
+        if config.vectorstore == "chromadb":
+            self.db = Chroma(
+                persist_directory=config.chroma_path,
+                embedding_function=embedding_function,
+            )
 
-        # set search 
-        if self.config.search_strategy == 'similarity':
+        # set search
+        if self.config.search_strategy == "similarity":
             self.search = self.db.similarity_search_with_score
 
     def get_prompt(self, query: str) -> str:
-        k = max(2, self.config.rag_params.top_k_retrieval // len(self.filters)) 
+        k = max(2, self.config.rag_params.top_k_retrieval // len(self.filters))
         context_text = ""
         for f in self.filters:
-            results = self.search(query, filter={self.meta:f}, k=k)
+            results = self.search(query, filter={self.meta: f}, k=k)
             f_text = "\n\n---\n\n".join([doc.page_content for doc, _score in results])
             context_text += f_text
 
         return self._prompt.get_prompt(query).format(
             decorate=self.PromptTemplate.format(
-                context=context_text,
-                decorate = "{decorate}"
+                context=context_text, decorate="{decorate}"
             )
         )
