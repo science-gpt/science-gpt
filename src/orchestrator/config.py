@@ -7,4 +7,6 @@ class SystemConfig:
     model_params: dict
     model_auth: dict
     vectorstore: str
+    chroma_path: str
+    search_strategy: str
     rag_params: dict

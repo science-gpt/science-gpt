@@ -1,0 +1,5 @@
+deptry
+pre-commit
+black
+isort
+-r requirements.txt

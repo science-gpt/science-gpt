@@ -12,6 +12,8 @@ model_params:
 
 
 vectorstore: chromadb
+chroma_path: "chroma"
+search_strategy: "similarity"
 
 rag_params:
   top_k_retrieval: 5
