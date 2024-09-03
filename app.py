@@ -1,6 +1,7 @@
-from orchestrator.chat_orchestrator import ChatOrchestrator
 import streamlit as st
 from langchain_core.messages import AIMessage
+
+from orchestrator.chat_orchestrator import ChatOrchestrator
 
 st.title("Science-GPT Prototype")
 

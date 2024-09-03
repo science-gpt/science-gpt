@@ -1,5 +1,6 @@
-from omegaconf import DictConfig
 import hydra
+from omegaconf import DictConfig
+
 
 def load_config(config_name: str, config_dir: str):
     """
@@ -11,4 +12,3 @@ def load_config(config_name: str, config_dir: str):
         config = hydra.utils.instantiate(dict_config, _convert_="all")
 
     return config
-  

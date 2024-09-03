@@ -5,7 +5,6 @@ import toml
 from models.models import OpenAIChatModel
 from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
-from retrieval import prompts
 
 
 class ChatOrchestrator:

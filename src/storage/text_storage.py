@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class TextStorage(ABC):
     """
     A class to represent a text storage.
