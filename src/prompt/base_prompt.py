@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class PromptComponent(ABC):
     """
     A class to represent a prompt.
