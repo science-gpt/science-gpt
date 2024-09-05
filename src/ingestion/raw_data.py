@@ -1,6 +1,7 @@
 import pathlib
 from abc import ABC
 from typing import Literal
+from uuid import uuid4
 
 RAW_DATA_TYPES = Literal[
     "pdf",
@@ -21,6 +22,7 @@ class RawData(ABC):
         """
         self.name = name
         self.data_type = data_type
+        # TODO: do we want to add uuids to objects?
 
 
 class PDFData(RawData):
