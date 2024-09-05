@@ -29,6 +29,7 @@ class Chunker(ABC):
 
 
 # TODO find a place to put these
+# TODO handle metadata tagging
 class CustomTextSplitter(ABC):
     @abstractmethod
     def __call__(self, chunk_size, chunk_overlap):
