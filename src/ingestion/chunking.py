@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
 from typing import List
+
 from extraction import Text
 from raw_data import RAW_DATA_TYPES
 from utils import OutputObject
 
 
 class Chunk(OutputObject):
-    # TODO docstring 
+    # TODO docstring
     def __init__(self, text: str, title: str, data_type: RAW_DATA_TYPES):
         """
         Instantiates an object of this class.
@@ -20,10 +21,10 @@ class Chunk(OutputObject):
 
 
 class Chunker(ABC):
-    # TODO docstring 
+    # TODO docstring
     @abstractmethod
     def __call__(self, text: Text, **kwargs) -> List[Chunk]:
-        # TODO docstring 
+        # TODO docstring
         pass
 
 
