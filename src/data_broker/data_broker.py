@@ -1,6 +1,7 @@
 from ingestion.chunking import CustomTextSplitter
 from ingestion.extraction import PDFExtract, Text
 from ingestion.raw_data import RawData
+from typing import List
 from orchestrator.config import SystemConfig
 
 
@@ -20,11 +21,23 @@ class DataBroker:
 
     """
 
-    def __init__(self, config: SystemConfig):
-        # TODO docstring
+    def __init__(self, config: SystemConfig) -> None:
+        """
+        Instantiates an object of this class.
+
+        :param config: Configuration object containing settings for
+            embedding model, vector store, chunking method, etc.
+        """
         self.config = config
 
     def _extract(self, data: RawData) -> Text:
+        """
+        Extract text from the given raw data.
+
+        :param data: The raw data object to extract text from
+        :return: The extracted text
+        :raises ValueError: If the data type is not recognized or supported
+        """
         # TODO docstring
         if data.data_type == "pdf":
             extractor = PDFExtract()
@@ -34,7 +47,14 @@ class DataBroker:
 
         return extractor(data=data)
 
-    def _chunk(self, text: Text):
+    def _chunk(self, text: Text) -> List[Chunk]:
+        """
+        Split the input text into chunks using the configured chunking method.
+
+        :param text: The input text to be chunked
+        :return: A list of text chunks
+        :raises ValueError: If the configured chunking method is not supported
+        """
         # TODO docstring
         if self.config.chunking_method == "custom-text-splitter":
             chunker = CustomTextSplitter()
@@ -43,13 +63,27 @@ class DataBroker:
             raise ValueError
 
         return chunker(text=text)
+    
+    def _embed(self, chunks: )
 
-    def insert(self, data: RawData):
+    def insert(self, data: RawData) -> None:
+        """
+        Process and insert the given raw data into the vector store.
+
+        This method orchestrates the extraction, chunking, embedding, and storage
+        of the input data.
+
+        :param data: The raw data to be processed and inserted
+        :raises ValueError: If any step in the process fails due to unsupported
+            data types or methods
+        """
         # TODO docstring
 
         text = self._extract(data=data)
         chunks = self._chunk(text=text)
+        vectors = self._embed(chunks=chunks)
+        
 
         # embed
         # insert into vector store
-        pass
+        # return confirmation
