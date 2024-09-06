@@ -10,3 +10,4 @@ class SystemConfig:
     chroma_path: str
     search_strategy: str
     rag_params: dict
+    chunking_method: str

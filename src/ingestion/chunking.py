@@ -23,17 +23,19 @@ class Chunk(OutputObject):
 class Chunker(ABC):
     # TODO docstring
     @abstractmethod
-    def __call__(self, text: Text, **kwargs) -> List[Chunk]:
+    def __call__(self, text: Text) -> List[Chunk]:
+        # TODO docstring
+        pass
+
+
+class CustomTextSplitter(Chunker):
+    def __call__(self, text: Text) -> List[Chunk]:
         # TODO docstring
         pass
 
 
 # TODO find a place to put these
 # TODO handle metadata tagging
-class CustomTextSplitter(ABC):
-    @abstractmethod
-    def __call__(self, chunk_size, chunk_overlap):
-        pass
 
 
 class CustomTableProcessor(ABC):
