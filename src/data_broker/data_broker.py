@@ -64,7 +64,10 @@ class DataBroker:
 
         return chunker(text=text)
     
-    def _embed(self, chunks: )
+    def _embed(self, chunks: List[Chunk]):
+        # TODO docstrings
+        # TODO implement
+        
 
     def insert(self, data: RawData) -> None:
         """
