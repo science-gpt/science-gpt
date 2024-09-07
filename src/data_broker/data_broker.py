@@ -18,7 +18,6 @@ class DataBroker:
     1- Test the vectorstore connection.
     2- Given a text source, embed and insert into a vector store.
     3- Given a query, retrieve a list of relevant documents.
-
     """
 
     def __init__(self, config: SystemConfig) -> None:
@@ -38,7 +37,6 @@ class DataBroker:
         :return: The extracted text
         :raises ValueError: If the data type is not recognized or supported
         """
-        # TODO docstring
         if data.data_type == "pdf":
             extractor = PDFExtract()
         else:
@@ -55,7 +53,6 @@ class DataBroker:
         :return: A list of text chunks
         :raises ValueError: If the configured chunking method is not supported
         """
-        # TODO docstring
         if self.config.chunking_method == "custom-text-splitter":
             chunker = CustomTextSplitter()
         else:
@@ -65,8 +62,13 @@ class DataBroker:
         return chunker(text=text)
     
     def _embed(self, chunks: List[Chunk]):
-        # TODO docstrings
-        # TODO implement
+        """
+        Embed the given chunks using the configured embedding model.
+
+        :param chunks: A list of text chunks to be embedded
+        :return: A list of embedded vectors
+        """
+        raise NotImplementedError("Embedding method not yet implemented")
         
 
     def insert(self, data: RawData) -> None:
@@ -80,8 +82,6 @@ class DataBroker:
         :raises ValueError: If any step in the process fails due to unsupported
             data types or methods
         """
-        # TODO docstring
-
         text = self._extract(data=data)
         chunks = self._chunk(text=text)
         vectors = self._embed(chunks=chunks)
