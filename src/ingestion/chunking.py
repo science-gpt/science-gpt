@@ -7,30 +7,50 @@ from utils import OutputObject
 
 
 class Chunk(OutputObject):
-    # TODO docstring
-    def __init__(self, text: str, title: str, data_type: RAW_DATA_TYPES):
+    """
+    Represents a chunk of text extracted from a data source.
+    """
+
+    def __init__(self, text: str, title: str, data_type: RAW_DATA_TYPES) -> None:
         """
         Instantiates an object of this class.
 
-        :param text: the extracted text
-        :param title: a title for the chunked text
-        :param data_type: the type of the original data source
+        :param text: The extracted text.
+        :param title: A title for the chunked text.
+        :param data_type: The type of the original data source.
         """
         super().__init__(title=title, data_type=data_type)
         self.text = text
 
 
 class Chunker(ABC):
-    # TODO docstring
+    """
+    Abstract base class for text chunking algorithms.
+    """
+
     @abstractmethod
     def __call__(self, text: Text) -> List[Chunk]:
-        # TODO docstring
+        """
+        Chunks the given text into smaller pieces.
+
+        :param text: The text to be chunked.
+        :return: A list of Chunk objects.
+        """
         pass
 
 
 class CustomTextSplitter(Chunker):
+    """
+    A custom implementation of the Chunker class for splitting text.
+    """
+
     def __call__(self, text: Text) -> List[Chunk]:
-        # TODO docstring
+        """
+        Splits the given text into chunks using a custom algorithm.
+
+        :param text: The text to be split into chunks.
+        :return: A list of Chunk objects.
+        """
         pass
 
 
@@ -39,8 +59,14 @@ class CustomTextSplitter(Chunker):
 
 
 class CustomTableProcessor(ABC):
+    """
+    Abstract base class for processing tables.
+    """
     pass
 
 
 class CustomFigureProcessor(ABC):
+    """
+    Abstract base class for processing figures.
+    """
     pass
