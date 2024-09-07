@@ -7,7 +7,12 @@ from utils import OutputObject
 
 
 class Text(OutputObject):
-    # TODO docstring
+    """
+    Represents extracted text from a data source.
+
+    This class inherits from OutputObject and adds a text attribute
+    to store the extracted content.
+    """
 
     def __init__(self, text: str, title: str, data_type: RAW_DATA_TYPES):
         """
@@ -22,7 +27,12 @@ class Text(OutputObject):
 
 
 class TextExtract(ABC):
-    # TODO docstring
+    """
+    Abstract base class for text extraction from various data sources.
+
+    This class defines the interface for text extraction classes and
+    provides a common initialization method.
+    """
 
     def __init__(self, data_type: RAW_DATA_TYPES):
         """
@@ -33,22 +43,40 @@ class TextExtract(ABC):
         self.data_type = data_type
 
     @abstractmethod
-    def __call__(self, data: RawData) -> List[Text]:
-        # TODO docstring
+    def __call__(self, data: RawData) -> Text:
+        """
+        Abstract method to extract text from the given raw data.
+
+        :param data: The raw data to extract text from
+        :return: A Text object containing the extracted text
+        """
         pass
 
 
 class PDFExtract(TextExtract):
-    # TODO docstring
+    """
+    Concrete implementation of TextExtract for PDF data sources.
+
+    This class provides functionality to extract text from PDF files.
+    """
 
     def __init__(self, data_type: RAW_DATA_TYPES):
-        # TODO docstring
+        """
+        Instantiates a PDFExtract object.
+
+        :param data_type: type of raw data, must be "pdf"
+        """
         super().__init__(data_type=data_type)
         assert (
             data_type == "pdf"
         )  # TODO there should be a better way to validate this, pydantic?
 
-    def __call__(self, data: PDFData) -> List[Text]:
-        # TODO docstring
+    def __call__(self, data: PDFData) -> Text:
+        """
+        Extracts text from the given PDF data.
+
+        :param data: The PDF data to extract text from
+        :return: A Text object containing the extracted text from the PDF
+        """
         # TODO add pdf extraction code
         pass
