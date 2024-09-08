@@ -42,20 +42,23 @@ class DataBroker:
         :raises ValueError: If any step in the process fails due to unsupported
             data types or methods
         """
-        extractor = self._create_extractor()
-        chunker = self._create_chunker()
-        embedder = self._create_embedder()
-        vector_store = self._create_vector_store()
+        extractor = self._create_extractor(self.config, data.data_type)
+        chunker = self._create_chunker(self.config)
+        embedder = self._create_embedder(self.config)
+        vector_store = self._create_vector_store(self.config)
 
         text = extractor(data)
         chunks = chunker(text)
         vectors = embedder(chunks)
         vector_store.insert(vectors)
 
-    def _create_extractor(self, data_type: str) -> Extractor:
+    @staticmethod
+    def _create_extractor(config: SystemConfig, data_type: str) -> Extractor:
         """
         Creates an extractor based on the given data type.
 
+        :param config: Configuration object containing settings for
+            embedding model, vector store, chunking method, etc.
         :param data_type: The type of data to extract
         :return: A function that extracts text from the given data
         :raises ValueError: If the data type is not recognized or supported
@@ -63,30 +66,39 @@ class DataBroker:
         # Implement based on config
         raise NotImplementedError("Embedding creation not yet implemented")
 
-    def _create_chunker(self) -> Chunker:
+    @staticmethod
+    def _create_chunker(config: SystemConfig) -> Chunker:
         """
         Creates a chunker based on the configured chunking method.
 
+        :param config: Configuration object containing settings for
+            embedding model, vector store, chunking method, etc.
         :return: A function that splits the input text into chunks
         :raises ValueError: If the configured chunking method is not supported
         """
         # Implement based on config
         raise NotImplementedError("Embedding creation not yet implemented")
 
-    def _create_embedder(self) -> Embedder:
+    @staticmethod
+    def _create_embedder(config: SystemConfig) -> Embedder:
         """
         Creates an embedder based on the configured embedding model.
 
+        :param config: Configuration object containing settings for
+            embedding model, vector store, chunking method, etc.
         :return: A function that embeds the given chunks
         :raises NotImplementedError: If the embedding creation is not yet implemented
         """
         # Implement based on config
         raise NotImplementedError("Embedding creation not yet implemented")
 
-    def _create_vector_store(self) -> VectorDB:
+    @staticmethod
+    def _create_vector_store(config: SystemConfig) -> VectorDB:
         """
         Creates a vector store based on the configured vector store.
 
+        :param config: Configuration object containing settings for
+            embedding model, vector store, chunking method, etc.
         :return: A function that inserts vectors into the vector store
         :raises NotImplementedError: If the vector store creation is not yet implemented
         """
