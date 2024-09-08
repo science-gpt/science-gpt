@@ -54,7 +54,6 @@ class CustomTextSplitter(Chunker):
         pass
 
 
-# Factory function for chunkers
 def create_chunker(chunker_type: str, **kwargs) -> CustomTextSplitter:
     """
     Create and return an instance of the specified chunker type.

@@ -3,7 +3,7 @@ from typing import Any
 
 from raw_data import RAW_DATA_TYPES
 
-
+# TODO decide if and how to generate/handle ids
 class OutputObject(ABC):
     """
     An abstract base class representing an output object for data processing.

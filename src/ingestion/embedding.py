@@ -22,7 +22,6 @@ class Embedder(ABC):
         pass
 
 
-# Factory function to create the appropriate embedder
 def create_embedder(embedder_type: str, **kwargs) -> Embedder:
     """
     Create and return an instance of the specified embedder type.

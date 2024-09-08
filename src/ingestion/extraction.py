@@ -76,9 +76,11 @@ class PDFExtract(TextExtract):
 
         :param data: The PDF data to extract text from
         :return: A Text object containing the extracted text from the PDF
+        :raises ValueError: If an unsupported extractor type is specified
         """
-        # TODO add pdf extraction code
-        pass
+        raise NotImplementedError(
+            f"Extractor type '{extractor_type}' is not implemented yet."
+        )
 
 
 def create_extractor(extractor_type: str, **kwargs) -> TextExtract:
