@@ -80,3 +80,17 @@ class PDFExtract(TextExtract):
         """
         # TODO add pdf extraction code
         pass
+
+
+# Factory function for extractors
+def create_extractor(extractor_type: str, **kwargs) -> TextExtract:
+    """
+    Create and return an instance of the specified extractor type.
+
+    :param extractor_type: Type of extractor to create
+    :param kwargs: Additional keyword arguments for the extractor constructor
+    :return: An instance of the specified TextExtract subclass
+    :raises ValueError: If an unsupported extractor type is specified
+    """
+    # TODO: Implement concrete extractor classes and add them to this factory function
+    raise NotImplementedError(f"Extractor type '{extractor_type}' is not implemented yet.")

@@ -54,10 +54,23 @@ class CustomTextSplitter(Chunker):
         pass
 
 
+# Factory function for chunkers
+def create_chunker(chunker_type: str, **kwargs) -> CustomTextSplitter:
+    """
+    Create and return an instance of the specified chunker type.
+
+    :param chunker_type: Type of chunker to create
+    :param kwargs: Additional keyword arguments for the chunker constructor
+    :return: An instance of the specified Chunker subclass
+    :raises ValueError: If an unsupported chunker type is specified
+    """
+    # TODO: Implement concrete chunker classes and add them to this factory function
+    raise NotImplementedError(f"Chunker type '{chunker_type}' is not implemented yet.")
+
+
+
 # TODO find a place to put these
 # TODO handle metadata tagging
-
-
 class CustomTableProcessor(ABC):
     """
     Abstract base class for processing tables.
