@@ -1,4 +1,5 @@
 from abc import ABC
+from typing import Any
 
 from raw_data import RAW_DATA_TYPES
 

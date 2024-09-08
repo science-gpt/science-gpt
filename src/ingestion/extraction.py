@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from chunk import Chunk
 from typing import List
 
 from raw_data import RAW_DATA_TYPES, PDFData, RawData
@@ -14,7 +13,7 @@ class Text(OutputObject):
     to store the extracted content.
     """
 
-    def __init__(self, text: str, title: str, data_type: RAW_DATA_TYPES):
+    def __init__(self, text: str, title: str, data_type: RAW_DATA_TYPES) -> None:
         """
         Instantiates an object of this class.
 
@@ -34,7 +33,7 @@ class TextExtract(ABC):
     provides a common initialization method.
     """
 
-    def __init__(self, data_type: RAW_DATA_TYPES):
+    def __init__(self, data_type: RAW_DATA_TYPES) -> None:
         """
         Instantiates a TextExtract object.
 
@@ -60,16 +59,14 @@ class PDFExtract(TextExtract):
     This class provides functionality to extract text from PDF files.
     """
 
-    def __init__(self, data_type: RAW_DATA_TYPES):
+    def __init__(self, data_type: RAW_DATA_TYPES) -> None:
         """
         Instantiates a PDFExtract object.
 
         :param data_type: type of raw data, must be "pdf"
         """
         super().__init__(data_type=data_type)
-        assert (
-            data_type == "pdf"
-        )  # TODO there should be a better way to validate this, pydantic?
+        assert data_type == "pdf"  # TODO there should be a better way to validate this, pydantic?
 
     def __call__(self, data: PDFData) -> Text:
         """
@@ -82,7 +79,6 @@ class PDFExtract(TextExtract):
         pass
 
 
-# Factory function for extractors
 def create_extractor(extractor_type: str, **kwargs) -> TextExtract:
     """
     Create and return an instance of the specified extractor type.
@@ -92,7 +88,4 @@ def create_extractor(extractor_type: str, **kwargs) -> TextExtract:
     :return: An instance of the specified TextExtract subclass
     :raises ValueError: If an unsupported extractor type is specified
     """
-    # TODO: Implement concrete extractor classes and add them to this factory function
-    raise NotImplementedError(
-        f"Extractor type '{extractor_type}' is not implemented yet."
-    )
+    raise NotImplementedError(f"Extractor type '{extractor_type}' is not implemented yet.")
