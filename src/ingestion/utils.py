@@ -5,7 +5,17 @@ from raw_data import RAW_DATA_TYPES
 
 
 class OutputObject(ABC):
-    # TODO add a docstring
+    """
+    An abstract base class representing an output object for data processing.
+
+    This class serves as a foundation for various types of output objects in the data
+    ingestion pipeline. It provides a common structure for storing and managing
+    processed data, including a title and the original data type.
+
+    Attributes:
+        title (str): A descriptive title for the data object.
+        data_type (RAW_DATA_TYPES): The type of the original data source.
+    """
 
     def __init__(self, title: str, data_type: RAW_DATA_TYPES) -> None:
         """
