@@ -3,6 +3,7 @@ import os
 import toml
 
 from models.models import OpenAIChatModel
+from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
 from prompt.base_prompt import ConcretePrompt
@@ -39,17 +40,19 @@ class ChatOrchestrator:
 
         return response
 
-    def triage_query(self, query: str, chat_history=None) -> str:
+    def triage_query(self, query: str, chat_history=None) -> tuple[str, float]:
         """
         Given a user query, the orchestrator detects user intent and leverages
         appropriate agents to provide a response.
+
+        Returns the response text content (str) and cost (float)
         """
 
         # Q&A RAG Usecase
         model = OpenAIChatModel(self.config)
         prompt = ConcretePrompt()
-        handler = LLMHandler(model, prompt, config)
+        handler = LLMCallHandler(model, prompt, self.config)
 
-        response, cb = self.llm(query)
+        response, cb = handler.call_llm(query)
 
         return response.content, cb.total_cost
