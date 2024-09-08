@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 import numpy as np
+
 from ingestion.chunker import Chunk
+
 
 class VectorDB(ABC):
     """
@@ -9,7 +12,12 @@ class VectorDB(ABC):
     """
 
     @abstractmethod
-    def insert(self, vectors: np.ndarray, documents: List[Chunk], metadata: Optional[Dict[str, Any]] = None) -> None:
+    def insert(
+        self,
+        vectors: np.ndarray,
+        documents: List[Chunk],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """
         Insert vectors, their associated documents, and optional metadata into the vector database.
 
@@ -54,7 +62,13 @@ class VectorDB(ABC):
         raise NotImplementedError("Subclass must implement delete method")
 
     @abstractmethod
-    def update(self, ids: List[str], vectors: np.ndarray, documents: List[Chunk], metadata: Optional[Dict[str, Any]] = None) -> None:
+    def update(
+        self,
+        ids: List[str],
+        vectors: np.ndarray,
+        documents: List[Chunk],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """
         Update existing vectors, their associated documents, and optional metadata in the database.
 

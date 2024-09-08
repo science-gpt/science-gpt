@@ -66,7 +66,9 @@ class PDFExtract(TextExtract):
         :param data_type: type of raw data, must be "pdf"
         """
         super().__init__(data_type=data_type)
-        assert data_type == "pdf"  # TODO there should be a better way to validate this, pydantic?
+        assert (
+            data_type == "pdf"
+        )  # TODO there should be a better way to validate this, pydantic?
 
     def __call__(self, data: PDFData) -> Text:
         """
@@ -88,4 +90,6 @@ def create_extractor(extractor_type: str, **kwargs) -> TextExtract:
     :return: An instance of the specified TextExtract subclass
     :raises ValueError: If an unsupported extractor type is specified
     """
-    raise NotImplementedError(f"Extractor type '{extractor_type}' is not implemented yet.")
+    raise NotImplementedError(
+        f"Extractor type '{extractor_type}' is not implemented yet."
+    )
