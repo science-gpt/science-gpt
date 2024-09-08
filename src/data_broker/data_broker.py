@@ -1,7 +1,8 @@
+from typing import List
+
 from ingestion.chunking import CustomTextSplitter
 from ingestion.extraction import PDFExtract, Text
 from ingestion.raw_data import RawData
-from typing import List
 from orchestrator.config import SystemConfig
 
 
@@ -60,7 +61,7 @@ class DataBroker:
             raise ValueError
 
         return chunker(text=text)
-    
+
     def _embed(self, chunks: List[Chunk]):
         """
         Embed the given chunks using the configured embedding model.
@@ -69,7 +70,6 @@ class DataBroker:
         :return: A list of embedded vectors
         """
         raise NotImplementedError("Embedding method not yet implemented")
-        
 
     def insert(self, data: RawData) -> None:
         """
@@ -85,7 +85,6 @@ class DataBroker:
         text = self._extract(data=data)
         chunks = self._chunk(text=text)
         vectors = self._embed(chunks=chunks)
-        
 
         # embed
         # insert into vector store

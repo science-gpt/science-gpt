@@ -93,4 +93,6 @@ def create_extractor(extractor_type: str, **kwargs) -> TextExtract:
     :raises ValueError: If an unsupported extractor type is specified
     """
     # TODO: Implement concrete extractor classes and add them to this factory function
-    raise NotImplementedError(f"Extractor type '{extractor_type}' is not implemented yet.")
+    raise NotImplementedError(
+        f"Extractor type '{extractor_type}' is not implemented yet."
+    )

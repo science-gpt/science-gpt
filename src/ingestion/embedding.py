@@ -33,4 +33,6 @@ def create_embedder(embedder_type: str, **kwargs) -> Embedder:
     :raises ValueError: If an unsupported embedder type is specified
     """
     # TODO: Implement concrete embedder classes and add them to this factory function
-    raise NotImplementedError(f"Embedder type '{embedder_type}' is not implemented yet.")
+    raise NotImplementedError(
+        f"Embedder type '{embedder_type}' is not implemented yet."
+    )

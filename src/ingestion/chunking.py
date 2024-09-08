@@ -68,13 +68,13 @@ def create_chunker(chunker_type: str, **kwargs) -> CustomTextSplitter:
     raise NotImplementedError(f"Chunker type '{chunker_type}' is not implemented yet.")
 
 
-
 # TODO find a place to put these
 # TODO handle metadata tagging
 class CustomTableProcessor(ABC):
     """
     Abstract base class for processing tables.
     """
+
     pass
 
 
@@ -82,4 +82,5 @@ class CustomFigureProcessor(ABC):
     """
     Abstract base class for processing figures.
     """
+
     pass
