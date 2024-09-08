@@ -10,7 +10,7 @@ from orchestrator.utils import load_config
 class ChatOrchestrator:
     def __init__(self) -> None:
         self.config: SystemConfig = load_config(
-            config_name="system_config", config_dir=f"{os.getcwd()}/configs"
+            config_name="system_config", config_dir=f"{os.getcwd()}/src/configs"
         )
         self.load_secrets()
 

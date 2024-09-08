@@ -1,4 +1,7 @@
+import sys
 import time
+
+sys.path.insert(0, "./src")
 
 import streamlit as st
 from langchain_core.messages import AIMessage
