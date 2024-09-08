@@ -1,5 +1,5 @@
-from src.models.config import ModelConfig
-from src.prompt.base_prompt import PromptComponent, PromptDecorator
+from orchestrator.config import SystemConfig
+from prompt.base_prompt import PromptComponent, PromptDecorator
 
 
 class TestDecorator(PromptDecorator):

@@ -1,7 +1,7 @@
 from langchain.vectorstores.chroma import Chroma
 
-from src.models.config import ModelConfig
-from src.prompt.base_prompt import PromptComponent, PromptDecorator
+from orchestrator.config import SystemConfig
+from prompt.base_prompt import PromptComponent, PromptDecorator
 
 
 class TestRetrieval(PromptDecorator):
@@ -33,7 +33,7 @@ class ContextRetrieval(PromptDecorator):
     """
 
     def __init__(
-        self, prompt: PromptComponent, config: ModelConfig, embedding_function
+        self, prompt: PromptComponent, config: SystemConfig, embedding_function
     ) -> None:
         self._prompt = prompt
         self.emb_fn = embedding_function
@@ -73,7 +73,7 @@ class FilteredContextRetrieval(PromptDecorator):
     def __init__(
         self,
         prompt: PromptComponent,
-        config: ModelConfig,
+        config: SystemConfig,
         meta: str,
         filters: list[str],
         embedding_function,

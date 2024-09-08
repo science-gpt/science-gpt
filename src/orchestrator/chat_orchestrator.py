@@ -5,6 +5,7 @@ import toml
 from models.models import OpenAIChatModel
 from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
+from prompt.base_prompt import ConcretePrompt
 
 
 class ChatOrchestrator:
@@ -14,20 +15,18 @@ class ChatOrchestrator:
         )
         self.load_secrets()
 
-        self.llm = OpenAIChatModel(self.config)
-
     def load_secrets(self, model: str = "gpt-3.5"):
         """
         Load secrets from toml file into config object.
         """
         secrets = toml.load("secrets.toml")
 
+        # TODO: dynamically select model secrets based on 'model' str input
         # hardcoded to use gpt3.5 for now
         self.config.model_auth["version"] = secrets["gpt35-api"]["api_version"]
         self.config.model_auth["api_key"] = secrets["gpt35-api"]["api_key"]
         self.config.model_auth["url"] = secrets["gpt35-api"]["azure_endpoint"]
 
-    # TODO - Implemement test connection method
     def test_connection(self, local=False):
         """
         Test connection to the local or remote chat model.
@@ -45,6 +44,11 @@ class ChatOrchestrator:
         Given a user query, the orchestrator detects user intent and leverages
         appropriate agents to provide a response.
         """
+
+        # Q&A RAG Usecase
+        model = OpenAIChatModel(self.config)
+        prompt = ConcretePrompt()
+        handler = LLMHandler(model, prompt, config)
 
         response, cb = self.llm(query)
 
