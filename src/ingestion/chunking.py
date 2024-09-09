@@ -83,8 +83,7 @@ class SplitSentencesChunker(Chunker):
 
     def __init__(self):
         # Download the punkt tokenizer if not already available
-        nltk.download('punkt_tab')
->>>>>>> 65b593d (implemented a simple sentence splitting chunker)
+        nltk.download('punkt_tab', quiet=True)
 
     def __call__(self, text: Text) -> List[Chunk]:
         """
