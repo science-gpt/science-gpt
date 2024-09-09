@@ -16,7 +16,7 @@ class TestRetrieval(PromptDecorator):
         self._prompt = prompt
 
     def get_prompt(self, query: str, **kwargs) -> str:
-        retreival = kwargs.get('rag', 'context \n context \n context')
+        retreival = kwargs.get("rag", "context \n context \n context")
         return self._prompt.get_prompt(query, **kwargs).format(
             decorate=self.PromptTemplate.format(
                 context=retreival, decorate="{decorate}"
@@ -95,8 +95,8 @@ class FilteredContextRetrieval(PromptDecorator):
     def get_prompt(self, query: str, **kwargs) -> str:
         k = max(2, self.config.rag_params.top_k_retrieval // len(self.filters))
         context_text = ""
-        meta = kwargs.get('meta', '')
-        filters = kwargs.get('filters', '')
+        meta = kwargs.get("meta", "")
+        filters = kwargs.get("filters", "")
         for f in filters:
             results = self.search(query, filter={meta: f}, k=k)
             f_text = "\n\n---\n\n".join([doc.page_content for doc, _score in results])

@@ -86,7 +86,9 @@ class PromptDecorator(PromptComponent):
         """
         # RAG -> RagString
         # format(decorate = RagString)
-        return self._prompt.get_prompt(query, **kwargs).format(decorate=self.PromptTemplate)
+        return self._prompt.get_prompt(query, **kwargs).format(
+            decorate=self.PromptTemplate
+        )
 
 
 class ConcretePrompt(PromptComponent):

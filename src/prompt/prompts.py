@@ -16,7 +16,9 @@ class TestDecorator(PromptDecorator):
         self._prompt = prompt
 
     def get_prompt(self, query: str, **kwargs) -> str:
-        return self._prompt.get_prompt(query, **kwargs).format(decorate=self.PromptTemplate)
+        return self._prompt.get_prompt(query, **kwargs).format(
+            decorate=self.PromptTemplate
+        )
 
 
 class DefinitionsDecorator(PromptDecorator):
@@ -56,7 +58,9 @@ class OnlyUseContextDecorator(PromptDecorator):
         self._prompt = prompt
 
     def get_prompt(self, query: str, **kwargs) -> str:
-        return self._prompt.get_prompt(query, **kwargs).format(decorate=self.PromptTemplate)
+        return self._prompt.get_prompt(query, **kwargs).format(
+            decorate=self.PromptTemplate
+        )
 
 
 class ModerationDecorator(PromptDecorator):
@@ -74,7 +78,9 @@ class ModerationDecorator(PromptDecorator):
         self._prompt = prompt
 
     def get_prompt(self, query: str, **kwargs) -> str:
-        return self._prompt.get_prompt(query, **kwargs).format(decorate=self.PromptTemplate)
+        return self._prompt.get_prompt(query, **kwargs).format(
+            decorate=self.PromptTemplate
+        )
 
 
 class ExamplesDecorator(PromptDecorator):
@@ -89,8 +95,8 @@ class ExamplesDecorator(PromptDecorator):
         self._prompt = prompt
 
     def get_prompt(self, query: str, **kwargs) -> str:
-        question = kwargs.get('question', '')
-        examples = kwargs.get('examples', dict())
+        question = kwargs.get("question", "")
+        examples = kwargs.get("examples", dict())
         return self._prompt.get_prompt(query, **kwargs).format(
             decorate=self.PromptTemplate.format(
                 examples="\n\n---\n\n"
