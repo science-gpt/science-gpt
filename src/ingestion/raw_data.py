@@ -23,7 +23,7 @@ class RawData(ABC):
         self.name = name
         self.data_type = data_type
         # TODO: do we want to add uuids to objects?
-    
+
     def __str__(self) -> str:
         """
         Returns a string representation of the data source.
@@ -36,7 +36,6 @@ class RawData(ABC):
         """
 
     __repr__ = __str__
-
 
 
 class PDFData(RawData):

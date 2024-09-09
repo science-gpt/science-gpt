@@ -6,6 +6,7 @@ from .utils import OutputObject
 
 import PyPDF2
 
+
 class Text(OutputObject):
     """
     Represents extracted text from a data source.
@@ -90,7 +91,7 @@ class PDFExtract(TextExtract):
         """
         # TODO: validate that data is a PDFData object
         try:
-            with open(data.filepath, 'rb') as file:
+            with open(data.filepath, "rb") as file:
                 reader = PyPDF2.PdfReader(file)
                 text = ""
                 for page in reader.pages:

@@ -83,7 +83,7 @@ class SplitSentencesChunker(Chunker):
 
     def __init__(self):
         # Download the punkt tokenizer if not already available
-        nltk.download('punkt_tab', quiet=True)
+        nltk.download("punkt_tab", quiet=True)
 
     def __call__(self, text: Text) -> List[Chunk]:
         """
@@ -101,7 +101,7 @@ class CustomFigureProcessor(ABC):
             Chunk(
                 text=sentence,
                 title=f"{text.title} - Sentence {i+1}",
-                data_type=text.data_type
+                data_type=text.data_type,
             )
             for i, sentence in enumerate(sentences)
         ]

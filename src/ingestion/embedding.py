@@ -7,12 +7,15 @@ from .chunking import Chunk
 from .utils import OutputObject
 from .raw_data import RAW_DATA_TYPES
 
+
 class Embedding(OutputObject):
     """
     Represents an embedding of a text chunk.
     """
 
-    def __init__(self, vector: np.ndarray, text: str, title: str, data_type: RAW_DATA_TYPES) -> None:
+    def __init__(
+        self, vector: np.ndarray, text: str, title: str, data_type: RAW_DATA_TYPES
+    ) -> None:
         """
         Instantiates an Embedding object.
 
@@ -39,6 +42,7 @@ class Embedding(OutputObject):
         """
 
     __repr__ = __str__
+
 
 class Embedder(ABC):
     """
