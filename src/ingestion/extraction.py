@@ -25,6 +25,20 @@ class Text(OutputObject):
         super().__init__(title=title, data_type=data_type)
         self.text = text
 
+    def __str__(self) -> str:
+        """
+        Returns a string representation of the Text.
+        """
+        return f"""
+        Text(
+            title='{self.title}',
+            text='{self.text[:50]}...',
+            data_type={self.data_type}
+        )
+        """
+
+    __repr__ = __str__
+
 
 class TextExtract(ABC):
     """
