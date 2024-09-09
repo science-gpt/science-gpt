@@ -6,6 +6,7 @@ import numpy as np
 from .chunking import Chunk
 from .utils import OutputObject
 from .raw_data import RAW_DATA_TYPES
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 
 
 class Embedding(OutputObject):
@@ -58,6 +59,24 @@ class Embedder(ABC):
         :return: A list of Embedding objects
         """
         pass
+
+
+class HuggingFaceSentenceTransformerEmbedder(Embedder):
+    def __init__(self, model_name: str = "sentence-transformers/all-mpnet-base-v2"):
+        self.model = HuggingFaceEmbeddings(model_name=model_name)
+
+    def __call__(self, chunks: List[Chunk]) -> List[Embedding]:
+        embeddings = []
+        for chunk in chunks:
+            vector = self.model.embed_query(chunk.text)
+            embedding = Embedding(
+                vector=np.array(vector),
+                text=chunk.text,
+                title=chunk.title,
+                data_type=chunk.data_type
+            )
+            embeddings.append(embedding)
+        return embeddings
 
 
 def create_embedder(embedder_type: str, **kwargs) -> Embedder:
