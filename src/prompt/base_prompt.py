@@ -23,7 +23,7 @@ class PromptComponent(ABC):
     """
 
     @abstractmethod
-    def get_prompt(self, query: str) -> str:
+    def get_prompt(self, query: str, **kwargs) -> str:
         """
         get_prompt: Query : str -> Prompt : str
         The get_prompt function takes as input the desired user query and populates
@@ -72,7 +72,7 @@ class PromptDecorator(PromptComponent):
         """
         self._prompt = prompt
 
-    def get_prompt(self, query: str) -> str:
+    def get_prompt(self, query: str, **kwargs) -> str:
         """
         get_prompt: Query : str -> Prompt : str
         The get_prompt function takes as input the desired user query and populates
@@ -86,7 +86,7 @@ class PromptDecorator(PromptComponent):
         """
         # RAG -> RagString
         # format(decorate = RagString)
-        return self._prompt.get_prompt(query).format(decorate=self.PromptTemplate)
+        return self._prompt.get_prompt(query, **kwargs).format(decorate=self.PromptTemplate)
 
 
 class ConcretePrompt(PromptComponent):
@@ -121,5 +121,5 @@ class ConcretePrompt(PromptComponent):
     </query>
     """
 
-    def get_prompt(self, query):
+    def get_prompt(self, query, **kwargs):
         return self.PromptTemplate.format(query=query, decorate="{decorate}")

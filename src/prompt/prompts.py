@@ -15,8 +15,8 @@ class TestDecorator(PromptDecorator):
     ) -> None:
         self._prompt = prompt
 
-    def get_prompt(self, query: str) -> str:
-        return self._prompt.get_prompt(query).format(decorate=self.PromptTemplate)
+    def get_prompt(self, query: str, **kwargs) -> str:
+        return self._prompt.get_prompt(query, **kwargs).format(decorate=self.PromptTemplate)
 
 
 class DefinitionsDecorator(PromptDecorator):
@@ -32,8 +32,8 @@ class DefinitionsDecorator(PromptDecorator):
         self._prompt = prompt
         self.definitions = definitions
 
-    def get_prompt(self, query: str) -> str:
-        return self._prompt.get_prompt(query).format(
+    def get_prompt(self, query: str, **kwargs) -> str:
+        return self._prompt.get_prompt(query, **kwargs).format(
             decorate=self.PromptTemplate.format(
                 definitions="\n\n".join(self.definitions), decorate="{decorate}"
             )
@@ -55,8 +55,8 @@ class OnlyUseContextDecorator(PromptDecorator):
     ) -> None:
         self._prompt = prompt
 
-    def get_prompt(self, query: str) -> str:
-        return self._prompt.get_prompt(query).format(decorate=self.PromptTemplate)
+    def get_prompt(self, query: str, **kwargs) -> str:
+        return self._prompt.get_prompt(query, **kwargs).format(decorate=self.PromptTemplate)
 
 
 class ModerationDecorator(PromptDecorator):
@@ -73,8 +73,8 @@ class ModerationDecorator(PromptDecorator):
     ) -> None:
         self._prompt = prompt
 
-    def get_prompt(self, query: str) -> str:
-        return self._prompt.get_prompt(query).format(decorate=self.PromptTemplate)
+    def get_prompt(self, query: str, **kwargs) -> str:
+        return self._prompt.get_prompt(query, **kwargs).format(decorate=self.PromptTemplate)
 
 
 class ExamplesDecorator(PromptDecorator):
@@ -85,22 +85,22 @@ class ExamplesDecorator(PromptDecorator):
     {decorate}
     """
 
-    def __init__(self, prompt: PromptComponent, question: str, examples: dict) -> None:
+    def __init__(self, prompt: PromptComponent) -> None:
         self._prompt = prompt
-        self.question = question
-        self.examples = examples
 
-    def get_prompt(self, query: str) -> str:
-        return self._prompt.get_prompt(query).format(
+    def get_prompt(self, query: str, **kwargs) -> str:
+        question = kwargs.get('question', '')
+        examples = kwargs.get('examples', dict())
+        return self._prompt.get_prompt(query, **kwargs).format(
             decorate=self.PromptTemplate.format(
                 examples="\n\n---\n\n"
                 + "\n\n---\n\n".join(
                     [
                         "Answer the following question for the following example:\n"
                         + example
-                        + f"\n\nQuestion: {self.question}"
+                        + f"\n\nQuestion: {question}"
                         + f"\nAnswer: {answer}"
-                        for example, answer in self.examples
+                        for example, answer in examples
                     ]
                 ),
                 decorate="{decorate}",

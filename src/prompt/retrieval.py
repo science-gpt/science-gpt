@@ -15,10 +15,11 @@ class TestRetrieval(PromptDecorator):
     def __init__(self, prompt: PromptComponent) -> None:
         self._prompt = prompt
 
-    def get_prompt(self, query: str) -> str:
-        return self._prompt.get_prompt(query).format(
+    def get_prompt(self, query: str, **kwargs) -> str:
+        retreival = kwargs.get('rag', 'context \n context \n context')
+        return self._prompt.get_prompt(query, **kwargs).format(
             decorate=self.PromptTemplate.format(
-                context="context \n context \n context", decorate="{decorate}"
+                context=retreival, decorate="{decorate}"
             )
         )
 
@@ -50,11 +51,11 @@ class ContextRetrieval(PromptDecorator):
         if self.config.search_strategy == "similarity":
             self.search = self.db.similarity_search_with_score
 
-    def get_prompt(self, query: str) -> str:
+    def get_prompt(self, query: str, **kwargs) -> str:
         # Change based on search strategy
         results = self.search(query, k=self.config.rag_params.top_k_retrieval)
         context_text = "\n\n---\n\n".join([doc.page_content for doc, _score in results])
-        return self._prompt.get_prompt(query).format(
+        return self._prompt.get_prompt(query, **kwargs).format(
             decorate=self.PromptTemplate.format(
                 context=context_text, decorate="{decorate}"
             )
@@ -74,15 +75,11 @@ class FilteredContextRetrieval(PromptDecorator):
         self,
         prompt: PromptComponent,
         config: ModelConfig,
-        meta: str,
-        filters: list[str],
         embedding_function,
     ) -> None:
         self._prompt = prompt
         self.emb_fn = embedding_function
         self.config = config
-        self.meta = meta
-        self.filters = filters
 
         # set db
         if config.vectorstore == "chromadb":
@@ -95,15 +92,17 @@ class FilteredContextRetrieval(PromptDecorator):
         if self.config.search_strategy == "similarity":
             self.search = self.db.similarity_search_with_score
 
-    def get_prompt(self, query: str) -> str:
+    def get_prompt(self, query: str, **kwargs) -> str:
         k = max(2, self.config.rag_params.top_k_retrieval // len(self.filters))
         context_text = ""
-        for f in self.filters:
-            results = self.search(query, filter={self.meta: f}, k=k)
+        meta = kwargs.get('meta', '')
+        filters = kwargs.get('filters', '')
+        for f in filters:
+            results = self.search(query, filter={meta: f}, k=k)
             f_text = "\n\n---\n\n".join([doc.page_content for doc, _score in results])
             context_text += f_text
 
-        return self._prompt.get_prompt(query).format(
+        return self._prompt.get_prompt(query, **kwargs).format(
             decorate=self.PromptTemplate.format(
                 context=context_text, decorate="{decorate}"
             )
