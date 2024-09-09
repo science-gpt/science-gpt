@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from raw_data import RAW_DATA_TYPES, PDFData, RawData
-from utils import OutputObject
+from .raw_data import RAW_DATA_TYPES, PDFData, RawData
+from .utils import OutputObject
 
 import PyPDF2
 

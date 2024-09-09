@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from chunking import Chunk
+from .chunking import Chunk
 
 
 class VectorDB(ABC):

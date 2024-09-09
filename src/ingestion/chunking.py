@@ -1,4 +1,12 @@
 from abc import ABC, abstractmethod
+<<<<<<< HEAD
+=======
+from typing import List
+
+from .extraction import Text
+from .raw_data import RAW_DATA_TYPES
+from .utils import OutputObject
+>>>>>>> 790cbb9 (fixed imports)
 
 
 class CustomTextSplitter(ABC):
