@@ -2,11 +2,11 @@ from abc import ABC, abstractmethod
 from typing import List
 
 import numpy as np
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 
 from .chunking import Chunk
-from .utils import OutputObject
 from .raw_data import RAW_DATA_TYPES
-from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from .utils import OutputObject
 
 
 class Embedding(OutputObject):

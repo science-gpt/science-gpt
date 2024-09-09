@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 <<<<<<< HEAD
 =======
 from typing import List
+
 import nltk
 from nltk.tokenize import sent_tokenize
 

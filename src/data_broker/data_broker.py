@@ -1,8 +1,8 @@
 from ingestion.chunking import Chunker
-from ingestion.extraction import TextExtract
 from ingestion.embedding import Embedder
-from ingestion.vectordb import VectorDB
+from ingestion.extraction import TextExtract
 from ingestion.raw_data import RawData
+from ingestion.vectordb import VectorDB
 from orchestrator.config import SystemConfig
 
 

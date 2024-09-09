@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import List
 
+import PyPDF2
+
 from .raw_data import RAW_DATA_TYPES, PDFData, RawData
 from .utils import OutputObject
-
-import PyPDF2
 
 
 class Text(OutputObject):
