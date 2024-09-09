@@ -73,7 +73,7 @@ class HuggingFaceSentenceTransformerEmbedder(Embedder):
                 vector=np.array(vector),
                 text=chunk.text,
                 title=chunk.title,
-                data_type=chunk.data_type
+                data_type=chunk.data_type,
             )
             embeddings.append(embedding)
         return embeddings
