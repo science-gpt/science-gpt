@@ -4,7 +4,41 @@ from typing import List
 import numpy as np
 
 from .chunking import Chunk
+from .utils import OutputObject
+from .raw_data import RAW_DATA_TYPES
 
+class Embedding(OutputObject):
+    """
+    Represents an embedding of a text chunk.
+    """
+
+    def __init__(self, vector: np.ndarray, text: str, title: str, data_type: RAW_DATA_TYPES) -> None:
+        """
+        Instantiates an Embedding object.
+
+        :param vector: The embedding vector
+        :param text: The original text of the chunk
+        :param title: The title of the chunk
+        :param data_type: The type of the original data source
+        """
+        super().__init__(title=title, data_type=data_type)
+        self.vector = vector
+        self.text = text
+
+    def __str__(self) -> str:
+        """
+        Returns a string representation of the Embedding.
+        """
+        return f"""
+        Embedding(
+            title='{self.title}',
+            text='{self.text[:50]}...',
+            data_type={self.data_type},
+            vector_shape={self.vector.shape}
+        )
+        """
+
+    __repr__ = __str__
 
 class Embedder(ABC):
     """
@@ -12,12 +46,12 @@ class Embedder(ABC):
     """
 
     @abstractmethod
-    def embed(self, chunks: List[Chunk]) -> np.ndarray:
+    def __call__(self, chunks: List[Chunk]) -> List[Embedding]:
         """
         Embed a list of text chunks into vectors.
 
         :param chunks: List of Chunk objects to be embedded
-        :return: A numpy array of embedded vectors, where each row represents a chunk's embedding
+        :return: A list of Embedding objects
         """
         pass
 
