@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import numpy as np
 
-from .chunking import Chunk
+from .embedding import Embedding
 
 
 class VectorDB(ABC):
@@ -12,24 +12,14 @@ class VectorDB(ABC):
     """
 
     @abstractmethod
-    def insert(
-        self,
-        vectors: np.ndarray,
-        documents: List[Chunk],
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> None:
+    def insert(self, embeddings: List[Embedding]) -> None:
         """
-        Insert vectors, their associated documents, and optional metadata into the vector database.
+        Insert embeddings into the vector database.
 
         Args:
-            vectors (np.ndarray): NumPy array of vector embeddings to insert.
-            documents (List[Chunk]): List of Chunk objects associated with each vector.
-            metadata (Optional[Dict[str, Any]]): Optional list of metadata associated with each vector.
-
-        Raises:
-            NotImplementedError: If the method is not implemented in the subclass.
+            embeddings (List[Embedding]): List of Embedding objects to insert.
         """
-        raise NotImplementedError("Subclass must implement insert method")
+        pass
 
     @abstractmethod
     def search(self, query_vector: np.ndarray, top_k: int = 5) -> List[Dict[str, Any]]:
@@ -42,11 +32,8 @@ class VectorDB(ABC):
 
         Returns:
             List[Dict[str, Any]]: List of dictionaries containing search results.
-
-        Raises:
-            NotImplementedError: If the method is not implemented in the subclass.
         """
-        raise NotImplementedError("Subclass must implement search method")
+        pass
 
     @abstractmethod
     def delete(self, ids: List[str]) -> None:
@@ -55,30 +42,16 @@ class VectorDB(ABC):
 
         Args:
             ids (List[str]): List of vector IDs to delete.
-
-        Raises:
-            NotImplementedError: If the method is not implemented in the subclass.
         """
-        raise NotImplementedError("Subclass must implement delete method")
+        pass
 
     @abstractmethod
-    def update(
-        self,
-        ids: List[str],
-        vectors: np.ndarray,
-        documents: List[Chunk],
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> None:
+    def update(self, ids: List[str], embeddings: List[Embedding]) -> None:
         """
-        Update existing vectors, their associated documents, and optional metadata in the database.
+        Update existing vectors in the database.
 
         Args:
             ids (List[str]): List of vector IDs to update.
-            vectors (np.ndarray): NumPy array of new vector embeddings.
-            documents (List[Chunk]): List of new Chunk objects associated with each vector.
-            metadata (Optional[Dict[str, Any]]): Optional list of new metadata associated with each vector.
-
-        Raises:
-            NotImplementedError: If the method is not implemented in the subclass.
+            embeddings (List[Embedding]): List of new Embedding objects.
         """
-        raise NotImplementedError("Subclass must implement update method")
+        pass
