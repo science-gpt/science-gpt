@@ -68,26 +68,27 @@ class TextExtract(ABC):
         pass
 
 
-class PDFExtract(TextExtract):
+class PyPDF2Extract(TextExtract):
     """
-    Concrete implementation of TextExtract for PDF data sources.
+    Concrete implementation of TextExtract for PDF data sources using PyPDF2.
 
-    This class provides functionality to extract text from PDF files.
+    This class provides functionality to extract text from PDF files using the PyPDF2 library.
     """
 
     def __init__(self) -> None:
         """
-        Instantiates a PDFExtract object.
+        Instantiates a PyPDF2Extract object.
         """
         super().__init__(data_type="pdf")
 
     def __call__(self, data: PDFData) -> Text:
         """
-        Extracts text from the given PDF data.
+        Extracts text from the given PDF data using PyPDF2.
 
         :param data: The PDF data to extract text from
         :return: A Text object containing the extracted text from the PDF
         :raises IOError: If there's an error reading the PDF file
+        :raises ValueError: If there's an error extracting text from the PDF
         """
         # TODO: validate that data is a PDFData object
         try:
