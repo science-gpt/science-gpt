@@ -26,7 +26,7 @@ class Chunker(ABC):
     """
 
     @abstractmethod
-    def __call__(self, chunk_size, chunk_overlap):
+    def __call__(self, text: Text) -> List[Chunk]:
         pass
 
 
