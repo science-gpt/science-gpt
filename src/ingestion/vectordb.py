@@ -92,10 +92,10 @@ class ChromaDB(VectorDB):
         Args:
             embeddings (List[Embedding]): List of Embedding objects to insert.
         """
-        ids = [str(embedding.id) for embedding in embeddings]
-        vectors = [embedding.vector for embedding in embeddings]
-        metadatas = [embedding.metadata for embedding in embeddings]
-        self.collection.add(ids=ids, embeddings=vectors, metadatas=metadatas)
+        documents = [embedding.text for embedding in embeddings]
+        ids = [embedding.title for embedding in embeddings]
+        vectors = [embedding.vector.tolist() for embedding in embeddings]
+        self.collection.add(ids=ids, embeddings=vectors, documents=documents)
 
     def search(
         self, query_vectors: List[np.ndarray], top_k: int = 5
@@ -151,6 +151,6 @@ class ChromaDB(VectorDB):
             ids (List[str]): List of vector IDs to update.
             embeddings (List[Embedding]): List of new Embedding objects.
         """
-        vectors = [embedding.vector for embedding in embeddings]
-        metadatas = [embedding.metadata for embedding in embeddings]
-        self.collection.update(ids=ids, embeddings=vectors, metadatas=metadatas)
+        documents = [embedding.text for embedding in embeddings]
+        vectors = [embedding.vector.tolist() for embedding in embeddings]
+        self.collection.update(ids=ids, embeddings=vectors, documents=documents)
