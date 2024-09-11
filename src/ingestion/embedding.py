@@ -13,6 +13,12 @@ from .raw_data import RAW_DATA_TYPES
 class Embedding:
     """
     Represents an embedding of a text chunk.
+
+    Attributes:
+        vector (np.ndarray): The embedding vector.
+        text (str): The original text that was embedded.
+        title (str): The title of the document containing the text.
+        data_type (RAW_DATA_TYPES): The type of the original data source.
     """
 
     vector: np.ndarray
@@ -31,8 +37,11 @@ class Embedder(ABC):
         """
         Embed a list of text chunks into vectors.
 
-        :param chunks: List of Chunk objects to be embedded
-        :return: A list of Embedding objects
+        Args:
+            chunks (List[Chunk]): List of Chunk objects to be embedded.
+
+        Returns:
+            List[Embedding]: A list of Embedding objects containing the embedded vectors and metadata.
         """
         pass
 
@@ -46,8 +55,9 @@ class HuggingFaceSentenceTransformerEmbedder(Embedder):
         """
         Initialize the HuggingFaceSentenceTransformerEmbedder.
 
-        :param model_name: The name of the Sentence Transformer model to use.
-                           Defaults to "sentence-transformers/all-mpnet-base-v2".
+        Args:
+            model_name (str): The name of the Sentence Transformer model to use.
+                              Defaults to "sentence-transformers/all-mpnet-base-v2".
         """
         self.model = HuggingFaceEmbeddings(model_name=model_name)
 
@@ -55,8 +65,11 @@ class HuggingFaceSentenceTransformerEmbedder(Embedder):
         """
         Embed a list of text chunks into vectors using the Sentence Transformer model.
 
-        :param chunks: List of Chunk objects to be embedded.
-        :return: A list of Embedding objects containing the embedded vectors and metadata.
+        Args:
+            chunks (List[Chunk]): List of Chunk objects to be embedded.
+
+        Returns:
+            List[Embedding]: A list of Embedding objects containing the embedded vectors and metadata.
         """
         embeddings = []
         for chunk in chunks:

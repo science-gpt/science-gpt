@@ -11,6 +11,11 @@ from .raw_data import RAW_DATA_TYPES, PDFData, RawData
 class Text:
     """
     Represents extracted text from a data source.
+
+    Attributes:
+        text (str): The extracted text content.
+        title (str): The title of the text.
+        data_type (RAW_DATA_TYPES): The type of the raw data source.
     """
 
     text: str
@@ -30,7 +35,8 @@ class TextExtract(ABC):
         """
         Instantiates a TextExtract object.
 
-        :param data_type: type of raw data
+        Args:
+            data_type (RAW_DATA_TYPES): Type of raw data.
         """
         self.data_type = data_type
 
@@ -39,8 +45,11 @@ class TextExtract(ABC):
         """
         Abstract method to extract text from the given raw data.
 
-        :param data: The raw data to extract text from
-        :return: A Text object containing the extracted text
+        Args:
+            data (RawData): The raw data to extract text from.
+
+        Returns:
+            Text: A Text object containing the extracted text.
         """
         pass
 
@@ -62,10 +71,15 @@ class PyPDF2Extract(TextExtract):
         """
         Extracts text from the given PDF data using PyPDF2.
 
-        :param data: The PDF data to extract text from
-        :return: A Text object containing the extracted text from the PDF
-        :raises IOError: If there's an error reading the PDF file
-        :raises ValueError: If there's an error extracting text from the PDF
+        Args:
+            data (PDFData): The PDF data to extract text from.
+
+        Returns:
+            Text: A Text object containing the extracted text from the PDF.
+
+        Raises:
+            IOError: If there's an error reading the PDF file.
+            ValueError: If there's an error extracting text from the PDF.
         """
         # TODO: validate that data is a PDFData object
         try:

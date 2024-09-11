@@ -78,6 +78,9 @@ class ChromaDB(VectorDB):
     def __init__(self, collection_name: str):
         """
         Initialize the ChromaDB instance with the specified collection name.
+
+        Args:
+            collection_name (str): The name of the collection to create or use.
         """
         self.client = chromadb.Client()
         self.collection = self.client.create_collection(name=collection_name)
@@ -85,6 +88,9 @@ class ChromaDB(VectorDB):
     def insert(self, embeddings: List[Embedding]) -> None:
         """
         Insert embeddings into the vector database.
+
+        Args:
+            embeddings (List[Embedding]): List of Embedding objects to insert.
         """
         ids = [str(embedding.id) for embedding in embeddings]
         vectors = [embedding.vector for embedding in embeddings]
@@ -96,6 +102,14 @@ class ChromaDB(VectorDB):
     ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database.
+
+        Args:
+            query_vectors (List[np.ndarray]): The query vectors to search for.
+            top_k (int): The number of most similar vectors to return for each query.
+
+        Returns:
+            List[List[SearchResult]]: List of lists of SearchResult objects containing search results.
+                                      The i-th inner list corresponds to the results for the i-th query vector.
         """
         query_embeddings = [vector.tolist() for vector in query_vectors]
         results = self.collection.query(
@@ -123,12 +137,19 @@ class ChromaDB(VectorDB):
     def delete(self, ids: List[str]) -> None:
         """
         Delete vectors from the database by their IDs.
+
+        Args:
+            ids (List[str]): List of vector IDs to delete.
         """
         self.collection.delete(ids=ids)
 
     def update(self, ids: List[str], embeddings: List[Embedding]) -> None:
         """
         Update existing vectors in the database.
+
+        Args:
+            ids (List[str]): List of vector IDs to update.
+            embeddings (List[Embedding]): List of new Embedding objects.
         """
         vectors = [embedding.vector for embedding in embeddings]
         metadatas = [embedding.metadata for embedding in embeddings]

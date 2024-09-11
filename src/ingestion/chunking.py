@@ -13,6 +13,11 @@ from .raw_data import RAW_DATA_TYPES
 class Chunk:
     """
     Represents a chunk of text extracted from a data source.
+
+    Attributes:
+        text (str): The content of the chunk.
+        title (str): The title associated with the chunk.
+        data_type (RAW_DATA_TYPES): The type of the original data source.
     """
 
     text: str
@@ -27,6 +32,15 @@ class Chunker(ABC):
 
     @abstractmethod
     def __call__(self, text: Text) -> List[Chunk]:
+        """
+        Split the given text into chunks.
+
+        Args:
+            text (Text): The text to be split into chunks.
+
+        Returns:
+            List[Chunk]: A list of Chunk objects representing the split text.
+        """
         pass
 
 
@@ -36,14 +50,20 @@ class SplitSentencesChunker(Chunker):
     """
 
     def __init__(self):
+        """
+        Initialize the SplitSentencesChunker and download the required NLTK data.
+        """
         nltk.download("punkt_tab", quiet=True)
 
     def __call__(self, text: Text) -> List[Chunk]:
         """
-        Splits the given text into chunks, where each chunk is a sentence.
+        Split the given text into chunks, where each chunk is a sentence.
 
-        :param text: The text to be split into chunks.
-        :return: A list of Chunk objects, each containing a single sentence.
+        Args:
+            text (Text): The text to be split into chunks.
+
+        Returns:
+            List[Chunk]: A list of Chunk objects, each containing a single sentence.
         """
         sentences = sent_tokenize(text.text)
         return [
