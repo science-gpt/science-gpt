@@ -68,25 +68,15 @@ class DataBroker:
         Raises:
             ValueError: If the search operation fails
         """
-        try:
-            # Create Chunk objects from the queries
-            query_chunks = [
-                Chunk(text=query, title=f"Query_{i}", data_type="query")
-                for i, query in enumerate(queries)
-            ]
+        query_chunks = [
+            Chunk(text=query, title=f"Query_{i}", data_type="query")
+            for i, query in enumerate(queries)
+        ]
+        query_embeddings = self.embedder(query_chunks)
+        query_vectors = [embedding.vector for embedding in query_embeddings]
+        results = self.vector_store.search(query_vectors, top_k)
 
-            # Embed the query chunks
-            query_embeddings = self.embedder(query_chunks)
-
-            # Extract vectors from embeddings
-            query_vectors = [embedding.vector for embedding in query_embeddings]
-
-            # Search the vector store
-            results = self.vector_store.search(query_vectors, top_k)
-
-            return results
-        except Exception as e:
-            raise ValueError(f"Search operation failed: {str(e)}")
+        return results
 
     @staticmethod
     def _create_extractor(config: SystemConfig, data_type: str) -> TextExtract:
