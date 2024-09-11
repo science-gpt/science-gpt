@@ -1,9 +1,19 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any, Dict, List
 
+import chromadb
 import numpy as np
 
 from .embedding import Embedding
+
+
+@dataclass
+class SearchResult:
+    id: str
+    distance: float
+    metadata: Dict[str, Any]
+    document: str
 
 
 class VectorDB(ABC):
@@ -22,16 +32,19 @@ class VectorDB(ABC):
         pass
 
     @abstractmethod
-    def search(self, query_vector: np.ndarray, top_k: int = 5) -> List[Dict[str, Any]]:
+    def search(
+        self, query_vectors: List[np.ndarray], top_k: int = 5
+    ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database.
 
         Args:
-            query_vector (np.ndarray): The query vector to search for.
-            top_k (int): The number of most similar vectors to return.
+            query_vectors (List[np.ndarray]): The query vectors to search for.
+            top_k (int): The number of most similar vectors to return for each query.
 
         Returns:
-            List[Dict[str, Any]]: List of dictionaries containing search results.
+            List[List[SearchResult]]: List of lists of SearchResult objects containing search results.
+                                      The i-th inner list corresponds to the results for the i-th query vector.
         """
         pass
 
@@ -55,3 +68,68 @@ class VectorDB(ABC):
             embeddings (List[Embedding]): List of new Embedding objects.
         """
         pass
+
+
+class ChromaDB(VectorDB):
+    """
+    Concrete implementation of VectorDB using Chroma.
+    """
+
+    def __init__(self, collection_name: str):
+        """
+        Initialize the ChromaDB instance with the specified collection name.
+        """
+        self.client = chromadb.Client()
+        self.collection = self.client.create_collection(name=collection_name)
+
+    def insert(self, embeddings: List[Embedding]) -> None:
+        """
+        Insert embeddings into the vector database.
+        """
+        ids = [str(embedding.id) for embedding in embeddings]
+        vectors = [embedding.vector for embedding in embeddings]
+        metadatas = [embedding.metadata for embedding in embeddings]
+        self.collection.add(ids=ids, embeddings=vectors, metadatas=metadatas)
+
+    def search(
+        self, query_vectors: List[np.ndarray], top_k: int = 5
+    ) -> List[List[SearchResult]]:
+        """
+        Search for similar vectors in the database.
+        """
+        query_embeddings = [vector.tolist() for vector in query_vectors]
+        results = self.collection.query(
+            query_embeddings=query_embeddings,
+            n_results=top_k,
+        )
+
+        all_results = []
+        for i in range(len(query_vectors)):
+            query_results = [
+                SearchResult(
+                    id=id, distance=distance, metadata=metadata, document=document
+                )
+                for id, distance, metadata, document in zip(
+                    results["ids"][i],
+                    results["distances"][i],
+                    results["metadatas"][i],
+                    results["documents"][i],
+                )
+            ]
+            all_results.append(query_results)
+
+        return all_results
+
+    def delete(self, ids: List[str]) -> None:
+        """
+        Delete vectors from the database by their IDs.
+        """
+        self.collection.delete(ids=ids)
+
+    def update(self, ids: List[str], embeddings: List[Embedding]) -> None:
+        """
+        Update existing vectors in the database.
+        """
+        vectors = [embedding.vector for embedding in embeddings]
+        metadatas = [embedding.metadata for embedding in embeddings]
+        self.collection.update(ids=ids, embeddings=vectors, metadatas=metadatas)
