@@ -25,29 +25,8 @@ class Chunker(ABC):
     Abstract base class for text chunking algorithms.
     """
 
->>>>>>> 1c4a8d6 (added text representations to intermediary objects)
     @abstractmethod
     def __call__(self, chunk_size, chunk_overlap):
-        pass
-
-
-<<<<<<< HEAD
-class CustomTableProcessor(ABC):
-    pass
-=======
-class CustomTextSplitter(Chunker):
-    """
-    A custom implementation of the Chunker class for splitting text.
-    """
-
-    def __call__(self, text: Text) -> List[Chunk]:
-        """
-        Splits the given text into chunks using a custom algorithm.
-
-        :param text: The text to be split into chunks.
-        :return: A list of Chunk objects.
-        """
-        # TODO find the custom chunking code and put it here
         pass
 
 
@@ -57,17 +36,12 @@ class SplitSentencesChunker(Chunker):
     """
 
     def __init__(self):
-        # Download the punkt tokenizer if not already available
         nltk.download("punkt_tab", quiet=True)
 
     def __call__(self, text: Text) -> List[Chunk]:
         """
         Splits the given text into chunks, where each chunk is a sentence.
 
-<<<<<<< HEAD
-class CustomFigureProcessor(ABC):
-    pass
-=======
         :param text: The text to be split into chunks.
         :return: A list of Chunk objects, each containing a single sentence.
         """
@@ -80,4 +54,3 @@ class CustomFigureProcessor(ABC):
             )
             for i, sentence in enumerate(sentences)
         ]
->>>>>>> 65b593d (implemented a simple sentence splitting chunker)

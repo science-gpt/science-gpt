@@ -69,18 +69,3 @@ class HuggingFaceSentenceTransformerEmbedder(Embedder):
             )
             embeddings.append(embedding)
         return embeddings
-
-
-def create_embedder(embedder_type: str, **kwargs) -> Embedder:
-    """
-    Create and return an instance of the specified embedder type.
-
-    :param embedder_type: Type of embedder to create
-    :param kwargs: Additional keyword arguments for the embedder constructor
-    :return: An instance of the specified Embedder subclass
-    :raises ValueError: If an unsupported embedder type is specified
-    """
-    # TODO: Implement concrete embedder classes and add them to this factory function
-    raise NotImplementedError(
-        f"Embedder type '{embedder_type}' is not implemented yet."
-    )
