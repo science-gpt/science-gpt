@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import List
 
 import numpy as np
@@ -6,43 +7,18 @@ from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 
 from .chunking import Chunk
 from .raw_data import RAW_DATA_TYPES
-from .utils import OutputObject
 
 
-class Embedding(OutputObject):
+@dataclass
+class Embedding:
     """
     Represents an embedding of a text chunk.
     """
 
-    def __init__(
-        self, vector: np.ndarray, text: str, title: str, data_type: RAW_DATA_TYPES
-    ) -> None:
-        """
-        Instantiates an Embedding object.
-
-        :param vector: The embedding vector
-        :param text: The original text of the chunk
-        :param title: The title of the chunk
-        :param data_type: The type of the original data source
-        """
-        super().__init__(title=title, data_type=data_type)
-        self.vector = vector
-        self.text = text
-
-    def __str__(self) -> str:
-        """
-        Returns a string representation of the Embedding.
-        """
-        return f"""
-        Embedding(
-            title='{self.title}',
-            text='{self.text[:50]}...',
-            data_type={self.data_type},
-            vector_shape={self.vector.shape}
-        )
-        """
-
-    __repr__ = __str__
+    vector: np.ndarray
+    text: str
+    title: str
+    data_type: RAW_DATA_TYPES
 
 
 class Embedder(ABC):

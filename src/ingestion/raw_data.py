@@ -1,5 +1,6 @@
 import pathlib
 from abc import ABC
+from dataclasses import dataclass
 from typing import Literal
 
 RAW_DATA_TYPES = Literal[
@@ -8,34 +9,15 @@ RAW_DATA_TYPES = Literal[
 ]
 
 
+@dataclass
 class RawData(ABC):
     """
     Represents the base class for data sources such as .pdf or .doc files, website links, etc.
     """
 
-    def __init__(self, name: str, data_type: RAW_DATA_TYPES) -> None:
-        """
-        Instantiates an object of this class.
-
-        :param name: Name of the data source. ie: title of the .pdf file
-        :param data_type: Type of data source
-        """
-        self.name = name
-        self.data_type = data_type
-        # TODO: do we want to add uuids to objects?
-
-    def __str__(self) -> str:
-        """
-        Returns a string representation of the data source.
-        """
-        return f"""
-        RawData(
-            title='{self.title}',
-            data_type={self.data_type}
-        )
-        """
-
-    __repr__ = __str__
+    name: str
+    data_type: RAW_DATA_TYPES
+    # TODO: do we want to add uuids to objects?
 
 
 class PDFData(RawData):

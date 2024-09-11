@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
-<<<<<<< HEAD
-=======
+from dataclasses import dataclass
 from typing import List
 
 import nltk
@@ -8,42 +7,17 @@ from nltk.tokenize import sent_tokenize
 
 from .extraction import Text
 from .raw_data import RAW_DATA_TYPES
-from .utils import OutputObject
->>>>>>> 790cbb9 (fixed imports)
 
 
-<<<<<<< HEAD
-class CustomTextSplitter(ABC):
-=======
-class Chunk(OutputObject):
+@dataclass
+class Chunk:
     """
     Represents a chunk of text extracted from a data source.
     """
 
-    def __init__(self, text: str, title: str, data_type: RAW_DATA_TYPES) -> None:
-        """
-        Instantiates an object of this class.
-
-        :param text: The extracted text.
-        :param title: A title for the chunked text.
-        :param data_type: The type of the original data source.
-        """
-        super().__init__(title=title, data_type=data_type)
-        self.text = text
-
-    def __str__(self) -> str:
-        """
-        Returns a string representation of the Chunk.
-        """
-        return f"""
-        Chunk(
-            title='{self.title}',
-            text='{self.text[:50]}...',
-            data_type={self.data_type}
-        )
-        """
-
-    __repr__ = __str__
+    text: str
+    title: str
+    data_type: RAW_DATA_TYPES
 
 
 class Chunker(ABC):

@@ -1,44 +1,21 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import List
 
 import PyPDF2
 
 from .raw_data import RAW_DATA_TYPES, PDFData, RawData
-from .utils import OutputObject
 
 
-class Text(OutputObject):
+@dataclass
+class Text:
     """
     Represents extracted text from a data source.
-
-    This class inherits from OutputObject and adds a text attribute
-    to store the extracted content.
     """
 
-    def __init__(self, text: str, title: str, data_type: RAW_DATA_TYPES) -> None:
-        """
-        Instantiates an object of this class.
-
-        :param text: the extracted text
-        :param title: a title for the extracted text
-        :param data_type: the type of the original data source
-        """
-        super().__init__(title=title, data_type=data_type)
-        self.text = text
-
-    def __str__(self) -> str:
-        """
-        Returns a string representation of the Text.
-        """
-        return f"""
-        Text(
-            title='{self.title}',
-            text='{self.text[:50]}...',
-            data_type={self.data_type}
-        )
-        """
-
-    __repr__ = __str__
+    text: str
+    title: str
+    data_type: RAW_DATA_TYPES
 
 
 class TextExtract(ABC):
