@@ -11,18 +11,19 @@ model_auth:
   version:
 
 extraction:
-  pdf_extraction_method: "pypdf2"
+  pdf_extract_method: "pypdf2"
 
 chunking:
-  chunking_method: "split_sentences"
+  method: "split_sentences"
 
 embedding:
-  embedding_method: "huggingface-sentence-transformer"
-  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+  method: "huggingface-sentence-transformer"
+  model: "sentence-transformers/all-mpnet-base-v2"
 
 vector_db:
-  vector_db: "local-chromadb"
-  vector_db_path: "chroma"
+  type: "local-chromadb"
+  local_path: "chroma"
+  instance_name: "chromadb-instance"
   search_strategy: "similarity"
 
 rag_params:

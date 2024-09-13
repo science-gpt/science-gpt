@@ -107,7 +107,7 @@ class PyPDF2Extract(TextExtract):
                 for page in reader.pages:
                     text += page.extract_text() + "\n"
                 # TODO: validate that text is not empty
-                return Text(text=text.strip(), title=data.name, data_type="pdf")
+                return Text(text=text.strip(), name=data.name, data_type="pdf")
         except IOError as e:
             raise IOError(f"Error reading PDF file: {e}")
         except Exception as e:

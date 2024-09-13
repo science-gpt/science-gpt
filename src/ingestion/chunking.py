@@ -70,7 +70,7 @@ class SplitSentencesChunker(Chunker):
         return [
             Chunk(
                 text=sentence,
-                title=f"{text.title} - Sentence {i+1}",
+                name=f"{text.name} - Sentence {i+1}",
                 data_type=text.data_type,
             )
             for i, sentence in enumerate(sentences)

@@ -60,7 +60,7 @@ class DataBroker:
         """
         # TODO better logging and error handling
         query_chunks = [
-            Chunk(text=query, title=f"Query_{i}", data_type="query")
+            Chunk(text=query, name=f"Query_{i}", data_type="query")
             for i, query in enumerate(queries)
         ]
         query_embeddings = self.embedder(query_chunks)
@@ -84,7 +84,7 @@ class DataBroker:
         """
         extractors = {}
         extraction_config = config.extraction
-        if extraction_config.pdf_extraction_method == "pypdf2":
+        if extraction_config.pdf_extract_method == "pypdf2":
             extractors["pdf"] = PyPDF2Extract()
         return extractors
 
@@ -103,10 +103,10 @@ class DataBroker:
             ValueError: If the configured chunking method is not supported
         """
         chunking_config = config.chunking
-        if chunking_config.chunking_method == "split_sentences":
+        if chunking_config.method == "split_sentences":
             return SplitSentencesChunker()
         else:
-            raise ValueError(f"Unsupported chunking method: {config.chunking_method}")
+            raise ValueError(f"Unsupported chunking method: {chunking_config.method}")
 
     @staticmethod
     def _create_embedder(config: SystemConfig) -> Embedder:
@@ -123,12 +123,12 @@ class DataBroker:
             ValueError: If the configured embedding method is not supported
         """
         embedding_config = config.embedding
-        if embedding_config.embedding_method == "huggingface-sentence-transformer":
+        if embedding_config.method == "huggingface-sentence-transformer":
             return HuggingFaceSentenceTransformerEmbedder(
-                model_name=embedding_config.embedding_model
+                model_name=embedding_config.model
             )
         else:
-            raise ValueError(f"Unsupported embedding method: {config.embedding_method}")
+            raise ValueError(f"Unsupported embedding method: {embedding_config.method}")
 
     @staticmethod
     def _create_vector_store(config: SystemConfig) -> VectorDB:
@@ -145,7 +145,7 @@ class DataBroker:
             ValueError: If the configured vector store is not supported
         """
         vector_db_config = config.vector_db
-        if vector_db_config.vector_db == "local-chromadb":
-            return ChromaDB(collection_name=vector_db_config.vector_db_name)
+        if vector_db_config.type == "local-chromadb":
+            return ChromaDB(collection_name=vector_db_config.instance_name)
         else:
-            raise ValueError(f"Unsupported vector store: {config.vector_db}")
+            raise ValueError(f"Unsupported vector store: {vector_db_config.type}")

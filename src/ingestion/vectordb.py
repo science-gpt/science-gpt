@@ -93,7 +93,7 @@ class ChromaDB(VectorDB):
             embeddings (List[Embedding]): List of Embedding objects to insert.
         """
         documents = [embedding.text for embedding in embeddings]
-        ids = [embedding.title for embedding in embeddings]
+        ids = [embedding.name for embedding in embeddings]
         vectors = [embedding.vector.tolist() for embedding in embeddings]
         self.collection.add(ids=ids, embeddings=vectors, documents=documents)
 
