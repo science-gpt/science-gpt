@@ -83,7 +83,8 @@ class DataBroker:
             Dict[str, TextExtract]: A dictionary mapping data types to their respective extractors
         """
         extractors = {}
-        if config.pdf_extraction_method == "pypdf2":
+        extraction_config = config.extraction
+        if extraction_config.pdf_extraction_method == "pypdf2":
             extractors["pdf"] = PyPDF2Extract()
         return extractors
 
@@ -101,7 +102,8 @@ class DataBroker:
         Raises:
             ValueError: If the configured chunking method is not supported
         """
-        if config.chunking_method == "split_sentences":
+        chunking_config = config.chunking
+        if chunking_config.chunking_method == "split_sentences":
             return SplitSentencesChunker()
         else:
             raise ValueError(f"Unsupported chunking method: {config.chunking_method}")
@@ -120,9 +122,10 @@ class DataBroker:
         Raises:
             ValueError: If the configured embedding method is not supported
         """
-        if config.embedding_method == "huggingface-sentence-transformer":
+        embedding_config = config.embedding
+        if embedding_config.embedding_method == "huggingface-sentence-transformer":
             return HuggingFaceSentenceTransformerEmbedder(
-                model_name=config.embedding_model
+                model_name=embedding_config.embedding_model
             )
         else:
             raise ValueError(f"Unsupported embedding method: {config.embedding_method}")
@@ -141,7 +144,8 @@ class DataBroker:
         Raises:
             ValueError: If the configured vector store is not supported
         """
-        if config.vector_db == "local-chromadb":
-            return ChromaDB(collection_name=config.vector_db_name)
+        vector_db_config = config.vector_db
+        if vector_db_config.vector_db == "local-chromadb":
+            return ChromaDB(collection_name=vector_db_config.vector_db_name)
         else:
             raise ValueError(f"Unsupported vector store: {config.vector_db}")
