@@ -141,7 +141,7 @@ class DataBroker:
         Raises:
             ValueError: If the configured vector store is not supported
         """
-        if config.vector_db == "local-chroma":
+        if config.vector_db == "local-chromadb":
             return ChromaDB(collection_name=config.vector_db_name)
         else:
             raise ValueError(f"Unsupported vector store: {config.vector_db}")

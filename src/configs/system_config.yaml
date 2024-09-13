@@ -1,19 +1,29 @@
 _target_: orchestrator.config.SystemConfig
 model_name: gpt-3.5
 
+model_params:
+  temperature: 0
+  max_tokens: 512
+
 model_auth:
   url:
   api_key:
   version:
 
-model_params:
-  temperature: 0
-  max_tokens: 512
+extraction:
+  pdf_extraction_method: "pypdf2"
 
+chunking:
+  chunking_method: "split_sentences"
 
-vectorstore: chromadb
-chroma_path: "chroma"
-search_strategy: "similarity"
+embedding:
+  embedding_method: "huggingface-sentence-transformer"
+  embedding_model: "sentence-transformers/all-mpnet-base-v2"
+
+vector_db:
+  vector_db: "local-chromadb"
+  vector_db_path: "chroma"
+  search_strategy: "similarity"
 
 rag_params:
   top_k_retrieval: 5
