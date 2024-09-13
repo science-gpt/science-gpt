@@ -1,13 +1,14 @@
-from typing import List
+from typing import Dict, List
 
-from ingestion.chunking import Chunk, Chunker
-from ingestion.embedding import Embedder
-from ingestion.extraction import TextExtract
+from ingestion.chunking import Chunk, Chunker, SplitSentencesChunker
+from ingestion.embedding import Embedder, HuggingFaceSentenceTransformerEmbedder
+from ingestion.extraction import PyPDF2Extract, TextExtract
 from ingestion.raw_data import RawData
-from ingestion.vectordb import SearchResult, VectorDB
+from ingestion.vectordb import ChromaDB, SearchResult, VectorDB
 from orchestrator.config import SystemConfig
 
 
+# TODO: error handling throughout this classis absent or inconsistent
 class DataBroker:
     """
     The interface between the client (the app) and all data
@@ -23,7 +24,7 @@ class DataBroker:
             config (SystemConfig): Configuration object containing settings
         """
         self.config = config
-        self.extractor = self._create_extractor(config)
+        self.extractors = self._create_extractors(config)
         self.chunker = self._create_chunker(config)
         self.embedder = self._create_embedder(config)
         self.vector_store = self._create_vector_store(config)
@@ -39,7 +40,8 @@ class DataBroker:
             data (RawData): The raw data to be processed and inserted
         """
         # TODO better logging and error handling
-        text = self.extractor(data)
+        extractor = self.extractors.get(data.data_type)
+        text = extractor(data)
         chunks = self.chunker(text)
         embeddings = self.embedder(chunks)
         self.vector_store.insert(embeddings)
@@ -68,19 +70,22 @@ class DataBroker:
         return results
 
     @staticmethod
-    def _create_extractor(config: SystemConfig, data_type: str) -> TextExtract:
+    def _create_extractors(config: SystemConfig) -> Dict[str, TextExtract]:
         """
-        Creates an extractor based on the configured extraction method and data type.
+        Creates a dictionary of extractors for different data types.
+        Each of the supported data types receives its own extractor.
+        Extractors are set using the config.
 
         Args:
-            config (SystemConfig): Configuration object containing settings for
-                embedding model, vector store, chunking method, etc.
+            config (SystemConfig): Configuration object containing settings
 
         Returns:
-            TextExtract: A function that extracts text from the given data
+            Dict[str, TextExtract]: A dictionary mapping data types to their respective extractors
         """
-        if config.extraction_method == "pypdf":
-            pass
+        extractors = {}
+        if config.pdf_extraction_method == "pypdf2":
+            extractors["pdf"] = PyPDF2Extract()
+        return extractors
 
     @staticmethod
     def _create_chunker(config: SystemConfig) -> Chunker:
@@ -88,17 +93,18 @@ class DataBroker:
         Creates a chunker based on the configured chunking method.
 
         Args:
-            config (SystemConfig): Configuration object containing settings for
-                embedding model, vector store, chunking method, etc.
+            config (SystemConfig): Configuration object containing settings
 
         Returns:
-            Chunker: A function that splits the input text into chunks
+            Chunker: An instance of the appropriate Chunker subclass
 
         Raises:
             ValueError: If the configured chunking method is not supported
         """
-        # Implement based on config
-        raise NotImplementedError("Embedding creation not yet implemented")
+        if config.chunking_method == "split_sentences":
+            return SplitSentencesChunker()
+        else:
+            raise ValueError(f"Unsupported chunking method: {config.chunking_method}")
 
     @staticmethod
     def _create_embedder(config: SystemConfig) -> Embedder:
@@ -106,17 +112,20 @@ class DataBroker:
         Creates an embedder based on the configured embedding model.
 
         Args:
-            config (SystemConfig): Configuration object containing settings for
-                embedding model, vector store, chunking method, etc.
+            config (SystemConfig): Configuration object containing settings.
 
         Returns:
-            Embedder: A function that embeds the given chunks
+            Embedder: An instance of the appropriate Embedder subclass
 
         Raises:
-            NotImplementedError: If the embedding creation is not yet implemented
+            ValueError: If the configured embedding method is not supported
         """
-        # Implement based on config
-        raise NotImplementedError("Embedding creation not yet implemented")
+        if config.embedding_method == "huggingface-sentence-transformer":
+            return HuggingFaceSentenceTransformerEmbedder(
+                model_name=config.embedding_model
+            )
+        else:
+            raise ValueError(f"Unsupported embedding method: {config.embedding_method}")
 
     @staticmethod
     def _create_vector_store(config: SystemConfig) -> VectorDB:
@@ -124,14 +133,15 @@ class DataBroker:
         Creates a vector store based on the configured vector store.
 
         Args:
-            config (SystemConfig): Configuration object containing settings for
-                embedding model, vector store, chunking method, etc.
+            config (SystemConfig): Configuration object containing settings
 
         Returns:
-            VectorDB: A function that inserts vectors into the vector store
+            VectorDB: An instance of the appropriate VectorDB subclass
 
         Raises:
-            NotImplementedError: If the vector store creation is not yet implemented
+            ValueError: If the configured vector store is not supported
         """
-        # Implement based on config
-        raise NotImplementedError("Vector store creation not yet implemented")
+        if config.vector_db == "local-chroma":
+            return ChromaDB(collection_name=config.vector_db_name)
+        else:
+            raise ValueError(f"Unsupported vector store: {config.vector_db}")
