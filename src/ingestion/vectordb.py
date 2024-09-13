@@ -10,7 +10,7 @@ from .embedding import Embedding
 
 @dataclass
 class SearchResult:
-    id: str
+    id: str  # TODO: add this
     distance: float
     metadata: Dict[str, Any]
     document: str

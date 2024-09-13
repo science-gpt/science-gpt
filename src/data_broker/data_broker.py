@@ -13,10 +13,6 @@ class DataBroker:
     The interface between the client (the app) and all data
     related operations. This class abstracts away the extraction,
     chunking, embedding, storage and retrieval of text data.
-
-    Attributes:
-        config (SystemConfig): Configuration object containing settings for
-            embedding model, vector store, chunking method, etc.
     """
 
     def __init__(self, config: SystemConfig) -> None:
@@ -24,8 +20,7 @@ class DataBroker:
         Instantiates an object of this class.
 
         Args:
-            config (SystemConfig): Configuration object containing settings for
-                embedding model, vector store, chunking method, etc.
+            config (SystemConfig): Configuration object containing settings
         """
         self.config = config
         self.extractor = self._create_extractor(config)
@@ -42,10 +37,6 @@ class DataBroker:
 
         Args:
             data (RawData): The raw data to be processed and inserted
-
-        Raises:
-            ValueError: If any step in the process fails due to unsupported
-                data types or methods
         """
         # TODO better logging and error handling
         text = self.extractor(data)
@@ -59,15 +50,13 @@ class DataBroker:
 
         Args:
             queries (List[str]): List of search queries
-            top_k (int): The number of results to return for each query (default: 5)
+            top_k (int): The number of results to return for each query
 
         Returns:
             List[List[SearchResult]]: A list of lists of SearchResult objects containing
                 the search results for each query, sorted by relevance
-
-        Raises:
-            ValueError: If the search operation fails
         """
+        # TODO better logging and error handling
         query_chunks = [
             Chunk(text=query, title=f"Query_{i}", data_type="query")
             for i, query in enumerate(queries)
@@ -89,13 +78,9 @@ class DataBroker:
 
         Returns:
             TextExtract: A function that extracts text from the given data
-
-        Raises:
-            ValueError: If the configured extraction method is not supported
-            ValueError: If the data type is not supported
         """
-        # Implement based on config
-        raise NotImplementedError("Extractor creation not yet implemented")
+        if config.extraction_method == "pypdf":
+            pass
 
     @staticmethod
     def _create_chunker(config: SystemConfig) -> Chunker:
