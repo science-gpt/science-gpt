@@ -1,26 +1,44 @@
+import pathlib
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List
 
 import PyPDF2
 
-from .raw_data import RAW_DATA_TYPES, PDFData, RawData
+from .raw_data import RAW_DATA_TYPES, Data, PDFData
 
 
 @dataclass
-class Text:
+class PDFData(Data):
+    """
+    Represents a raw .pdf data source.
+
+    Attributes:
+        name (str): The name of the PDF file.
+        data_type (RAW_DATA_TYPES): The type of the data source.
+        filepath (pathlib.Path): The path to the PDF file.
+    """
+
+    filepath: pathlib.Path
+
+    def __post_init__(self):
+        super().__init__(name=self.name, data_type="pdf")
+
+
+@dataclass
+class Text(Data):
     """
     Represents extracted text from a data source.
 
     Attributes:
-        text (str): The extracted text content.
-        title (str): The title of the text.
+        name (str): The name of the text.
         data_type (RAW_DATA_TYPES): The type of the raw data source.
+        text (str): The extracted text content.
     """
 
     text: str
-    title: str
-    data_type: RAW_DATA_TYPES
+
+    def __post_init__(self):
+        super().__init__(name=self.name, data_type=self.data_type)
 
 
 class TextExtract(ABC):
@@ -41,12 +59,12 @@ class TextExtract(ABC):
         self.data_type = data_type
 
     @abstractmethod
-    def __call__(self, data: RawData) -> Text:
+    def __call__(self, data: Data) -> Text:
         """
         Abstract method to extract text from the given raw data.
 
         Args:
-            data (RawData): The raw data to extract text from.
+            data (Data): The raw data to extract text from.
 
         Returns:
             Text: A Text object containing the extracted text.

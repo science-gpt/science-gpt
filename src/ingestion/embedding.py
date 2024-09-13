@@ -6,25 +6,26 @@ import numpy as np
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 
 from .chunking import Chunk
-from .raw_data import RAW_DATA_TYPES
+from .raw_data import RAW_DATA_TYPES, Data
 
 
 @dataclass
-class Embedding:
+class Embedding(Data):
     """
     Represents an embedding of a text chunk.
 
     Attributes:
+        name (str): The name of the embedding.
+        data_type (RAW_DATA_TYPES): The type of the original data source.
         vector (np.ndarray): The embedding vector.
         text (str): The original text that was embedded.
-        title (str): The title of the document containing the text.
-        data_type (RAW_DATA_TYPES): The type of the original data source.
     """
 
     vector: np.ndarray
     text: str
-    title: str
-    data_type: RAW_DATA_TYPES
+
+    def __post_init__(self):
+        super().__init__(name=self.name, data_type=self.data_type)
 
 
 class Embedder(ABC):
@@ -75,10 +76,10 @@ class HuggingFaceSentenceTransformerEmbedder(Embedder):
         for chunk in chunks:
             vector = self.model.embed_query(chunk.text)
             embedding = Embedding(
+                name=chunk.name,
+                data_type=chunk.data_type,
                 vector=np.array(vector),
                 text=chunk.text,
-                title=chunk.title,
-                data_type=chunk.data_type,
             )
             embeddings.append(embedding)
         return embeddings

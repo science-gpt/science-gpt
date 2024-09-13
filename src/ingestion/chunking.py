@@ -6,23 +6,24 @@ import nltk
 from nltk.tokenize import sent_tokenize
 
 from .extraction import Text
-from .raw_data import RAW_DATA_TYPES
+from .raw_data import RAW_DATA_TYPES, Data
 
 
 @dataclass
-class Chunk:
+class Chunk(Data):
     """
     Represents a chunk of text extracted from a data source.
 
     Attributes:
-        text (str): The content of the chunk.
-        title (str): The title associated with the chunk.
+        name (str): The name of the chunk.
         data_type (RAW_DATA_TYPES): The type of the original data source.
+        text (str): The content of the chunk.
     """
 
     text: str
-    title: str
-    data_type: RAW_DATA_TYPES
+
+    def __post_init__(self):
+        super().__init__(name=self.name, data_type=self.data_type)
 
 
 class Chunker(ABC):
