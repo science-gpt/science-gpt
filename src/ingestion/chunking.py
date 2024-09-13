@@ -6,7 +6,7 @@ import nltk
 from nltk.tokenize import sent_tokenize
 
 from .extraction import Text
-from .raw_data import RAW_DATA_TYPES, Data
+from .raw_data import Data
 
 
 @dataclass

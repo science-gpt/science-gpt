@@ -3,7 +3,7 @@ from typing import Dict, List
 from ingestion.chunking import Chunk, Chunker, SplitSentencesChunker
 from ingestion.embedding import Embedder, HuggingFaceSentenceTransformerEmbedder
 from ingestion.extraction import PyPDF2Extract, TextExtract
-from ingestion.raw_data import RawData
+from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, SearchResult, VectorDB
 from orchestrator.config import SystemConfig
 
@@ -29,7 +29,7 @@ class DataBroker:
         self.embedder = self._create_embedder(config)
         self.vector_store = self._create_vector_store(config)
 
-    def insert(self, data: RawData) -> None:
+    def insert(self, data: Data) -> None:
         """
         Process and insert the given raw data into the vector store.
 
@@ -37,7 +37,7 @@ class DataBroker:
         of the input data.
 
         Args:
-            data (RawData): The raw data to be processed and inserted
+            data (Data): The raw data to be processed and inserted
         """
         # TODO better logging and error handling
         extractor = self.extractors.get(data.data_type)

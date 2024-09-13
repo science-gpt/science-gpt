@@ -6,7 +6,7 @@ import numpy as np
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 
 from .chunking import Chunk
-from .raw_data import RAW_DATA_TYPES, Data
+from .raw_data import Data
 
 
 @dataclass

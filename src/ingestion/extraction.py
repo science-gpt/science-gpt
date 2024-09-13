@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import PyPDF2
 
-from .raw_data import RAW_DATA_TYPES, Data, PDFData
+from .raw_data import RAW_DATA_TYPES, Data
 
 
 @dataclass
