@@ -1,9 +1,8 @@
 from langchain_community.vectorstores import Chroma
 
+from data_broker.data_broker import DataBroker
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent, PromptDecorator
-
-from data_broker.data_broker import DataBroker
 
 
 class TestRetrieval(PromptDecorator):
@@ -34,9 +33,7 @@ class ContextRetrieval(PromptDecorator):
     {context}
     """
 
-    def __init__(
-        self, prompt: PromptComponent
-    ) -> None:
+    def __init__(self, prompt: PromptComponent) -> None:
         self._prompt = prompt
         self.data_broker = DataBroker()
 

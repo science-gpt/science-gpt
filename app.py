@@ -7,8 +7,8 @@ sys.path.insert(0, "./src")
 import streamlit as st
 from langchain_core.messages import AIMessage
 
-from orchestrator.chat_orchestrator import ChatOrchestrator
 from data_broker.data_broker import DataBroker
+from orchestrator.chat_orchestrator import ChatOrchestrator
 
 st.title("Science-GPT Prototype")
 
@@ -80,8 +80,7 @@ if prompt := st.chat_input("Write your query here..."):
         message_placeholder = st.empty()
 
         query_config = SimpleNamespace(
-            moderationfilter= moderationfilter,
-            onlyusecontext= onlyusecontext
+            moderationfilter=moderationfilter, onlyusecontext=onlyusecontext
         )
         response, cost = st.session_state.orchestrator.triage_query(
             prompt, query_config, chat_history=st.session_state.messages

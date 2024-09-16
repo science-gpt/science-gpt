@@ -1,5 +1,4 @@
 import os
-
 from typing import Dict, List
 
 from ingestion.chunking import Chunk, Chunker, SplitSentencesChunker
@@ -9,6 +8,7 @@ from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, SearchResult, VectorDB
 from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
+
 
 class SingletonMeta(type):
     """
@@ -28,6 +28,7 @@ class SingletonMeta(type):
             instance = super().__call__(*args, **kwargs)
             cls._instances[cls] = instance
         return cls._instances[cls]
+
 
 # TODO: error handling throughout this classis absent or inconsistent
 class DataBroker(metaclass=SingletonMeta):
@@ -56,12 +57,10 @@ class DataBroker(metaclass=SingletonMeta):
             config_name="data_config", config_dir=f"{os.getcwd()}/src/configs"
         )
         data_root = f"{os.getcwd()}/data/"
-        for fpath, fname in zip(self.files['pdf']['filepaths'], self.files['pdf']['filenames']):
-            pdf = PDFData(
-                filepath = data_root+fpath,
-                name = fname,
-                data_type = 'pdf'
-            )
+        for fpath, fname in zip(
+            self.files["pdf"]["filepaths"], self.files["pdf"]["filenames"]
+        ):
+            pdf = PDFData(filepath=data_root + fpath, name=fname, data_type="pdf")
             self.insert(pdf)
 
     def insert(self, data: Data) -> None:

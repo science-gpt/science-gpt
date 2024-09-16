@@ -7,8 +7,8 @@ from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
 from prompt.base_prompt import ConcretePrompt
+from prompt.prompts import ModerationDecorator, OnlyUseContextDecorator
 from prompt.retrieval import ContextRetrieval
-from prompt.prompts import OnlyUseContextDecorator, ModerationDecorator
 
 
 class ChatOrchestrator:
@@ -43,7 +43,9 @@ class ChatOrchestrator:
 
         return response
 
-    def triage_query(self, query: str, query_config, chat_history=None) -> tuple[str, float]:
+    def triage_query(
+        self, query: str, query_config, chat_history=None
+    ) -> tuple[str, float]:
         """
         Given a user query, the orchestrator detects user intent and leverages
         appropriate agents to provide a response.
@@ -56,7 +58,7 @@ class ChatOrchestrator:
         # Basic use case
         model = OpenAIChatModel(self.config)
         prompt = ConcretePrompt()
-        
+
         # Retrieval use case
         if query[:7].lower() == "search:":
             query = query[7:]
@@ -66,7 +68,7 @@ class ChatOrchestrator:
         if query_config.moderationfilter:
             prompt = ModerationDecorator(prompt)
 
-        # look for only use context 
+        # look for only use context
         if query_config.onlyusecontext:
             prompt = OnlyUseContextDecorator(prompt)
 
