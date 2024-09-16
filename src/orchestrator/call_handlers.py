@@ -20,4 +20,8 @@ class LLMCallHandler:
         """
         Returns the LLM response and the cost of the query
         """
-        return self.model(query)
+        prompt = self.get_prompt(query)
+        print("-----The Prompt-----")
+        print(prompt)
+        print("--------------------")
+        return self.model(prompt)

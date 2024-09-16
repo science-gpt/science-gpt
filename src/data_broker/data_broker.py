@@ -53,14 +53,14 @@ class DataBroker(metaclass=SingletonMeta):
         self.vector_store = self._create_vector_store(self.config)
 
         self.files: SystemConfig = load_config(
-            config_name="files_config", config_dir=f"{os.getcwd()}/src/configs"
+            config_name="data_config", config_dir=f"{os.getcwd()}/src/configs"
         )
-
-        data_root = f"{os.getcwd()}/data"
-        for fpath, fname in zip(self.files.pdf.filepaths, self.files.pdf.filenames):
+        data_root = f"{os.getcwd()}/data/"
+        for fpath, fname in zip(self.files['pdf']['filepaths'], self.files['pdf']['filenames']):
             pdf = PDFData(
                 filepath = data_root+fpath,
                 name = fname,
+                data_type = 'pdf'
             )
             self.insert(pdf)
 
