@@ -14,6 +14,7 @@ class ChatOrchestrator:
         self.config: SystemConfig = load_config(
             config_name="system_config", config_dir=f"{os.getcwd()}/src/configs"
         )
+
         self.load_secrets()
 
     def load_secrets(self, model: str = "gpt-3.5"):
@@ -24,9 +25,9 @@ class ChatOrchestrator:
 
         # TODO: dynamically select model secrets based on 'model' str input
         # hardcoded to use gpt3.5 for now
-        self.config.model_auth["version"] = secrets["gpt35-api"]["api_version"]
-        self.config.model_auth["api_key"] = secrets["gpt35-api"]["api_key"]
-        self.config.model_auth["url"] = secrets["gpt35-api"]["azure_endpoint"]
+        self.config.model_auth.version = secrets["gpt35-api"]["api_version"]
+        self.config.model_auth.api_key = secrets["gpt35-api"]["api_key"]
+        self.config.model_auth.url = secrets["gpt35-api"]["azure_endpoint"]
 
     def test_connection(self, local=False):
         """

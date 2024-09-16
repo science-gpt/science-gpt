@@ -1,33 +1,68 @@
+import os
+
 from typing import Dict, List
 
 from ingestion.chunking import Chunk, Chunker, SplitSentencesChunker
 from ingestion.embedding import Embedder, HuggingFaceSentenceTransformerEmbedder
-from ingestion.extraction import PyPDF2Extract, TextExtract
+from ingestion.extraction import PDFData, PyPDF2Extract, TextExtract
 from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, SearchResult, VectorDB
 from orchestrator.config import SystemConfig
+from orchestrator.utils import load_config
 
+class SingletonMeta(type):
+    """
+    The Singleton class can be implemented in different ways in Python. Some
+    possible methods include: base class, decorator, metaclass. We will use the
+    metaclass because it is best suited for this purpose.
+    """
+
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        """
+        Possible changes to the value of the `__init__` argument do not affect
+        the returned instance.
+        """
+        if cls not in cls._instances:
+            instance = super().__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+        return cls._instances[cls]
 
 # TODO: error handling throughout this classis absent or inconsistent
-class DataBroker:
+class DataBroker(metaclass=SingletonMeta):
     """
     The interface between the client (the app) and all data
     related operations. This class abstracts away the extraction,
     chunking, embedding, storage and retrieval of text data.
     """
 
-    def __init__(self, config: SystemConfig) -> None:
+    def __init__(self) -> None:
         """
         Instantiates an object of this class.
 
         Args:
             config (SystemConfig): Configuration object containing settings
         """
-        self.config = config
-        self.extractors = self._create_extractors(config)
-        self.chunker = self._create_chunker(config)
-        self.embedder = self._create_embedder(config)
-        self.vector_store = self._create_vector_store(config)
+        self.config: SystemConfig = load_config(
+            config_name="system_config", config_dir=f"{os.getcwd()}/src/configs"
+        )
+        self.extractors = self._create_extractors(self.config)
+        self.chunker = self._create_chunker(self.config)
+        self.embedder = self._create_embedder(self.config)
+        self.vector_store = self._create_vector_store(self.config)
+
+        self.files: SystemConfig = load_config(
+            config_name="files_config", config_dir=f"{os.getcwd()}/src/configs"
+        )
+
+        data_root = f"{os.getcwd()}/data"
+        for fpath, fname in zip(self.files.pdf.filepaths, self.files.pdf.filenames):
+            pdf = PDFData(
+                filepath = data_root+fpath,
+                name = fname,
+            )
+            self.insert(pdf)
 
     def insert(self, data: Data) -> None:
         """

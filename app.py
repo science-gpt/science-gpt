@@ -7,6 +7,7 @@ import streamlit as st
 from langchain_core.messages import AIMessage
 
 from orchestrator.chat_orchestrator import ChatOrchestrator
+from data_broker.data_broker import DataBroker
 
 st.title("Science-GPT Prototype")
 
@@ -14,6 +15,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
     st.session_state.cost = 0.0
     st.session_state.orchestrator = ChatOrchestrator()
+    st.session_state.databroker = DataBroker()
 
 for message in st.session_state.messages:
     with st.chat_message(message.type):
