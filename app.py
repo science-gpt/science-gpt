@@ -12,12 +12,11 @@ from orchestrator.chat_orchestrator import ChatOrchestrator
 
 st.title("Science-GPT Prototype")
 
-st.session_state.orchestrator = ChatOrchestrator()
-st.session_state.databroker = DataBroker()
-
 if "messages" not in st.session_state:
     st.session_state.messages = []
     st.session_state.cost = 0.0
+    st.session_state.orchestrator = ChatOrchestrator()
+    st.session_state.databroker = DataBroker()
 
 for message in st.session_state.messages:
     with st.chat_message(message.type):
