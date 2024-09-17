@@ -20,11 +20,11 @@ class OpenAIChatModel(ChatModel):
         super().__init__(config)
 
         self.model = AzureChatOpenAI(
-            openai_api_key=self.config.model_auth["api_key"],
-            openai_api_version=self.config.model_auth["version"],
-            azure_endpoint=self.config.model_auth["url"],
-            max_tokens=self.config.model_params["max_tokens"],
-            temperature=self.config.model_params["temperature"],
+            openai_api_key=self.config.model_auth.api_key,
+            openai_api_version=self.config.model_auth.version,
+            azure_endpoint=self.config.model_auth.url,
+            max_tokens=self.config.model_params.max_tokens,
+            temperature=self.config.model_params.temperature,
         )
 
     def __call__(self, query: str):

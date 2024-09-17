@@ -1,13 +1,13 @@
 from models.models import ChatModel
 from orchestrator.config import SystemConfig
-from prompt.base_prompt import ConcretePrompt
+from prompt.base_prompt import PromptComponent
 from prompt.prompts import TestDecorator
 from prompt.retrieval import TestRetrieval
 
 
 class LLMCallHandler:
     def __init__(
-        self, model: ChatModel, prompt: ConcretePrompt, config: SystemConfig
+        self, model: ChatModel, prompt: PromptComponent, config: SystemConfig
     ) -> None:
         self.config = config
         self.model = model
@@ -20,4 +20,8 @@ class LLMCallHandler:
         """
         Returns the LLM response and the cost of the query
         """
-        return self.model(query)
+        prompt = self.get_prompt(query)
+        print("-----The Prompt-----")
+        print(prompt)
+        print("--------------------")
+        return self.model(prompt)

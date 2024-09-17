@@ -1,11 +1,13 @@
 import sys
 import time
+from types import SimpleNamespace
 
 sys.path.insert(0, "./src")
 
 import streamlit as st
 from langchain_core.messages import AIMessage
 
+from data_broker.data_broker import DataBroker
 from orchestrator.chat_orchestrator import ChatOrchestrator
 
 st.title("Science-GPT Prototype")
@@ -14,6 +16,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
     st.session_state.cost = 0.0
     st.session_state.orchestrator = ChatOrchestrator()
+    st.session_state.databroker = DataBroker()
 
 for message in st.session_state.messages:
     with st.chat_message(message.type):
@@ -63,6 +66,8 @@ with st.sidebar:
                 )
 
     temperature = st.slider("Temperature", 0.0, 1.0, 0.2)
+    moderationfilter = st.checkbox("Moderation Filter")
+    onlyusecontext = st.checkbox("Only Use Knowledge Base")
     st.write(f"Total Cost: ${format(st.session_state.cost, '.5f')}")
 
 
@@ -73,8 +78,11 @@ if prompt := st.chat_input("Write your query here..."):
     with st.chat_message("AI"):
         message_placeholder = st.empty()
 
+        query_config = SimpleNamespace(
+            moderationfilter=moderationfilter, onlyusecontext=onlyusecontext
+        )
         response, cost = st.session_state.orchestrator.triage_query(
-            prompt, chat_history=st.session_state.messages
+            prompt, query_config, chat_history=st.session_state.messages
         )
         message_placeholder.markdown(response)
         st.session_state.cost += cost

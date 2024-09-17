@@ -1,5 +1,6 @@
 from langchain_community.vectorstores import Chroma
 
+from data_broker.data_broker import DataBroker
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent, PromptDecorator
 
@@ -32,28 +33,15 @@ class ContextRetrieval(PromptDecorator):
     {context}
     """
 
-    def __init__(
-        self, prompt: PromptComponent, config: SystemConfig, embedding_function
-    ) -> None:
+    def __init__(self, prompt: PromptComponent) -> None:
         self._prompt = prompt
-        self.emb_fn = embedding_function
-        self.config = config
-
-        # set db
-        if config.vectorstore == "chromadb":
-            self.db = Chroma(
-                persist_directory=config.chroma_path,
-                embedding_function=embedding_function,
-            )
-
-        # set search
-        if self.config.search_strategy == "similarity":
-            self.search = self.db.similarity_search_with_score
+        self.data_broker = DataBroker()
 
     def get_prompt(self, query: str) -> str:
-        # Change based on search strategy
-        results = self.search(query, k=self.config.rag_params.top_k_retrieval)
-        context_text = "\n\n---\n\n".join([doc.page_content for doc, _score in results])
+        print("Retrieval!\n")
+        results = self.data_broker.search([query])
+        print(results)
+        context_text = "\n\n---\n\n".join([res.document for res in results[0]])
         return self._prompt.get_prompt(query).format(
             decorate=self.PromptTemplate.format(
                 context=context_text, decorate="{decorate}"
@@ -61,6 +49,7 @@ class ContextRetrieval(PromptDecorator):
         )
 
 
+# TODO: I'm broken PLEASE FIX LATER
 class FilteredContextRetrieval(PromptDecorator):
     _prompt: PromptComponent = None
     PromptTemplate: str = """
@@ -73,27 +62,13 @@ class FilteredContextRetrieval(PromptDecorator):
     def __init__(
         self,
         prompt: PromptComponent,
-        config: SystemConfig,
         meta: str,
         filters: list[str],
-        embedding_function,
     ) -> None:
         self._prompt = prompt
-        self.emb_fn = embedding_function
-        self.config = config
+        self.data_broker = DataBroker()
         self.meta = meta
         self.filters = filters
-
-        # set db
-        if config.vectorstore == "chromadb":
-            self.db = Chroma(
-                persist_directory=config.chroma_path,
-                embedding_function=embedding_function,
-            )
-
-        # set search
-        if self.config.search_strategy == "similarity":
-            self.search = self.db.similarity_search_with_score
 
     def get_prompt(self, query: str) -> str:
         k = max(2, self.config.rag_params.top_k_retrieval // len(self.filters))

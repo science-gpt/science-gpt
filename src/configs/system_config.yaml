@@ -5,10 +5,10 @@ model_params:
   temperature: 0
   max_tokens: 512
 
-model_auth:
-  url:
-  api_key:
-  version:
+model_auth: 
+  url: 
+  api_key: 
+  version: 
 
 extraction:
   pdf_extract_method: "pypdf2"
