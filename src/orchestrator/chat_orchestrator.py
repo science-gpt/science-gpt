@@ -60,6 +60,8 @@ class ChatOrchestrator:
         prompt = ConcretePrompt()
 
         # Retrieval use case
+        # TODO: This is clunky - ideally we would have a LLM detect the intent for use cases
+        #  involving user input.
         if query[:7].lower() == "search:":
             query = query[7:]
             prompt = ContextRetrieval(prompt)
