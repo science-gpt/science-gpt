@@ -1,10 +1,13 @@
+import sys
 import time
 from types import SimpleNamespace
 
+sys.path.insert(0, "./src")
+
 import streamlit as st
+from data_broker.data_broker import DataBroker
 from langchain_core.messages import AIMessage
-from src.data_broker.data_broker import DataBroker
-from src.orchestrator.chat_orchestrator import ChatOrchestrator
+from orchestrator.chat_orchestrator import ChatOrchestrator
 
 st.title("Science-GPT Prototype")
 
