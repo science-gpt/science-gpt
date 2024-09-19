@@ -30,7 +30,7 @@ class SingletonMeta(type):
         return cls._instances[cls]
 
 
-# TODO: error handling throughout this classis absent or inconsistent
+# TODO: error handling throughout this class is absent or inconsistent
 class DataBroker(metaclass=SingletonMeta):
     """
     The interface between the client (the app) and all data
@@ -41,9 +41,6 @@ class DataBroker(metaclass=SingletonMeta):
     def __init__(self) -> None:
         """
         Instantiates an object of this class.
-
-        Args:
-            config (SystemConfig): Configuration object containing settings
         """
         self.config: SystemConfig = load_config(
             config_name="system_config", config_dir=f"{os.getcwd()}/src/configs"
