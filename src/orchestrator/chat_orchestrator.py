@@ -18,6 +18,7 @@ class ChatOrchestrator:
         )
 
         self.load_secrets()
+        self.system_prompt = None
 
     def load_secrets(self, model: str = "gpt-3.5"):
         """
@@ -43,6 +44,9 @@ class ChatOrchestrator:
 
         return response
 
+    def update_system_prompt(self, new_prompt: str):
+        self.system_prompt = new_prompt
+
     def triage_query(
         self, query: str, query_config, chat_history=None
     ) -> tuple[str, float]:
@@ -57,7 +61,7 @@ class ChatOrchestrator:
 
         # Basic use case
         model = OpenAIChatModel(self.config)
-        prompt = ConcretePrompt()
+        prompt = ConcretePrompt(self.system_prompt)
 
         # Retrieval use case
         # TODO: This is clunky - ideally we would have a LLM detect the intent for use cases
