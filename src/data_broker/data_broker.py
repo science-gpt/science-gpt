@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Dict, List
 
@@ -8,6 +9,8 @@ from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, SearchResult, VectorDB
 from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
+
+logger = logging.getLogger(__name__)
 
 
 class SingletonMeta(type):
@@ -58,7 +61,10 @@ class DataBroker(metaclass=SingletonMeta):
             self.files["pdf"]["filepaths"], self.files["pdf"]["filenames"]
         ):
             pdf = PDFData(filepath=data_root + fpath, name=fname, data_type="pdf")
-            self.insert(pdf)
+            try:
+                self.insert(pdf)
+            except IOError as e:
+                logger.error(f"Failed to insert {pdf.name} into the vector store: {e}")
 
     def insert(self, data: Data) -> None:
         """
