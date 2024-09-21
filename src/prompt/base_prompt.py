@@ -108,14 +108,6 @@ class ConcretePrompt(PromptComponent):
         returns a prompt to be input into a LLM.
     """
 
-    default_system_prompt: str = """ You are a helpful chatbot that answers questions from the perspective 
-    of a regulatory toxicologist. You should answer the user's question in 
-    plain and precise language based on the below context. If the context 
-    doesn't contain any relevant information to the question, don't make 
-    something up. Instead, just say "I don't have information on that 
-    topic".
-    """
-
     PromptTemplate: str = """
     
     {decorate}
@@ -125,11 +117,9 @@ class ConcretePrompt(PromptComponent):
     </query>
     """
 
-    def __init__(self, system_prompt: Optional[str] = None):
+    def __init__(self, system_prompt: str):
         """Overrides the prompt template if initialized with a different prompt"""
-        self.PromptTemplate = (
-            system_prompt or ConcretePrompt.default_system_prompt
-        ) + ConcretePrompt.PromptTemplate
+        self.PromptTemplate = system_prompt + ConcretePrompt.PromptTemplate
 
     def get_prompt(self, query):
         print("Base Prompt")
