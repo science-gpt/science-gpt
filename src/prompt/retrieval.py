@@ -1,4 +1,5 @@
 import os
+
 from langchain_community.vectorstores import Chroma
 
 from data_broker.data_broker import DataBroker

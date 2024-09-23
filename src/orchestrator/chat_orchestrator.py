@@ -10,6 +10,7 @@ from prompt.base_prompt import ConcretePrompt
 from prompt.prompts import ModerationDecorator, OnlyUseContextDecorator
 from prompt.retrieval import ContextRetrieval
 
+
 class SingletonMeta(type):
     """
     The Singleton class can be implemented in different ways in Python. Some
@@ -28,6 +29,7 @@ class SingletonMeta(type):
             instance = super().__call__(*args, **kwargs)
             cls._instances[cls] = instance
         return cls._instances[cls]
+
 
 class ChatOrchestrator(metaclass=SingletonMeta):
     def __init__(self) -> None:
@@ -49,7 +51,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             self.config.model_auth.version = secrets["gpt40-api"]["api_version"]
             self.config.model_auth.api_key = secrets["gpt40-api"]["api_key"]
             self.config.model_auth.url = secrets["gpt40-api"]["azure_endpoint"]
-        else: # Defaults to GPT-3.5
+        else:  # Defaults to GPT-3.5
             self.config.model_auth.version = secrets["gpt35-api"]["api_version"]
             self.config.model_auth.api_key = secrets["gpt35-api"]["api_key"]
             self.config.model_auth.url = secrets["gpt35-api"]["azure_endpoint"]

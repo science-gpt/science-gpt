@@ -87,8 +87,8 @@ if prompt := st.chat_input("Write your query here..."):
             seed=seed,
             temperature=temperature,
             top_k=top_k,
-            moderationfilter=moderationfilter, 
-            onlyusecontext=onlyusecontext
+            moderationfilter=moderationfilter,
+            onlyusecontext=onlyusecontext,
         )
         response, cost = st.session_state.orchestrator.triage_query(
             prompt, query_config, chat_history=st.session_state.messages
