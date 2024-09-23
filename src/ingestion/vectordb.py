@@ -1,3 +1,4 @@
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List
@@ -82,8 +83,10 @@ class ChromaDB(VectorDB):
         Args:
             collection_name (str): The name of the collection to create or use.
         """
-        self.client = chromadb.Client()
-        self.collection = self.client.create_collection(name=collection_name)
+        chromadb_path = f"{os.getcwd()}/vectorstore/chromadb/"
+        os.makedirs(chromadb_path, exist_ok=True)
+        self.client = chromadb.PersistentClient(path=chromadb_path)
+        self.collection = self.client.get_or_create_collection(name=collection_name)
 
     def insert(self, embeddings: List[Embedding]) -> None:
         """
