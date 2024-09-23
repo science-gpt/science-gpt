@@ -10,8 +10,26 @@ from prompt.base_prompt import ConcretePrompt
 from prompt.prompts import ModerationDecorator, OnlyUseContextDecorator
 from prompt.retrieval import ContextRetrieval
 
+class SingletonMeta(type):
+    """
+    The Singleton class can be implemented in different ways in Python. Some
+    possible methods include: base class, decorator, metaclass. We will use the
+    metaclass because it is best suited for this purpose.
+    """
 
-class ChatOrchestrator:
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        """
+        Possible changes to the value of the `__init__` argument do not affect
+        the returned instance.
+        """
+        if cls not in cls._instances:
+            instance = super().__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+        return cls._instances[cls]
+
+class ChatOrchestrator(metaclass=SingletonMeta):
     def __init__(self) -> None:
         self.config: SystemConfig = load_config(
             config_name="system_config", config_dir=f"{os.getcwd()}/src/configs"
@@ -27,9 +45,20 @@ class ChatOrchestrator:
 
         # TODO: dynamically select model secrets based on 'model' str input
         # hardcoded to use gpt3.5 for now
-        self.config.model_auth.version = secrets["gpt35-api"]["api_version"]
-        self.config.model_auth.api_key = secrets["gpt35-api"]["api_key"]
-        self.config.model_auth.url = secrets["gpt35-api"]["azure_endpoint"]
+        if model == "GPT-4.0":
+            self.config.model_auth.version = secrets["gpt40-api"]["api_version"]
+            self.config.model_auth.api_key = secrets["gpt40-api"]["api_key"]
+            self.config.model_auth.url = secrets["gpt40-api"]["azure_endpoint"]
+        else: # Defaults to GPT-3.5
+            self.config.model_auth.version = secrets["gpt35-api"]["api_version"]
+            self.config.model_auth.api_key = secrets["gpt35-api"]["api_key"]
+            self.config.model_auth.url = secrets["gpt35-api"]["azure_endpoint"]
+
+    def set_model_config(self, query_config):
+        self.config.model_params.seed = query_config.seed
+        self.config.model_params.temperature = query_config.temperature
+        # self.config.model_params.max_tokens = query_config.max_tokens
+        self.config.rag_params.top_k_retrieval = query_config.top_k
 
     def test_connection(self, local=False):
         """
@@ -55,6 +84,8 @@ class ChatOrchestrator:
 
         print(query_config)
 
+        self.set_model_config(query_config)
+
         # Basic use case
         model = OpenAIChatModel(self.config)
         prompt = ConcretePrompt()
@@ -64,7 +95,7 @@ class ChatOrchestrator:
         #  involving user input.
         if query[:7].lower() == "search:":
             query = query[7:]
-            prompt = ContextRetrieval(prompt)
+            prompt = ContextRetrieval(prompt, self.config)
 
         # look for moderation filter
         if query_config.moderationfilter:

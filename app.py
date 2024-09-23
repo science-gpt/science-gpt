@@ -33,7 +33,7 @@ with st.sidebar:
         st.markdown("*Local models are not yet supported.*")
     else:
         model = st.selectbox(
-            "Model", ["GPT-3.5", "GPT-4.0"], index=None, placeholder="Select a model"
+            "Model", ["GPT-3.5", "GPT-4.0"], index=0, placeholder="Select a model"
         )
 
     col1, col2 = st.columns(2, vertical_alignment="center")
@@ -57,6 +57,9 @@ with st.sidebar:
 
             else:
                 # update model secrets in orchestrator
+
+                st.session_state.orchestrator.load_secrets(model)
+
                 time.sleep(1)
                 st.write("Found model credentials.")
                 time.sleep(1)
@@ -65,7 +68,9 @@ with st.sidebar:
                     label="Connection established!", state="complete", expanded=False
                 )
 
+    seed = st.text_input("Seed", value=42)
     temperature = st.slider("Temperature", 0.0, 1.0, 0.2)
+    top_k = st.slider("Top K", 0, 20, 1)
     moderationfilter = st.checkbox("Moderation Filter")
     onlyusecontext = st.checkbox("Only Use Knowledge Base")
     st.write(f"Total Cost: ${format(st.session_state.cost, '.5f')}")
@@ -79,7 +84,11 @@ if prompt := st.chat_input("Write your query here..."):
         message_placeholder = st.empty()
 
         query_config = SimpleNamespace(
-            moderationfilter=moderationfilter, onlyusecontext=onlyusecontext
+            seed=seed,
+            temperature=temperature,
+            top_k=top_k,
+            moderationfilter=moderationfilter, 
+            onlyusecontext=onlyusecontext
         )
         response, cost = st.session_state.orchestrator.triage_query(
             prompt, query_config, chat_history=st.session_state.messages

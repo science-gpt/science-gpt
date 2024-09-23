@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 
 class ModelParams(BaseModel):
+    seed: Optional[str]
     temperature: Optional[float]
     max_tokens: Optional[int]
 
