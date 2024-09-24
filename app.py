@@ -70,7 +70,7 @@ with st.sidebar:
                 status.update(
                     label="Connection established!", state="complete", expanded=False
                 )
-                
+
     seed = st.text_input("Seed", value=42)
     temperature = st.select_slider(
         "Temperature", options=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0], value=0.2
