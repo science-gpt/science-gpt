@@ -10,6 +10,14 @@ from prompt.base_prompt import ConcretePrompt
 from prompt.prompts import ModerationDecorator, OnlyUseContextDecorator
 from prompt.retrieval import ContextRetrieval
 
+DEFAULT_SYSTEM_PROMPT: str = """ You are a helpful chatbot that answers questions from the perspective 
+    of a regulatory toxicologist. You should answer the user's question in 
+    plain and precise language based on the below context. If the context 
+    doesn't contain any relevant information to the question, don't make 
+    something up. Instead, just say "I don't have information on that 
+    topic".
+    """
+
 
 class SingletonMeta(type):
     """
@@ -38,6 +46,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         )
 
         self.load_secrets()
+        self.system_prompt = DEFAULT_SYSTEM_PROMPT
 
     def load_secrets(self, model: str = "gpt-3.5"):
         """
@@ -74,6 +83,9 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         return response
 
+    def update_system_prompt(self, new_prompt: str):
+        self.system_prompt = new_prompt
+
     def triage_query(
         self, query: str, query_config, chat_history=None
     ) -> tuple[str, float]:
@@ -90,7 +102,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         # Basic use case
         model = OpenAIChatModel(self.config)
-        prompt = ConcretePrompt()
+        prompt = ConcretePrompt(self.system_prompt)
 
         # Retrieval use case
         # TODO: This is clunky - ideally we would have a LLM detect the intent for use cases

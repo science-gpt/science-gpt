@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 
 class PromptComponent(ABC):
@@ -108,19 +109,17 @@ class ConcretePrompt(PromptComponent):
     """
 
     PromptTemplate: str = """
-    You are a helpful chatbot that answers questions from the perspective 
-    of a regulatory toxicologist. You should answer the user's question in 
-    plain and precise language based on the below context. If the context 
-    doesn't contain any relevant information to the question, don't make 
-    something up. Instead, just say "I don't have information on that 
-    topic".
-
+    
     {decorate}
 
     <query>
     {query}
     </query>
     """
+
+    def __init__(self, system_prompt: str):
+        """Overrides the prompt template if initialized with a different prompt"""
+        self.PromptTemplate = system_prompt + ConcretePrompt.PromptTemplate
 
     def get_prompt(self, query):
         print("Base Prompt")
