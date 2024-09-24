@@ -1,7 +1,10 @@
+import os
+
 from langchain_community.vectorstores import Chroma
 
 from data_broker.data_broker import DataBroker
 from orchestrator.config import SystemConfig
+from orchestrator.utils import load_config
 from prompt.base_prompt import PromptComponent, PromptDecorator
 
 
@@ -33,13 +36,16 @@ class ContextRetrieval(PromptDecorator):
     {context}
     """
 
-    def __init__(self, prompt: PromptComponent) -> None:
+    def __init__(self, prompt: PromptComponent, config: SystemConfig) -> None:
         self._prompt = prompt
         self.data_broker = DataBroker()
+        self.config: SystemConfig = config
 
-    def get_prompt(self, query: str) -> str:
-        print("Retrieval!\n")
-        results = self.data_broker.search([query])
+    def get_prompt(self, query: str, top_k=None) -> str:
+        if top_k == None:
+            top_k = self.config.rag_params.top_k_retrieval
+        print("Retrieval!\n", str(top_k))
+        results = self.data_broker.search([query], top_k=top_k)
         print(results)
         context_text = "\n\n---\n\n".join([res.document for res in results[0]])
         return self._prompt.get_prompt(query).format(
@@ -62,6 +68,7 @@ class FilteredContextRetrieval(PromptDecorator):
     def __init__(
         self,
         prompt: PromptComponent,
+        config: SystemConfig,
         meta: str,
         filters: list[str],
     ) -> None:
@@ -69,11 +76,15 @@ class FilteredContextRetrieval(PromptDecorator):
         self.data_broker = DataBroker()
         self.meta = meta
         self.filters = filters
+        self.config: SystemConfig = config
 
-    def get_prompt(self, query: str) -> str:
-        k = max(2, self.config.rag_params.top_k_retrieval // len(self.filters))
+    def get_prompt(self, query: str, top_k=None) -> str:
+        if top_k == None:
+            top_k = self.config.rag_params.top_k_retrieval
+        k = max(2, top_k // len(self.filters))
         context_text = ""
         for f in self.filters:
+            # Add filtering to search!
             results = self.search(query, filter={self.meta: f}, k=k)
             f_text = "\n\n---\n\n".join([doc.page_content for doc, _score in results])
             context_text += f_text

@@ -23,6 +23,7 @@ class OpenAIChatModel(ChatModel):
             openai_api_key=self.config.model_auth.api_key,
             openai_api_version=self.config.model_auth.version,
             azure_endpoint=self.config.model_auth.url,
+            seed=self.config.model_params.seed,
             max_tokens=self.config.model_params.max_tokens,
             temperature=self.config.model_params.temperature,
         )
