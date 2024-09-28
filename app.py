@@ -68,8 +68,7 @@ def create_answer(prompt):
 
 
 def display_answer():
-    for message in st.session_state.messages:
-        print(message)
+    for i, message in enumerate(st.session_state.messages):
         with st.chat_message(message["content"].type):
             st.markdown(message["content"].content)
 
@@ -91,6 +90,9 @@ def fbcb(response):
     last_entry = st.session_state.messages[-1]  # get the last entry
     last_entry.update({"feedback": response})  # update the last entry
     st.session_state.messages[-1] = last_entry  # replace the last entry
+
+    st.markdown("✔️ Feedback received!")
+    # st.markdown(f"Feedback: {response}")
 
     # Create a new feedback by changing the key of feedback component.
     st.session_state.fbk = str(uuid.uuid4())
@@ -174,12 +176,12 @@ if prompt := st.chat_input("Write your query here..."):
     st.session_state.question_state = True
 
 if st.session_state.question_state:
-    create_answer(prompt)
     display_answer()
+    create_answer(prompt)
 
     streamlit_feedback(
-        feedback_type="thumbs",
-        optional_text_label="[Optional]",
+        feedback_type="faces",
+        optional_text_label="How was this response?",
         align="flex-start",
         key=st.session_state.fbk,
         on_submit=fbcb,
