@@ -9,6 +9,7 @@ langchain-openai
 langsmith
 pydantic
 streamlit
+streamlit-feedback
 toml
 hydra-core
 omegaconf

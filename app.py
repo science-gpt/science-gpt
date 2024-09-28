@@ -4,22 +4,97 @@ from types import SimpleNamespace
 
 sys.path.insert(0, "./src")
 
+import uuid
+
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from streamlit_feedback import streamlit_feedback
 
 from data_broker.data_broker import DataBroker
 from orchestrator.chat_orchestrator import ChatOrchestrator
 
 st.title("Science-GPT Prototype")
 
+st.session_state.orchestrator = ChatOrchestrator()
+st.session_state.databroker = DataBroker()
+
+if "question_state" not in st.session_state:
+    st.session_state.question_state = False
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
     st.session_state.cost = 0.0
-    st.session_state.orchestrator = ChatOrchestrator()
-    st.session_state.databroker = DataBroker()
+
+if "fbk" not in st.session_state:
+    st.session_state.fbk = str(uuid.uuid4())
 
 if "show_textbox" not in st.session_state:
     st.session_state.show_textbox = False
+
+
+def create_answer(prompt):
+    if prompt is None:
+        return
+
+    with st.chat_message("User"):
+        st.markdown(prompt)
+
+    with st.chat_message("AI"):
+        message_placeholder = st.empty()
+
+        query_config = SimpleNamespace(
+            seed=seed,
+            temperature=temperature,
+            top_k=top_k,
+            moderationfilter=moderationfilter,
+            onlyusecontext=onlyusecontext,
+        )
+        response, cost = st.session_state.orchestrator.triage_query(
+            prompt, query_config, chat_history=st.session_state.messages
+        )
+        message_placeholder.markdown(response)
+        st.session_state.cost += cost
+
+    st.session_state.messages.append(
+        {
+            "content": HumanMessage(content=prompt),
+        }
+    )
+    st.session_state.messages.append(
+        {
+            "content": AIMessage(content=response),
+        }
+    )
+
+
+def display_answer():
+    for message in st.session_state.messages:
+        print(message)
+        with st.chat_message(message["content"].type):
+            st.markdown(message["content"].content)
+
+        if "feedback" not in message:
+            continue
+        # If there is no feedback show N/A
+        if "feedback" in message:
+            st.markdown(f"Feedback: {message['feedback']}")
+        else:
+            st.markdown("Feedback: N/A")
+
+
+def fbcb(response):
+    """Update the history with feedback.
+
+    The question and answer are already saved in history.
+    Now we will add the feedback in that history entry.
+    """
+    last_entry = st.session_state.messages[-1]  # get the last entry
+    last_entry.update({"feedback": response})  # update the last entry
+    st.session_state.messages[-1] = last_entry  # replace the last entry
+
+    # Create a new feedback by changing the key of feedback component.
+    st.session_state.fbk = str(uuid.uuid4())
+
 
 with st.sidebar:
 
@@ -80,10 +155,6 @@ with st.sidebar:
     moderationfilter = st.checkbox("Moderation Filter")
     onlyusecontext = st.checkbox("Only Use Knowledge Base")
 
-for message in st.session_state.messages:
-    with st.chat_message(message.type):
-        st.markdown(message.content)
-
 # Logic to update system prompt
 if update_prompt:
     st.session_state.show_textbox = True
@@ -95,29 +166,21 @@ if st.session_state.get("show_textbox", False):
         st.session_state.orchestrator.update_system_prompt(new_prompt)
         st.session_state.show_textbox = False
         st.session_state.messages.append(
-            AIMessage(content="System prompt updated successfully!")
+            {"content": AIMessage(content="System prompt updated successfully!")}
         )
         st.rerun()
 
 if prompt := st.chat_input("Write your query here..."):
-    with st.chat_message("User"):
-        st.markdown(prompt)
+    st.session_state.question_state = True
 
-    with st.chat_message("AI"):
-        message_placeholder = st.empty()
+if st.session_state.question_state:
+    create_answer(prompt)
+    display_answer()
 
-        query_config = SimpleNamespace(
-            seed=seed,
-            temperature=temperature,
-            top_k=top_k,
-            moderationfilter=moderationfilter,
-            onlyusecontext=onlyusecontext,
-        )
-        response, cost = st.session_state.orchestrator.triage_query(
-            prompt, query_config, chat_history=st.session_state.messages
-        )
-        message_placeholder.markdown(response)
-        st.session_state.cost += cost
-
-    st.session_state.messages.append(HumanMessage(content=prompt))
-    st.session_state.messages.append(AIMessage(content=response))
+    streamlit_feedback(
+        feedback_type="thumbs",
+        optional_text_label="[Optional]",
+        align="flex-start",
+        key=st.session_state.fbk,
+        on_submit=fbcb,
+    )
