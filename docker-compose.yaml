@@ -1,0 +1,7 @@
+services:
+  science-gpt:
+    image: science-gpt
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./app/vectorstore:/usr/src/app/vectorstore
