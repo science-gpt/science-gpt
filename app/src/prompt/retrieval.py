@@ -1,8 +1,7 @@
 import os
 
-from langchain_community.vectorstores import Chroma
-
 from data_broker.data_broker import DataBroker
+from langchain_community.vectorstores import Chroma
 from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
 from prompt.base_prompt import PromptComponent, PromptDecorator
