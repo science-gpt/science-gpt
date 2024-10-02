@@ -26,6 +26,7 @@ class OpenAIChatModel(ChatModel):
             seed=self.config.model_params.seed,
             max_tokens=self.config.model_params.max_tokens,
             temperature=self.config.model_params.temperature,
+            top_p=self.config.model_params.top_p,
         )
 
     def __call__(self, query: str):

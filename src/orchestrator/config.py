@@ -7,6 +7,7 @@ class ModelParams(BaseModel):
     seed: Optional[str]
     temperature: Optional[float]
     max_tokens: Optional[int]
+    top_p: Optional[float]
 
 
 class ModelAuth(BaseModel):

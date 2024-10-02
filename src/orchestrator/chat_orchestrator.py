@@ -70,6 +70,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         self.config.model_params.temperature = query_config.temperature
         # self.config.model_params.max_tokens = query_config.max_tokens
         self.config.rag_params.top_k_retrieval = query_config.top_k
+        self.config.model_params.top_p = query_config.top_p
 
     def test_connection(self, local=False):
         """
@@ -95,6 +96,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         Returns the response text content (str) and cost (float)
         """
+        print(self.config)
 
         print(query_config)
 
