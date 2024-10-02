@@ -46,6 +46,7 @@ def create_answer(prompt):
             seed=seed,
             temperature=temperature,
             top_k=top_k,
+            top_p=top_p,
             moderationfilter=moderationfilter,
             onlyusecontext=onlyusecontext,
         )
@@ -153,6 +154,8 @@ with st.sidebar:
         "Temperature", options=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0], value=0.2
     )
     top_k = st.slider("Top K", 0, 20, 1)
+
+    top_p = st.slider("top_p", 0, 1, 1)
 
     moderationfilter = st.checkbox("Moderation Filter")
     onlyusecontext = st.checkbox("Only Use Knowledge Base")
