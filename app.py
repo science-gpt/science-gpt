@@ -32,7 +32,6 @@ if "messages" not in st.session_state:
 
 if "survey" not in st.session_state:
     st.session_state.survey = StreamlitSurvey()
-    st.session_state.submitted = False
     st.session_state.feedback = []
 
 if "fbk" not in st.session_state:
@@ -43,55 +42,53 @@ if "show_textbox" not in st.session_state:
 
 
 def create_answer(prompt):
-    with st.session_state.mcontainer:
-        if prompt is None:
-            return
+    if prompt is None:
+        return
 
-        with st.chat_message("User"):
-            st.markdown(prompt)
+    with st.chat_message("User"):
+        st.markdown(prompt)
 
-        with st.chat_message("AI"):
-            message_placeholder = st.empty()
+    with st.chat_message("AI"):
+        message_placeholder = st.empty()
 
-            query_config = SimpleNamespace(
-                seed=seed,
-                temperature=temperature,
-                top_k=top_k,
-                top_p=top_p,
-                moderationfilter=moderationfilter,
-                onlyusecontext=onlyusecontext,
-            )
-            response, cost = st.session_state.orchestrator.triage_query(
-                prompt, query_config, chat_history=st.session_state.messages
-            )
-            message_placeholder.markdown(response)
-            st.session_state.cost += cost
-
-        st.session_state.messages.append(
-            {
-                "content": HumanMessage(content=prompt),
-            }
+        query_config = SimpleNamespace(
+            seed=seed,
+            temperature=temperature,
+            top_k=top_k,
+            top_p=top_p,
+            moderationfilter=moderationfilter,
+            onlyusecontext=onlyusecontext,
         )
-        st.session_state.messages.append(
-            {
-                "content": AIMessage(content=response),
-            }
+        response, cost = st.session_state.orchestrator.triage_query(
+            prompt, query_config, chat_history=st.session_state.messages
         )
+        message_placeholder.markdown(response)
+        st.session_state.cost += cost
+
+    st.session_state.messages.append(
+        {
+            "content": HumanMessage(content=prompt),
+        }
+    )
+    st.session_state.messages.append(
+        {
+            "content": AIMessage(content=response),
+        }
+    )
 
 
 def display_answer():
-    with st.session_state.mcontainer:
-        for i, message in enumerate(st.session_state.messages):
-            with st.chat_message(message["content"].type):
-                st.markdown(message["content"].content)
+    for i, message in enumerate(st.session_state.messages):
+        with st.chat_message(message["content"].type):
+            st.markdown(message["content"].content)
 
-            if "feedback" not in message:
-                continue
-            # If there is no feedback show N/A
-            if "feedback" in message:
-                st.markdown(f"Feedback: {message['feedback']}")
-            else:
-                st.markdown("Feedback: N/A")
+        if "feedback" not in message:
+            continue
+        # If there is no feedback show N/A
+        if "feedback" in message:
+            st.markdown(f"Feedback: {message['feedback']}")
+        else:
+            st.markdown("Feedback: N/A")
 
 
 def fbcb(response):
@@ -100,16 +97,15 @@ def fbcb(response):
     The question and answer are already saved in history.
     Now we will add the feedback in that history entry.
     """
-    with st.session_state.mcontainer:
-        last_entry = st.session_state.messages[-1]  # get the last entry
-        last_entry.update({"feedback": response})  # update the last entry
-        st.session_state.messages[-1] = last_entry  # replace the last entry
+    last_entry = st.session_state.messages[-1]  # get the last entry
+    last_entry.update({"feedback": response})  # update the last entry
+    st.session_state.messages[-1] = last_entry  # replace the last entry
 
-        st.markdown("✔️ Feedback Received!")
-        # st.markdown(f"Feedback: {response}")
+    st.markdown("✔️ Feedback Received!")
+    # st.markdown(f"Feedback: {response}")
 
-        # Create a new feedback by changing the key of feedback component.
-        st.session_state.fbk = str(uuid.uuid4())
+    # Create a new feedback by changing the key of feedback component.
+    st.session_state.fbk = str(uuid.uuid4())
 
 
 def surveycb():
@@ -186,8 +182,6 @@ with st.sidebar:
 
 chat_tab, survey_tab = st.tabs(["Chat", "Survey"])
 with survey_tab:
-    st.session_state.survey_form = st.form("form", clear_on_submit=True)
-
     st.text("Please complete this short survey sharing your experiences with the team!")
     overall = st.session_state.survey.radio(
         "How was your overall experience?",
@@ -236,47 +230,37 @@ with survey_tab:
 
 
 with chat_tab:
-    with st.container():
+    # Logic to update system prompt
+    if update_prompt:
+        st.session_state.show_textbox = True
 
-        # Logic to update system prompt
-        if update_prompt:
-            st.session_state.show_textbox = True
-
-        if st.session_state.get("show_textbox", False):
-            current_prompt = st.session_state.orchestrator.system_prompt
-            new_prompt = st.text_area("Modify the system prompt:", value=current_prompt)
-            if st.button("Submit New Prompt"):
-                st.session_state.orchestrator.update_system_prompt(new_prompt)
-                st.session_state.show_textbox = False
-                st.session_state.messages.append(
-                    {
-                        "content": AIMessage(
-                            content="System prompt updated successfully!"
-                        )
-                    }
-                )
-                st.rerun()
-
-        st.session_state.mcontainer = st.container(height=550, border=False)
-
-        with st.container():
-            if prompt := st.chat_input("Write your query here..."):
-                st.session_state.question_state = True
-            button_b_pos = "3rem"
-            button_css = float_css_helper(
-                width="2.2rem", bottom=button_b_pos, transition=0
+    if st.session_state.get("show_textbox", False):
+        current_prompt = st.session_state.orchestrator.system_prompt
+        new_prompt = st.text_area("Modify the system prompt:", value=current_prompt)
+        if st.button("Submit New Prompt"):
+            st.session_state.orchestrator.update_system_prompt(new_prompt)
+            st.session_state.show_textbox = False
+            st.session_state.messages.append(
+                {"content": AIMessage(content="System prompt updated successfully!")}
             )
-            float_parent(css=button_css)
+            st.rerun()
 
-        if st.session_state.question_state:
+    with st.container():
+        if prompt := st.chat_input("Write your query here..."):
+            st.session_state.question_state = True
+        button_b_pos = "3rem"
+        button_css = float_css_helper(width="2.2rem", bottom=button_b_pos, transition=0)
+        float_parent(css=button_css)
+
+    if st.session_state.question_state:
+        with st.container(height=550, border=False):
             display_answer()
             create_answer(prompt)
 
-            with st.session_state.mcontainer:
-                streamlit_feedback(
-                    feedback_type="faces",
-                    optional_text_label="How was this response?",
-                    align="flex-start",
-                    key=st.session_state.fbk,
-                    on_submit=fbcb,
-                )
+            streamlit_feedback(
+                feedback_type="faces",
+                optional_text_label="How was this response?",
+                align="flex-start",
+                key=st.session_state.fbk,
+                on_submit=fbcb,
+            )
