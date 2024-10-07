@@ -2,7 +2,7 @@ services:
   science-gpt:
     image: science-gpt
     expose:
-      - "8501"  # Exposed only to the Docker network
+      - "8501"
     volumes:
       - ./app/vectorstore:/usr/src/app/vectorstore
     networks:
@@ -11,7 +11,7 @@ services:
   nginx:
     image: nginx:latest
     ports:
-      - "80:80"  # Exposed to the host for public access
+      - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
     depends_on:
