@@ -186,8 +186,6 @@ with st.sidebar:
 
 chat_tab, survey_tab = st.tabs(["Chat", "Survey"])
 with survey_tab:
-
-    st.subheader("Survey")
     st.session_state.survey_form = st.form("form", clear_on_submit=True)
 
     st.text("Please complete this short survey sharing your experiences with the team!")
