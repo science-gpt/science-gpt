@@ -29,6 +29,7 @@ if "messages" not in st.session_state:
 
 if "survey" not in st.session_state:
     st.session_state.survey = StreamlitSurvey()
+    st.session_state.submitted = False
     st.session_state.feedback = []
 
 if "fbk" not in st.session_state:
@@ -36,6 +37,12 @@ if "fbk" not in st.session_state:
 
 if "show_textbox" not in st.session_state:
     st.session_state.show_textbox = False
+
+
+if "pages" not in st.session_state:
+    st.session_state.pages = st.session_state.survey.pages(
+        3, progress_bar=True, on_submit=surveycb
+    )
 
 
 def create_answer(prompt):
@@ -98,7 +105,7 @@ def fbcb(response):
     last_entry.update({"feedback": response})  # update the last entry
     st.session_state.messages[-1] = last_entry  # replace the last entry
 
-    st.markdown("✔️ Feedback received!")
+    st.markdown("✔️ Feedback Received!")
     # st.markdown(f"Feedback: {response}")
 
     # Create a new feedback by changing the key of feedback component.
@@ -107,10 +114,10 @@ def fbcb(response):
 
 def surveycb():
     with survey_tab:
-        st.session_state.submitted = True
-        st.session_state.feedback.append(st.session_state.survey)
-        print(st.session_state.feedback[-1].data)
-        st.toast("Your responses have been recorded. Thank you!")
+        with st.session_state.survey_form:
+            st.session_state.feedback.append(st.session_state.survey)
+            st.toast("Your feedback has been recorded.  Thank you!", icon="🎉")
+            print(st.session_state.feedback[-1].data)
 
 
 with st.sidebar:
@@ -212,53 +219,59 @@ with chat_tab:
             on_submit=fbcb,
         )
 
+
 with survey_tab:
 
     st.subheader("Survey")
+    st.session_state.survey_form = st.form("form", clear_on_submit=True)
 
-    st.text("Please complete this short survey sharing your experiences with the team!")
-    overall = st.session_state.survey.radio(
-        "How was your overall experience?",
-        options=["😞", "🙁", "😐", "🙂", "😀"],
-        index=3,
-        horizontal=True,
-        id="overall",
-    )
+    with st.session_state.survey_form:
 
-    if overall in ["😞", "🙁"]:
-        overall_1 = st.session_state.survey.text_area(
-            "Is there something we can do better?", id="overall_1"
+        st.text(
+            "Please complete this short survey sharing your experiences with the team!"
+        )
+        overall = st.session_state.survey.radio(
+            "How was your overall experience?",
+            options=["😞", "🙁", "😐", "🙂", "😀"],
+            index=3,
+            horizontal=True,
+            id="overall",
         )
 
-    responsequality = st.session_state.survey.radio(
-        "Was the model able to answer you questions?",
-        options=["Yes 👍", "Kind of", "No 👎"],
-        index=0,
-        horizontal=True,
-        id="responsequality",
-    )
+        if overall in ["😞", "🙁"]:
+            overall_1 = st.session_state.survey.text_area(
+                "Is there something we can do better?", id="overall_1"
+            )
 
-    if responsequality in ["Kind of", "No 👎"]:
-        responsequality_1 = st.session_state.survey.text_input(
-            "What was the question that the model failed to answer?",
-            id="responsequality_1",
-        )
-        responsequality_2 = st.session_state.survey.text_area(
-            "What kind of response / format do you want to get back from the model?",
-            id="responsequality_2",
+        responsequality = st.session_state.survey.radio(
+            "Was the model able to answer you questions?",
+            options=["Yes 👍", "Kind of", "No 👎"],
+            index=0,
+            horizontal=True,
+            id="responsequality",
         )
 
-    timesaved = st.number_input(
-        "How many minutes of work has your LLM chat saved?",
-        min_value=0,
-        max_value=120,
-        value=0,
-    )
+        if responsequality in ["Kind of", "No 👎"]:
+            responsequality_1 = st.session_state.survey.text_input(
+                "What was the question that the model failed to answer?",
+                id="responsequality_1",
+            )
+            responsequality_2 = st.session_state.survey.text_area(
+                "What kind of response / format do you want to get back from the model?",
+                id="responsequality_2",
+            )
 
-    visuals = st.session_state.survey.text_area(
-        "Is there anyway we can improve the design / Make the application easier to use?"
-    )
+        timesaved = st.number_input(
+            "How many minutes of work has your LLM chat saved?",
+            min_value=0,
+            max_value=120,
+            value=0,
+        )
 
-    visuals = st.session_state.survey.text_area("Other comments and feedback:")
+        visuals = st.session_state.survey.text_area(
+            "Is there anyway we can improve the design / Make the application easier to use?"
+        )
+        visuals = st.session_state.survey.text_area("Other comments and feedback:")
 
-    st.text("Thank you for participating in ScienceGPT Alpha!")
+        st.form_submit_button("Submit", on_click=surveycb)
+        st.text("Thank you for participating in ScienceGPT Alpha!")
