@@ -1,6 +1,7 @@
 services:
   science-gpt:
-    image: science-gpt
+    build:
+      context: ./
     expose:
       - "8501"
     volumes:
