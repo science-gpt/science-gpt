@@ -8,9 +8,11 @@ class ModelParams(BaseModel):
     temperature: Optional[float]
     max_tokens: Optional[int]
     top_p: Optional[float]
+    num_ctx: Optional[int]
 
 
 class ModelAuth(BaseModel):
+    macbook_endpoint: Optional[str]
     url: Optional[str]
     api_key: Optional[str]
     version: Optional[str]

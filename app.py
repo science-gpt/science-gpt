@@ -13,6 +13,8 @@ from streamlit_feedback import streamlit_feedback
 from data_broker.data_broker import DataBroker
 from orchestrator.chat_orchestrator import ChatOrchestrator
 
+from models.models import LocalAIModel, OpenAIChatModel
+
 st.title("Science-GPT Prototype")
 
 st.session_state.orchestrator = ChatOrchestrator()
@@ -35,7 +37,8 @@ if "show_textbox" not in st.session_state:
 def create_answer(prompt):
     if prompt is None:
         return
-
+    
+    
     with st.chat_message("User"):
         st.markdown(prompt)
 
@@ -50,9 +53,24 @@ def create_answer(prompt):
             moderationfilter=moderationfilter,
             onlyusecontext=onlyusecontext,
         )
+        local = True
+        # Check if we are using a local model
+        if local:
+            st.session_state.orchestrator.llm = LocalAIModel(st.session_state.orchestrator.config)
+        else:
+            st.session_state.orchestrator.llm = OpenAIChatModel(st.session_state.orchestrator.config)
+
+        # Now call the triage_query function without the 'local' argument
         response, cost = st.session_state.orchestrator.triage_query(
-            prompt, query_config, chat_history=st.session_state.messages
+            prompt, query_config, chat_history=st.session_state.messages, local=local
         )
+
+
+#        response, cost = st.session_state.orchestrator.triage_query(
+#            prompt, query_config, chat_history=st.session_state.messages
+#        )
+ 
+ 
         message_placeholder.markdown(response)
         st.session_state.cost += cost
 
@@ -109,9 +127,10 @@ with st.sidebar:
 
     if local:
         model = st.selectbox(
-            "Model", ["Llama 2", "Llama 3.1"], index=None, placeholder="Select a model"
+            "Model", ["llama 3.2:3B-instruct-fp16", "deepseek-v2:16b"], index=None, placeholder="Select a model"
         )
-        st.markdown("*Local models are not yet supported.*")
+        st.session_state.selected_model = model  # Save the selected model in session state
+        #st.markdown("*Local models are not yet supported.*")
     else:
         model = st.selectbox(
             "Model", ["GPT-3.5", "GPT-4.0"], index=0, placeholder="Select a model"
@@ -130,11 +149,17 @@ with st.sidebar:
         with st.status("Testing connection...") as status:
 
             if local:
+                st.session_state.orchestrator.load_secrets(model)
+
+                time.sleep(1)
+                st.write("Found model credentials.")
+                time.sleep(1)
+                # send test prompt to model
                 status.update(
-                    label="Local models are not yet supported.",
-                    state="error",
-                    expanded=False,
+                    label="Connection established!", state="complete", expanded=False
                 )
+ 
+
 
             else:
                 # update model secrets in orchestrator

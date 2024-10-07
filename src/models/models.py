@@ -4,7 +4,7 @@ from langchain_community.callbacks import get_openai_callback
 from langchain_openai import AzureChatOpenAI
 
 from orchestrator.config import SystemConfig
-
+import requests
 
 class ChatModel(ABC):
     def __init__(self, config: SystemConfig) -> None:
@@ -33,6 +33,45 @@ class OpenAIChatModel(ChatModel):
         with get_openai_callback() as cb:
             response = self.model.invoke(query)
             return response, cb
+    
+    def test_connection(self):
+        # TODO: implement test connection method
+        return True
+
+class LocalAIModel(ChatModel):
+    def __init__(self, config: SystemConfig):
+        super().__init__(config)
+        self.macbook_endpoint=self.config.model_auth.macbook_endpoint
+        self.macbookmodel = {
+            "model": self.config.model_name,
+            #"prompt": query,
+            "stream": False,
+            "options": {
+                "temperature": self.config.model_params.temperature,
+                "seed": self.config.model_params.seed,
+                "top_p": config.model_params.top_p,
+                "num_ctx": self.config.model_params.num_ctx
+            }
+        }
+        
+        
+
+    def __call__(self, query: str):
+        # Add the query to the request body when calling the model
+        self.macbookmodel["prompt"] = query
+        response = requests.post("http://macbook1.sciencegpt.ca:11434/api/generate", json=self.macbookmodel, stream=False)
+        print(response)
+    #    return response
+            # Check if the response was successful
+        if response.status_code == 200:
+            response_json = response.json()  # Assuming the response is in JSON format
+            # Extract the relevant content from the response
+            return response_json, 0.0  # Return the response content and a dummy cost
+        else:
+            # Handle error response
+            print(f"Error: {response.status_code}, {response.text}")
+            return "Error occurred", 0.0  # You can customize the error handling
+
 
     def test_connection(self):
         # TODO: implement test connection method
