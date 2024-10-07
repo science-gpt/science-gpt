@@ -217,7 +217,6 @@ with survey_tab:
     st.subheader("Survey")
 
     st.text("Please complete this short survey sharing your experiences with the team!")
-
     overall = st.session_state.survey.radio(
         "How was your overall experience?",
         options=["😞", "🙁", "😐", "🙂", "😀"],
@@ -260,6 +259,6 @@ with survey_tab:
         "Is there anyway we can improve the design / Make the application easier to use?"
     )
 
-    st.button("Submit", on_click=surveycb)
+    visuals = st.session_state.survey.text_area("Other comments and feedback:")
 
     st.text("Thank you for participating in ScienceGPT Alpha!")
