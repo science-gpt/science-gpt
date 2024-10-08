@@ -65,9 +65,11 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             self.config.model_auth.version = secrets["gpt35-api"]["api_version"]
             self.config.model_auth.api_key = secrets["gpt35-api"]["api_key"]
             self.config.model_auth.url = secrets["gpt35-api"]["azure_endpoint"]
-        else: 
-            self.config.model_auth.macbook_endpoint = secrets["localmodel"]["macbook_endpoint"]
-            self.config.model_name=model
+        else:
+            self.config.model_auth.macbook_endpoint = secrets["localmodel"][
+                "macbook_endpoint"
+            ]
+            self.config.model_name = model
 
     def set_model_config(self, query_config):
         self.config.model_params.seed = query_config.seed
@@ -108,7 +110,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         self.set_model_config(query_config)
 
-    # Select the model dynamically based on whether we're using local or remote models
+        # Select the model dynamically based on whether we're using local or remote models
         if local:
             model = LocalAIModel(self.config)
         else:
