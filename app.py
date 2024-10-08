@@ -16,9 +16,8 @@ from streamlit_survey import StreamlitSurvey
 float_init(theme=True, include_unstable_primary=False)
 
 from data_broker.data_broker import DataBroker
-from orchestrator.chat_orchestrator import ChatOrchestrator
-
 from models.models import LocalAIModel, OpenAIChatModel
+from orchestrator.chat_orchestrator import ChatOrchestrator
 
 st.title("Science-GPT Prototype")
 

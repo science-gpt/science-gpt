@@ -2,8 +2,7 @@ import os
 
 import toml
 
-from models.models import OpenAIChatModel
-from models.models import LocalAIModel
+from models.models import LocalAIModel, OpenAIChatModel
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
