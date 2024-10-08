@@ -44,13 +44,12 @@ if "show_textbox" not in st.session_state:
 
 
 def create_answer(prompt):
-    #trying to capture model session state
+    # trying to capture model session state
     st.session_state.orchestrator.load_secrets(model)
-    
+
     if prompt is None:
         return
-    
-    
+
     with st.chat_message("User"):
         st.markdown(prompt)
 
@@ -69,34 +68,37 @@ def create_answer(prompt):
         print(f"Local: {local}")
         # Check if we are using a local model
         if local:
-            st.session_state.orchestrator.llm = LocalAIModel(st.session_state.orchestrator.config)
+            st.session_state.orchestrator.llm = LocalAIModel(
+                st.session_state.orchestrator.config
+            )
         else:
-            st.session_state.orchestrator.llm = OpenAIChatModel(st.session_state.orchestrator.config)
+            st.session_state.orchestrator.llm = OpenAIChatModel(
+                st.session_state.orchestrator.config
+            )
 
         # Now call the triage_query function without the 'local' argument
         response, cost = st.session_state.orchestrator.triage_query(
             prompt, query_config, chat_history=st.session_state.messages, local=local
         )
 
+        #        response, cost = st.session_state.orchestrator.triage_query(
+        #            prompt, query_config, chat_history=st.session_state.messages
+        #        )
 
-#        response, cost = st.session_state.orchestrator.triage_query(
-#            prompt, query_config, chat_history=st.session_state.messages
-#        )
- 
         # If using a local model, parse the response as a dict
         # Handle the response for local and non-local models differently
         if local:
             # Assuming response is a dictionary for local models
             response_json = response
-            response_text = response_json.get('response', '')
+            response_text = response_json.get("response", "")
         else:
             # For non-local models, the response might contain metadata and content
             # Ensure you extract just the 'content' field
-                response_text = str(response.content)
-        
+            response_text = str(response.content)
+
         # Display the extracted response content
         message_placeholder.markdown(response_text)
-    
+
     # Append the messages to session state
     st.session_state.messages.append(
         {
@@ -160,11 +162,16 @@ with st.sidebar:
 
     if local:
         model = st.selectbox(
-            "Model", ["llama3.2:3B-instruct-fp16", "deepseek-v2:16b"], index=None, placeholder="Select a model"
+            "Model",
+            ["llama3.2:3B-instruct-fp16", "deepseek-v2:16b"],
+            index=None,
+            placeholder="Select a model",
         )
-        st.session_state.selected_model = model  # Save the selected model in session state
+        st.session_state.selected_model = (
+            model  # Save the selected model in session state
+        )
         st.session_state.get(model)
-        #st.markdown("*Local models are not yet supported.*")
+        # st.markdown("*Local models are not yet supported.*")
     else:
         model = st.selectbox(
             "Model", ["GPT-3.5", "GPT-4.0"], index=0, placeholder="Select a model"
@@ -192,8 +199,6 @@ with st.sidebar:
                 status.update(
                     label="Connection established!", state="complete", expanded=False
                 )
- 
-
 
             else:
                 # update model secrets in orchestrator
