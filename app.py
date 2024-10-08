@@ -6,9 +6,14 @@ sys.path.insert(0, "./src")
 
 import uuid
 
+import numpy as np
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from streamlit_feedback import streamlit_feedback
+from streamlit_float import *
+from streamlit_survey import StreamlitSurvey
+
+float_init(theme=True, include_unstable_primary=False)
 
 from data_broker.data_broker import DataBroker
 from orchestrator.chat_orchestrator import ChatOrchestrator
@@ -24,6 +29,10 @@ if "question_state" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
     st.session_state.cost = 0.0
+
+if "survey" not in st.session_state:
+    st.session_state.survey = StreamlitSurvey()
+    st.session_state.feedback = []
 
 if "fbk" not in st.session_state:
     st.session_state.fbk = str(uuid.uuid4())
@@ -92,11 +101,18 @@ def fbcb(response):
     last_entry.update({"feedback": response})  # update the last entry
     st.session_state.messages[-1] = last_entry  # replace the last entry
 
-    st.markdown("✔️ Feedback received!")
+    st.markdown("✔️ Feedback Received!")
     # st.markdown(f"Feedback: {response}")
 
     # Create a new feedback by changing the key of feedback component.
     st.session_state.fbk = str(uuid.uuid4())
+
+
+def surveycb():
+    with st.session_state.survey_form:
+        st.session_state.feedback.append(st.session_state.survey)
+        st.toast("Your feedback has been recorded.  Thank you!", icon="🎉")
+        print(st.session_state.feedback[-1].data)
 
 
 with st.sidebar:
@@ -151,41 +167,100 @@ with st.sidebar:
 
     seed = st.text_input("Seed", value=42)
     temperature = st.select_slider(
-        "Temperature", options=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0], value=0.2
+        "Temperature", options=[round(0.1 * i, 1) for i in range(0, 10)], value=0.2
     )
-    top_k = st.slider("Top K", 0, 20, 1)
 
-    top_p = st.slider("top_p", 0, 1, 1)
+    top_p = st.select_slider(
+        "Top P", options=[round(0.1 * i, 1) for i in range(0, 10)], value=0.2
+    )
+
+    top_k = st.slider("Top K", 0, 20, 1)
 
     moderationfilter = st.checkbox("Moderation Filter")
     onlyusecontext = st.checkbox("Only Use Knowledge Base")
 
-# Logic to update system prompt
-if update_prompt:
-    st.session_state.show_textbox = True
 
-if st.session_state.get("show_textbox", False):
-    current_prompt = st.session_state.orchestrator.system_prompt
-    new_prompt = st.text_area("Modify the system prompt:", value=current_prompt)
-    if st.button("Submit New Prompt"):
-        st.session_state.orchestrator.update_system_prompt(new_prompt)
-        st.session_state.show_textbox = False
-        st.session_state.messages.append(
-            {"content": AIMessage(content="System prompt updated successfully!")}
-        )
-        st.rerun()
-
-if prompt := st.chat_input("Write your query here..."):
-    st.session_state.question_state = True
-
-if st.session_state.question_state:
-    display_answer()
-    create_answer(prompt)
-
-    streamlit_feedback(
-        feedback_type="faces",
-        optional_text_label="How was this response?",
-        align="flex-start",
-        key=st.session_state.fbk,
-        on_submit=fbcb,
+chat_tab, survey_tab = st.tabs(["Chat", "Survey"])
+with survey_tab:
+    st.text("Please complete this short survey sharing your experiences with the team!")
+    overall = st.session_state.survey.radio(
+        "How was your overall experience?",
+        options=["😞", "🙁", "😐", "🙂", "😀"],
+        index=3,
+        horizontal=True,
+        id="overall",
     )
+
+    if overall in ["😞", "🙁"]:
+        overall_1 = st.session_state.survey.text_area(
+            "Is there something we can do better?", id="overall_1"
+        )
+
+    responsequality = st.session_state.survey.radio(
+        "Was the model able to answer you questions?",
+        options=["Yes 👍", "No 👎"],
+        index=0,
+        horizontal=True,
+        id="responsequality",
+    )
+
+    if responsequality in ["Kind of", "No 👎"]:
+        responsequality_1 = st.session_state.survey.text_input(
+            "What was the question that the model failed to answer?",
+            id="responsequality_1",
+        )
+        responsequality_2 = st.session_state.survey.text_area(
+            "What kind of response / format do you want to get back from the model?",
+            id="responsequality_2",
+        )
+
+    timesaved = st.number_input(
+        "How many minutes of work has your LLM chat saved?",
+        min_value=0,
+        max_value=120,
+        value=0,
+    )
+
+    visuals = st.session_state.survey.text_area(
+        "Is there anyway we can improve the design / Make the application easier to use?"
+    )
+    visuals = st.session_state.survey.text_area("Other comments and feedback:")
+
+    st.button("Submit", on_click=surveycb)
+
+
+with chat_tab:
+    # Logic to update system prompt
+    if update_prompt:
+        st.session_state.show_textbox = True
+
+    if st.session_state.get("show_textbox", False):
+        current_prompt = st.session_state.orchestrator.system_prompt
+        new_prompt = st.text_area("Modify the system prompt:", value=current_prompt)
+        if st.button("Submit New Prompt"):
+            st.session_state.orchestrator.update_system_prompt(new_prompt)
+            st.session_state.show_textbox = False
+            st.session_state.messages.append(
+                {"content": AIMessage(content="System prompt updated successfully!")}
+            )
+            st.rerun()
+
+    with st.container():
+        if prompt := st.chat_input("Write your query here..."):
+            st.session_state.question_state = True
+        button_b_pos = "3rem"
+        button_css = float_css_helper(width="2.2rem", bottom=button_b_pos, transition=0)
+        float_parent(css=button_css)
+
+    if st.session_state.question_state:
+        with st.container(height=550, border=False):
+            display_answer()
+            create_answer(prompt)
+
+            streamlit_feedback(
+                feedback_type="faces",
+                optional_text_label="How was this response?",
+                align="flex-start",
+                key=st.session_state.fbk,
+                on_submit=fbcb,
+            )
