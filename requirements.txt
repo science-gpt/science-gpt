@@ -10,6 +10,8 @@ langsmith
 pydantic
 streamlit
 streamlit-feedback
+streamlit-survey
+streamlit-float
 toml
 hydra-core
 omegaconf
