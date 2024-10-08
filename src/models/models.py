@@ -32,6 +32,7 @@ class OpenAIChatModel(ChatModel):
     def __call__(self, query: str):
         with get_openai_callback() as cb:
             response = self.model.invoke(query)
+            print(response)
             return response, cb
     
     def test_connection(self):
@@ -59,8 +60,9 @@ class LocalAIModel(ChatModel):
     def __call__(self, query: str):
         # Add the query to the request body when calling the model
         self.macbookmodel["prompt"] = query
-        response = requests.post("http://macbook1.sciencegpt.ca:11434/api/generate", json=self.macbookmodel, stream=False)
+        response = requests.post(self.macbook_endpoint, json=self.macbookmodel, stream=False)
         print(response)
+        print(response.json())
     #    return response
             # Check if the response was successful
         if response.status_code == 200:

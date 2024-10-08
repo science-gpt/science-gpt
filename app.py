@@ -35,6 +35,9 @@ if "show_textbox" not in st.session_state:
 
 
 def create_answer(prompt):
+    #trying to capture model session state
+    st.session_state.orchestrator.load_secrets(model)
+    
     if prompt is None:
         return
     
@@ -70,10 +73,19 @@ def create_answer(prompt):
 #            prompt, query_config, chat_history=st.session_state.messages
 #        )
  
- 
-        message_placeholder.markdown(response)
-        st.session_state.cost += cost
+        # If using a local model, parse the response as a dict
+        if local:
+            # Assuming response is already a dictionary
+            response_json = response
 
+            # Extract the relevant response text
+            response_text = response_json.get('response', '')
+            
+            # Optional: Handle other fields if needed
+            #context_data = response_json.get('context', [])
+    message_placeholder.markdown(response_text)
+    
+    
     st.session_state.messages.append(
         {
             "content": HumanMessage(content=prompt),
@@ -81,7 +93,7 @@ def create_answer(prompt):
     )
     st.session_state.messages.append(
         {
-            "content": AIMessage(content=response),
+            "content": AIMessage(content=response_text),
         }
     )
 
@@ -127,9 +139,10 @@ with st.sidebar:
 
     if local:
         model = st.selectbox(
-            "Model", ["llama 3.2:3B-instruct-fp16", "deepseek-v2:16b"], index=None, placeholder="Select a model"
+            "Model", ["llama3.2:3B-instruct-fp16", "deepseek-v2:16b"], index=None, placeholder="Select a model"
         )
         st.session_state.selected_model = model  # Save the selected model in session state
+        st.session_state.get(model)
         #st.markdown("*Local models are not yet supported.*")
     else:
         model = st.selectbox(
@@ -174,7 +187,7 @@ with st.sidebar:
                     label="Connection established!", state="complete", expanded=False
                 )
 
-    seed = st.text_input("Seed", value=42)
+    seed = st.number_input("Seed", value=0)
     temperature = st.select_slider(
         "Temperature", options=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0], value=0.2
     )

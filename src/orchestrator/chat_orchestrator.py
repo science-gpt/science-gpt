@@ -65,8 +65,9 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             self.config.model_auth.version = secrets["gpt35-api"]["api_version"]
             self.config.model_auth.api_key = secrets["gpt35-api"]["api_key"]
             self.config.model_auth.url = secrets["gpt35-api"]["azure_endpoint"]
-        elif model == "llama 3.2:3B-instruct-fp16": 
+        else: 
             self.config.model_auth.macbook_endpoint = secrets["localmodel"]["macbook_endpoint"]
+            self.config.model_name=model
 
     def set_model_config(self, query_config):
         self.config.model_params.seed = query_config.seed
@@ -133,4 +134,4 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         response, cb = handler.call_llm(query)
 
-        return response.content, cb.total_cost
+        return response, cb
