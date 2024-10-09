@@ -4,13 +4,16 @@ from types import SimpleNamespace
 
 sys.path.insert(0, "./src")
 
+import logging
 import uuid
 
 import streamlit as st
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from streamlit_feedback import streamlit_feedback
 from streamlit_float import *
 from streamlit_survey import StreamlitSurvey
+
+from logs.logger import LogManager
 
 float_init(theme=True, include_unstable_primary=False)
 
@@ -21,6 +24,12 @@ st.title("Science-GPT Prototype")
 
 st.session_state.orchestrator = ChatOrchestrator()
 st.session_state.databroker = DataBroker()
+
+logger = LogManager(
+    __name__,
+    st.session_state.orchestrator.azure_logs_connection_string,
+    level=logging.INFO,
+)
 
 if "question_state" not in st.session_state:
     st.session_state.question_state = False
@@ -51,7 +60,7 @@ def create_answer(prompt):
         message_placeholder = st.empty()
 
         query_config = SimpleNamespace(
-            seed=seed,
+            seed=int(seed),
             temperature=temperature,
             top_k=top_k,
             top_p=top_p,
@@ -118,10 +127,12 @@ def fbcb(response):
 
 
 def surveycb():
-    with st.session_state.survey_form:
-        st.session_state.feedback.append(st.session_state.survey)
-        st.toast("Your feedback has been recorded.  Thank you!", icon="🎉")
-        print(st.session_state.feedback[-1].data)
+    st.session_state.feedback.append(st.session_state.survey)
+    logger.survey(
+        "Survey response received", xtra={"contents": st.session_state.survey}
+    )
+    st.toast("Your feedback has been recorded.  Thank you!", icon="🎉")
+    print(st.session_state.feedback[-1].data)
 
 
 with st.sidebar:
@@ -237,6 +248,9 @@ with chat_tab:
             st.session_state.show_textbox = False
             st.session_state.messages.append(
                 {"content": AIMessage(content="System prompt updated successfully!")}
+            )
+            logger.info(
+                "System prompt updated successfully", xtra={"prompt": new_prompt}
             )
             st.rerun()
 
