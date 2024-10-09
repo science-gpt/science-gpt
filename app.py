@@ -34,6 +34,9 @@ if "survey" not in st.session_state:
     st.session_state.survey = StreamlitSurvey()
     st.session_state.feedback = []
 
+if "automate" not in st.session_state:
+    st.session_state.automate = StreamlitSurvey()
+
 if "fbk" not in st.session_state:
     st.session_state.fbk = str(uuid.uuid4())
 
@@ -180,7 +183,45 @@ with st.sidebar:
     onlyusecontext = st.checkbox("Only Use Knowledge Base")
 
 
-chat_tab, survey_tab = st.tabs(["Chat", "Survey"])
+chat_tab, automate_tab, survey_tab = st.tabs(["Chat", "Automate", "Survey"])
+
+
+with chat_tab:
+    # Logic to update system prompt
+    if update_prompt:
+        st.session_state.show_textbox = True
+
+    if st.session_state.get("show_textbox", False):
+        current_prompt = st.session_state.orchestrator.system_prompt
+        new_prompt = st.text_area("Modify the system prompt:", value=current_prompt)
+        if st.button("Submit New Prompt"):
+            st.session_state.orchestrator.update_system_prompt(new_prompt)
+            st.session_state.show_textbox = False
+            st.session_state.messages.append(
+                {"content": AIMessage(content="System prompt updated successfully!")}
+            )
+            st.rerun()
+
+    with st.container():
+        if prompt := st.chat_input("Write your query here..."):
+            st.session_state.question_state = True
+        button_b_pos = "3rem"
+        button_css = float_css_helper(width="2.2rem", bottom=button_b_pos, transition=0)
+        float_parent(css=button_css)
+
+    if st.session_state.question_state:
+        with st.container(height=550, border=False):
+            display_answer()
+            create_answer(prompt)
+
+            streamlit_feedback(
+                feedback_type="faces",
+                optional_text_label="How was this response?",
+                align="flex-start",
+                key=st.session_state.fbk,
+                on_submit=fbcb,
+            )
+
 with survey_tab:
     st.text("Please complete this short survey sharing your experiences with the team!")
     overall = st.session_state.survey.radio(
@@ -227,40 +268,3 @@ with survey_tab:
     visuals = st.session_state.survey.text_area("Other comments and feedback:")
 
     st.button("Submit", on_click=surveycb)
-
-
-with chat_tab:
-    # Logic to update system prompt
-    if update_prompt:
-        st.session_state.show_textbox = True
-
-    if st.session_state.get("show_textbox", False):
-        current_prompt = st.session_state.orchestrator.system_prompt
-        new_prompt = st.text_area("Modify the system prompt:", value=current_prompt)
-        if st.button("Submit New Prompt"):
-            st.session_state.orchestrator.update_system_prompt(new_prompt)
-            st.session_state.show_textbox = False
-            st.session_state.messages.append(
-                {"content": AIMessage(content="System prompt updated successfully!")}
-            )
-            st.rerun()
-
-    with st.container():
-        if prompt := st.chat_input("Write your query here..."):
-            st.session_state.question_state = True
-        button_b_pos = "3rem"
-        button_css = float_css_helper(width="2.2rem", bottom=button_b_pos, transition=0)
-        float_parent(css=button_css)
-
-    if st.session_state.question_state:
-        with st.container(height=550, border=False):
-            display_answer()
-            create_answer(prompt)
-
-            streamlit_feedback(
-                feedback_type="faces",
-                optional_text_label="How was this response?",
-                align="flex-start",
-                key=st.session_state.fbk,
-                on_submit=fbcb,
-            )
