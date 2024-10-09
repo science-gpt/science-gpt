@@ -6,7 +6,6 @@ sys.path.insert(0, "./src")
 
 import uuid
 
-import numpy as np
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from streamlit_feedback import streamlit_feedback
@@ -62,12 +61,22 @@ def create_answer(prompt):
             moderationfilter=moderationfilter,
             onlyusecontext=onlyusecontext,
         )
-        response, cost = st.session_state.orchestrator.triage_query(
-            prompt, query_config, chat_history=st.session_state.messages
-        )
-        message_placeholder.markdown(response)
-        st.session_state.cost += cost
 
+        # Now call the triage_query function without the 'local' argument
+        response, cost = st.session_state.orchestrator.triage_query(
+            model,
+            prompt,
+            query_config,
+            chat_history=st.session_state.messages,
+        )
+
+        print(cost)
+        st.session_state.cost += float(cost)
+
+        # Display the extracted response content
+        message_placeholder.markdown(response)
+
+    # Append the messages to session state
     st.session_state.messages.append(
         {
             "content": HumanMessage(content=prompt),
@@ -124,17 +133,12 @@ with st.sidebar:
 
     update_prompt = st.button("Modify System Prompt")
 
-    local = st.toggle("Use Local Model", False)
-
-    if local:
-        model = st.selectbox(
-            "Model", ["Llama 2", "Llama 3.1"], index=None, placeholder="Select a model"
-        )
-        st.markdown("*Local models are not yet supported.*")
-    else:
-        model = st.selectbox(
-            "Model", ["GPT-3.5", "GPT-4.0"], index=0, placeholder="Select a model"
-        )
+    model = st.selectbox(
+        "Model",
+        ["GPT-3.5", "GPT-4.0", "llama3.2:3B-instruct-fp16", "deepseek-v2:16b"],
+        index=2,
+        placeholder="Select a model",
+    )
 
     col1, col2 = st.columns(2, vertical_alignment="center")
 
@@ -148,27 +152,18 @@ with st.sidebar:
     if test_con:
         with st.status("Testing connection...") as status:
 
-            if local:
-                status.update(
-                    label="Local models are not yet supported.",
-                    state="error",
-                    expanded=False,
-                )
+            # update model secrets in orchestrator
+            st.session_state.orchestrator.load_models(model)
 
-            else:
-                # update model secrets in orchestrator
+            time.sleep(1)
+            st.write("Found model credentials.")
+            time.sleep(1)
+            # send test prompt to model
+            status.update(
+                label="Connection established!", state="complete", expanded=False
+            )
 
-                st.session_state.orchestrator.load_secrets(model)
-
-                time.sleep(1)
-                st.write("Found model credentials.")
-                time.sleep(1)
-                # send test prompt to model
-                status.update(
-                    label="Connection established!", state="complete", expanded=False
-                )
-
-    seed = st.text_input("Seed", value=42)
+    seed = st.number_input("Seed", value=0)
     temperature = st.select_slider(
         "Temperature", options=[round(0.1 * i, 1) for i in range(0, 10)], value=0.2
     )
@@ -238,7 +233,7 @@ with survey_tab:
         )
 
     responsequality = st.session_state.survey.radio(
-        "Was the model able to answer you questions?",
+        "Was the model able to answer your questions?",
         options=["Yes 👍", "No 👎"],
         index=0,
         horizontal=True,
