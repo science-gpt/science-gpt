@@ -61,7 +61,7 @@ def create_answer(prompt):
         message_placeholder = st.empty()
 
         query_config = SimpleNamespace(
-            seed=seed,
+            seed=int(seed),
             temperature=temperature,
             top_k=top_k,
             top_p=top_p,
@@ -118,10 +118,12 @@ def fbcb(response):
 
 
 def surveycb():
-    with st.session_state.survey_form:
-        st.session_state.feedback.append(st.session_state.survey)
-        st.toast("Your feedback has been recorded.  Thank you!", icon="🎉")
-        print(st.session_state.feedback[-1].data)
+    st.session_state.feedback.append(st.session_state.survey)
+    logger.survey(
+        "Survey response received", xtra={"contents": st.session_state.survey}
+    )
+    st.toast("Your feedback has been recorded.  Thank you!", icon="🎉")
+    print(st.session_state.feedback[-1].data)
 
 
 with st.sidebar:
@@ -251,6 +253,9 @@ with chat_tab:
             st.session_state.show_textbox = False
             st.session_state.messages.append(
                 {"content": AIMessage(content="System prompt updated successfully!")}
+            )
+            logger.info(
+                "System prompt updated successfully", xtra={"prompt": new_prompt}
             )
             st.rerun()
 
