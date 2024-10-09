@@ -34,7 +34,7 @@ class OpenAIChatModel(ChatModel):
         with get_openai_callback() as cb:
             response = self.model.invoke(query)
             print(response)
-            return response, cb
+            return str(response.content), cb.total_cost
 
     def test_connection(self):
         # TODO: implement test connection method
@@ -70,7 +70,10 @@ class LocalAIModel(ChatModel):
         if response.status_code == 200:
             response_json = response.json()  # Assuming the response is in JSON format
             # Extract the relevant content from the response
-            return response_json, 0.0  # Return the response content and a dummy cost
+            return (
+                str(response_json.get("response", "")),
+                0.0,
+            )  # Return the response content and a dummy cost
         else:
             # Handle error response
             print(f"Error: {response.status_code}, {response.text}")
