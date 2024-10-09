@@ -2,7 +2,7 @@ import os
 
 import toml
 
-from models.models import OpenAIChatModel
+from models.models import LocalAIModel, OpenAIChatModel
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
@@ -44,11 +44,10 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         self.config: SystemConfig = load_config(
             config_name="system_config", config_dir=f"{os.getcwd()}/src/configs"
         )
-
-        self.load_secrets()
+        self.model = None
         self.system_prompt = DEFAULT_SYSTEM_PROMPT
 
-    def load_secrets(self, model: str = "gpt-3.5"):
+    def load_model(self, model: str = "gpt-3.5"):
         """
         Load secrets from toml file into config object.
         """
@@ -60,10 +59,20 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             self.config.model_auth.version = secrets["gpt40-api"]["api_version"]
             self.config.model_auth.api_key = secrets["gpt40-api"]["api_key"]
             self.config.model_auth.url = secrets["gpt40-api"]["azure_endpoint"]
-        else:  # Defaults to GPT-3.5
+            self.config.model_name = model
+            self.model = OpenAIChatModel(self.config)
+        elif model == "GPT-3.5":  # Defaults to GPT-3.5
             self.config.model_auth.version = secrets["gpt35-api"]["api_version"]
             self.config.model_auth.api_key = secrets["gpt35-api"]["api_key"]
             self.config.model_auth.url = secrets["gpt35-api"]["azure_endpoint"]
+            self.config.model_name = model
+            self.model = OpenAIChatModel(self.config)
+        else:
+            self.config.model_auth.macbook_endpoint = secrets["localmodel"][
+                "macbook_endpoint"
+            ]
+            self.config.model_name = model
+            self.model = LocalAIModel(self.config)
 
     def set_model_config(self, query_config):
         self.config.model_params.seed = query_config.seed
@@ -78,7 +87,8 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         """
 
         if local:
-            response = "Local models are not yet supported."
+            model = LocalAIModel(self.config)
+            response = model.test_connection()
         else:
             response = self.llm.test_connection()
 
@@ -88,7 +98,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         self.system_prompt = new_prompt
 
     def triage_query(
-        self, query: str, query_config, chat_history=None
+        self, model: str, query: str, query_config, chat_history=None, local=True
     ) -> tuple[str, float]:
         """
         Given a user query, the orchestrator detects user intent and leverages
@@ -96,14 +106,15 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         Returns the response text content (str) and cost (float)
         """
+        print(f"Using model: {self.config.model_name}")
         print(self.config)
 
         print(query_config)
 
+        # Set the model config and load the model
         self.set_model_config(query_config)
+        self.load_model(model)
 
-        # Basic use case
-        model = OpenAIChatModel(self.config)
         prompt = ConcretePrompt(self.system_prompt)
 
         # Retrieval use case
@@ -121,8 +132,8 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         if query_config.onlyusecontext:
             prompt = OnlyUseContextDecorator(prompt)
 
-        handler = LLMCallHandler(model, prompt, self.config)
+        handler = LLMCallHandler(self.model, prompt, self.config)
 
         response, cb = handler.call_llm(query)
 
-        return response.content, cb.total_cost
+        return response, cb
