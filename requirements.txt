@@ -7,6 +7,7 @@ langchain-huggingface
 langchain-text-splitters==0.2.1
 langchain-openai
 langsmith
+opencensus-ext-azure
 pydantic
 streamlit
 streamlit-feedback

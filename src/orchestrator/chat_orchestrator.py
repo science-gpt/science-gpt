@@ -54,6 +54,10 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         """
         secrets = toml.load("secrets.toml")
 
+        self.azure_logs_connection_string = secrets["azure-logging"][
+            "connection_string"
+        ]
+
         # TODO: dynamically select model secrets based on 'model' str input
         # hardcoded to use gpt3.5 for now
         if model == "GPT-4.0":
