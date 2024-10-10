@@ -175,6 +175,36 @@ with st.sidebar:
     onlyusecontext = st.checkbox("Only Use Knowledge Base")
 
 
+    st.sidebar.markdown("---")  # Horizontal line
+    # Create an expandable section for advanced options
+    with st.sidebar.expander("Advanced DataBase Options", expanded=False):
+        # Dropdown for embedding models
+        embedding_option = st.selectbox(
+            "Choose embedding model:",
+            ("Hugging Face", "Ollama")
+        )
+
+        # Update the embedding model in session state based on user selection
+        if embedding_option == "Hugging Face":
+            st.session_state.databroker.set_embedding_model("huggingface")
+        elif embedding_option == "Ollama":
+            st.session_state.databroker.set_embedding_model("ollama")
+        
+        # Buttons inside the expander
+        clear_db = st.button("Clear DB")
+        generate_embeddings = st.button("Generate Embeddings")
+
+        # Feedback based on button press
+        if clear_db:
+            st.session_state.databroker.clear_db()  # Call the clear_db method from the session state
+            st.sidebar.success("Database cleared!")
+        
+        if generate_embeddings:
+            # Retrieve the current embedding model from the session state
+            current_embedding_model = st.session_state.databroker.get_embedding_model()
+            st.sidebar.info(f"Generating embeddings using {current_embedding_model}...")
+            st.session_state.databroker.ingest_and_process_data()
+
 chat_tab, survey_tab = st.tabs(["Chat", "Survey"])
 with survey_tab:
     st.text("Please complete this short survey sharing your experiences with the team!")

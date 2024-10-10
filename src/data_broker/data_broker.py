@@ -3,7 +3,7 @@ import os
 from typing import Dict, List
 
 from ingestion.chunking import Chunk, Chunker, SplitSentencesChunker
-from ingestion.embedding import Embedder, HuggingFaceSentenceTransformerEmbedder
+from ingestion.embedding import Embedder, HuggingFaceSentenceTransformerEmbedder, OllamaEmbedder
 from ingestion.extraction import PDFData, PyPDF2Extract, TextExtract
 from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, SearchResult, VectorDB
@@ -45,6 +45,11 @@ class DataBroker(metaclass=SingletonMeta):
         """
         Instantiates an object of this class.
         """
+        self.embedding_model = "huggingface"  # Default to Hugging Face embeddings
+                # Instantiate your existing embedders
+        self.hf_embedder = HuggingFaceSentenceTransformerEmbedder()  # Hugging Face embedder
+        self.ollama_embedder = None  # Initialize as None for now
+
         self.config: SystemConfig = load_config(
             config_name="system_config", config_dir=f"{os.getcwd()}/src/configs"
         )
@@ -65,6 +70,33 @@ class DataBroker(metaclass=SingletonMeta):
                 self.insert(pdf)
             except IOError as e:
                 logger.error(f"Failed to insert {pdf.name} into the vector store: {e}")
+    
+    def get_embedding_model(self):
+        """Returns the currently set embedding model."""
+        return self.embedding_model
+    
+    def set_embedding_model(self, model_name: str):
+        self.embedding_model = model_name  # Update the current embedding model name
+        """Sets the embedding model to use."""
+        if model_name == "ollama":
+            # Initialize the Ollama embedder with the desired model name
+            self.ollama_embedder = OllamaEmbedder(model_name="mxbai-embed-large:latest")  # Modify this line to pass different model names if needed
+
+
+    def ingest_and_process_data(self):
+        """
+        Orchestrates the ingestion, chunking, embedding, and storing of data.
+        """
+        data_root = f"{os.getcwd()}/data/"
+        for fpath, fname in zip(
+            self.files["pdf"]["filepaths"], self.files["pdf"]["filenames"]
+        ):
+            pdf = PDFData(filepath=data_root + fpath, name=fname, data_type="pdf")
+            try:
+                print("inserting",pdf)
+                self.insert(pdf)
+            except IOError as e:
+                logger.error(f"Failed to insert {pdf.name} into the vector store: {e}")
 
     def insert(self, data: Data) -> None:
         """
@@ -80,8 +112,21 @@ class DataBroker(metaclass=SingletonMeta):
         extractor = self.extractors.get(data.data_type)
         text = extractor(data)
         chunks = self.chunker(text)
-        embeddings = self.embedder(chunks)
+        # embeddings = self.embedder(chunks)
+        # Choose embedder based on selected embedding model
+        if self.embedding_model == "huggingface":
+            embeddings = self.hf_embedder(chunks)
+        elif self.embedding_model == "ollama" and self.ollama_embedder is not None:
+            embeddings = self.ollama_embedder(chunks)  # Use the Ollama embedder
+
         self.vector_store.insert(embeddings)
+### added clear db fuction here
+    def clear_db(self):
+        """
+        Clears all vectors from the vector store.
+        """
+        self.vector_store.delete_collection() 
+
 
     def search(self, queries: List[str], top_k: int = 5) -> List[List[SearchResult]]:
         """
