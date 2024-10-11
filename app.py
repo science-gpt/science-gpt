@@ -4,7 +4,8 @@ from types import SimpleNamespace
 
 sys.path.insert(0, "./src")
 
-import logging
+
+import json
 import uuid
 
 import numpy as np
@@ -14,7 +15,7 @@ from streamlit_feedback import streamlit_feedback
 from streamlit_float import *
 from streamlit_survey import StreamlitSurvey
 
-from logs.logger import LogManager
+from logs.logger import logger
 
 float_init(theme=True, include_unstable_primary=False)
 
@@ -25,12 +26,6 @@ st.title("Science-GPT Prototype")
 
 st.session_state.orchestrator = ChatOrchestrator()
 st.session_state.databroker = DataBroker()
-
-logger = LogManager(
-    __name__,
-    st.session_state.orchestrator.azure_logs_connection_string,
-    level=logging.INFO,
-)
 
 if "question_state" not in st.session_state:
     st.session_state.question_state = False
@@ -95,7 +90,7 @@ def display_answer():
             continue
         # If there is no feedback show N/A
         if "feedback" in message:
-            st.markdown(f"Feedback: {message['feedback']}")
+            st.markdown(f"Feedback: {message['feedback']['score']}")
         else:
             st.markdown("Feedback: N/A")
 
@@ -111,7 +106,6 @@ def fbcb(response):
     st.session_state.messages[-1] = last_entry  # replace the last entry
 
     st.markdown("✔️ Feedback Received!")
-    # st.markdown(f"Feedback: {response}")
 
     # Create a new feedback by changing the key of feedback component.
     st.session_state.fbk = str(uuid.uuid4())
@@ -120,10 +114,10 @@ def fbcb(response):
 def surveycb():
     st.session_state.feedback.append(st.session_state.survey)
     logger.survey(
-        "Survey response received", xtra={"contents": st.session_state.survey}
+        f"Survey response received: {st.session_state.survey.to_json()}",
+        xtra={"user": "admin"},
     )
     st.toast("Your feedback has been recorded.  Thank you!", icon="🎉")
-    print(st.session_state.feedback[-1].data)
 
 
 with st.sidebar:

@@ -1,3 +1,4 @@
+from logs.logger import logger
 from models.models import ChatModel
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent
@@ -20,6 +21,7 @@ class LLMCallHandler:
         """
         Returns the LLM response and the cost of the query
         """
+        logger.info(f"Query: {query}", xtra={"user": "admin"})
         prompt = self.get_prompt(query)
         print("-----The Prompt-----")
         print(prompt)

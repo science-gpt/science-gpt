@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from langchain_community.callbacks import get_openai_callback
 from langchain_openai import AzureChatOpenAI
 
+from logs.logger import logger
 from orchestrator.config import SystemConfig
 
 
