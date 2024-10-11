@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import List
 
 import numpy as np
+from langchain_community.embeddings.ollama import OllamaEmbeddings
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 
 from .chunking import Chunk
@@ -72,6 +73,49 @@ class HuggingFaceSentenceTransformerEmbedder(Embedder):
         Returns:
             List[Embedding]: A list of Embedding objects containing the embedded vectors and metadata.
         """
+        embeddings = []
+        for chunk in chunks:
+            vector = self.model.embed_query(chunk.text)
+            embedding = Embedding(
+                name=chunk.name,
+                data_type=chunk.data_type,
+                vector=np.array(vector),
+                text=chunk.text,
+            )
+            embeddings.append(embedding)
+        return embeddings
+
+
+class OllamaEmbedder(Embedder):
+    """
+    An embedder that uses API calls to our Ollama instances hosting embedding models to generate embeddings.
+    """
+
+    def __init__(self, model_name: str):
+        """
+        Initialize the embedding API call for the embedding model on Ollama.
+
+        Args:
+            model_name (str): The name of the embedding model to use.
+                              Defaults to "mxbai-embed-large:latest".
+        """
+
+        self.model_name = model_name  # Store the model name
+        self.model = OllamaEmbeddings(
+            model=self.model_name, base_url="http://macbook1.sciencegpt.ca:11434"
+        )
+
+    def __call__(self, chunks: List[Chunk]) -> List[Embedding]:
+        """
+        Embed a list of text chunks into vectors using the Ollama hosted embedding model
+
+        Args:
+            chunks (List[Chunk]): List of Chunk objects to be embedded.
+
+        Returns:
+            List[Embedding]: A list of Embedding objects containing the embedded vectors and metadata.
+        """
+
         embeddings = []
         for chunk in chunks:
             vector = self.model.embed_query(chunk.text)

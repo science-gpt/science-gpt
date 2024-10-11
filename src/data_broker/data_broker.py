@@ -3,7 +3,11 @@ import os
 from typing import Dict, List
 
 from ingestion.chunking import Chunk, Chunker, SplitSentencesChunker
-from ingestion.embedding import Embedder, HuggingFaceSentenceTransformerEmbedder
+from ingestion.embedding import (
+    Embedder,
+    HuggingFaceSentenceTransformerEmbedder,
+    OllamaEmbedder,
+)
 from ingestion.extraction import PDFData, PyPDF2Extract, TextExtract
 from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, SearchResult, VectorDB
@@ -45,6 +49,14 @@ class DataBroker(metaclass=SingletonMeta):
         """
         Instantiates an object of this class.
         """
+
+        self.embedding_model = "huggingface"  # Default to Hugging Face embeddings
+        # Instantiate your existing embedders
+        self.hf_embedder = (
+            HuggingFaceSentenceTransformerEmbedder()
+        )  # Hugging Face embedder
+        self.ollama_embedder = None  # Initialize as None for now
+
         self.config: SystemConfig = load_config(
             config_name="system_config", config_dir=f"{os.getcwd()}/src/configs"
         )
@@ -66,6 +78,34 @@ class DataBroker(metaclass=SingletonMeta):
             except IOError as e:
                 logger.error(f"Failed to insert {pdf.name} into the vector store: {e}")
 
+    def get_embedding_model(self):
+        """Returns the currently set embedding model."""
+        return self.embedding_model
+
+    def set_embedding_model(self, model_name: str):
+        self.embedding_model = model_name  # Update the current embedding model name
+        """Sets the embedding model to use."""
+        if model_name == "mxbai-embed-large:latest":
+            # Initialize the Ollama embedder with the desired model name
+            self.ollama_embedder = OllamaEmbedder(
+                model_name="mxbai-embed-large:latest"
+            )  # Modify this line to pass different model names if needed
+
+    def ingest_and_process_data(self):
+        """
+        Orchestrates the ingestion, chunking, embedding, and storing of data.
+        """
+        data_root = f"{os.getcwd()}/data/"
+        for fpath, fname in zip(
+            self.files["pdf"]["filepaths"], self.files["pdf"]["filenames"]
+        ):
+            pdf = PDFData(filepath=data_root + fpath, name=fname, data_type="pdf")
+            try:
+                print("inserting", pdf)
+                self.insert(pdf)
+            except IOError as e:
+                logger.error(f"Failed to insert {pdf.name} into the vector store: {e}")
+
     def insert(self, data: Data) -> None:
         """
         Process and insert the given raw data into the vector store.
@@ -76,12 +116,52 @@ class DataBroker(metaclass=SingletonMeta):
         Args:
             data (Data): The raw data to be processed and inserted
         """
+        # Check if the collection exists, and if not, recreate it
+        try:
+            self.vector_store.collection = (
+                self.vector_store.client.get_or_create_collection(
+                    name=self.vector_store.collection.name
+                )
+            )
+        except Exception as e:
+            logger.error(f"Failed to get or create collection: {e}")
+            return
         # TODO better logging and error handling
         extractor = self.extractors.get(data.data_type)
         text = extractor(data)
         chunks = self.chunker(text)
-        embeddings = self.embedder(chunks)
-        self.vector_store.insert(embeddings)
+        # embeddings = self.embedder(chunks)
+        # Choose embedder based on selected embedding model
+        if self.embedding_model == "huggingface":
+            embeddings = self.hf_embedder(chunks)
+        elif (
+            self.embedding_model == "mxbai-embed-large:latest"
+            and self.ollama_embedder is not None
+        ):
+            embeddings = self.ollama_embedder(chunks)  # Use the Ollama embedder
+        try:
+            # Attempt to insert embeddings into the vector store
+            self.vector_store.insert(embeddings)
+        except:
+            logger.warning(
+                "Embedding dimension mismatch detected. Clearing the DB and regenerating embeddings."
+            )
+            print("I couldn't insert stuff... :( clearing DB and trying again")
+            self.clear_db()  # Clear the database to reset the collection
+            # Regenerate embeddings after clearing the database
+            self.ingest_and_process_data()  # Call to retry embedding after clearing the DB
+            return
+
+    ### added clear db fuction here
+    def clear_db(self):
+        """
+        Clears all vectors from the vector store.
+        """
+        collection_name = (
+            self.vector_store.collection.name
+        )  # Retrieve the collection name
+        print("I'm clearing the db:", collection_name)
+        self.vector_store.client.delete_collection(collection_name)
 
     def search(self, queries: List[str], top_k: int = 5) -> List[List[SearchResult]]:
         """
@@ -100,9 +180,27 @@ class DataBroker(metaclass=SingletonMeta):
             Chunk(text=query, name=f"Query_{i}", data_type="query")
             for i, query in enumerate(queries)
         ]
-        query_embeddings = self.embedder(query_chunks)
+
+        # Use the appropriate embedding model based on the selected model
+        if self.embedding_model == "huggingface":
+            query_embeddings = self.hf_embedder(query_chunks)
+        elif self.embedding_model == "mxbai-embed-large:latest":
+            query_embeddings = self.ollama_embedder(query_chunks)
+        # query_embeddings = self.embedder(query_chunks)
+
         query_vectors = [embedding.vector for embedding in query_embeddings]
-        results = self.vector_store.search(query_vectors, top_k)
+
+        try:
+            results = self.vector_store.search(query_vectors, top_k)
+        except:
+            logger.error(
+                "Connect search. probably an issue with the DB not initialized and nothing returned"
+            )
+            # You could prompt the user to reprocess data or clear and reset the DB here
+            print(
+                "Could not search, vector DB probably doesn't exist. We should flag this and tell the user the error"
+            )
+            results = []
 
         return results
 
