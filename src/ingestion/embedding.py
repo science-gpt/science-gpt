@@ -3,8 +3,9 @@ from dataclasses import dataclass
 from typing import List
 
 import numpy as np
-from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from langchain_community.embeddings.ollama import OllamaEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+
 from .chunking import Chunk
 from .raw_data import Data
 
