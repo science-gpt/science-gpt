@@ -85,7 +85,6 @@ class HuggingFaceSentenceTransformerEmbedder(Embedder):
         return embeddings
 
 
-
 class OllamaEmbedder(Embedder):
     """
     An embedder that uses API calls to our Ollama instances hosting embedding models to generate embeddings.
@@ -102,8 +101,7 @@ class OllamaEmbedder(Embedder):
 
         self.model_name = model_name  # Store the model name
         self.model = OllamaEmbeddings(
-        model=self.model_name,
-        base_url="http://macbook1.sciencegpt.ca:11434"
+            model=self.model_name, base_url="http://macbook1.sciencegpt.ca:11434"
         )
 
     def __call__(self, chunks: List[Chunk]) -> List[Embedding]:
@@ -116,8 +114,7 @@ class OllamaEmbedder(Embedder):
         Returns:
             List[Embedding]: A list of Embedding objects containing the embedded vectors and metadata.
         """
-        
-        
+
         embeddings = []
         for chunk in chunks:
             vector = self.model.embed_query(chunk.text)
