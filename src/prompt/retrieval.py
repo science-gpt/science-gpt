@@ -46,6 +46,16 @@ class ContextRetrieval(PromptDecorator):
             top_k = self.config.rag_params.top_k_retrieval
         print("Retrieval!\n", str(top_k))
         results = self.data_broker.search([query], top_k=top_k)
+
+        #### If no results found, we should log and we should also tell the user that their RAG search did not return any results for some reason
+        if not results or len(results[0]) == 0:
+            # No results found; handle the case here
+            # logger.warning("No documents found for the query. Returning only the query as the prompt.")
+            print(
+                "no results returned... probably something wrong with the DB not existing but trying to be queried"
+            )
+            return query  # Return the query itself if no context is found
+
         print(results)
         context_text = "\n\n---\n\n".join([res.document for res in results[0]])
         return self._prompt.get_prompt(query).format(

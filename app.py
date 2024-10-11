@@ -67,6 +67,7 @@ def create_answer(prompt):
             st.session_state.model,
             prompt,
             query_config,
+            use_rag=st.session_state.use_rag,
             chat_history=st.session_state.messages,
         )
 
@@ -169,15 +170,65 @@ def sidebar():
         st.session_state.temperature = st.select_slider(
             "Temperature", options=[round(0.1 * i, 1) for i in range(0, 10)], value=0.2
         )
-
         st.session_state.top_p = st.select_slider(
             "Top P", options=[round(0.1 * i, 1) for i in range(0, 10)], value=0.2
         )
 
+        st.session_state.use_rag = st.checkbox(
+            "Enable RAG (Retrieval-Augmented Generation)"
+        )
         st.session_state.top_k = st.slider("Top K", 0, 20, 1)
 
         st.session_state.moderationfilter = st.checkbox("Moderation Filter")
         st.session_state.onlyusecontext = st.checkbox("Only Use Knowledge Base")
+
+        st.sidebar.markdown("---")  # Horizontal line
+        # Create an expandable section for advanced options
+        with st.sidebar.expander("Advanced DataBase Options", expanded=False):
+            # Dropdown for embedding models
+            embedding_option = st.selectbox(
+                "Choose embedding model:", ("Hugging Face", "mxbai-embed-large:latest")
+            )
+
+            # Check if embedding model has changed
+            if "selected_embedding_model" not in st.session_state:
+                st.session_state.selected_embedding_model = embedding_option
+
+            if embedding_option != st.session_state.selected_embedding_model:
+                # Update the session state with the new model
+                st.session_state.selected_embedding_model = embedding_option
+
+                # Update the embedding model in databroker
+                if embedding_option == "Hugging Face":
+                    st.session_state.databroker.set_embedding_model("huggingface")
+                elif embedding_option == "mxbai-embed-large:latest":
+                    st.session_state.databroker.set_embedding_model(
+                        "mxbai-embed-large:latest"
+                    )
+
+                try:
+                    st.session_state.databroker.clear_db()
+                except Exception as e:
+                    st.sidebar.warning(f"Could not clear the database: {e}")
+                st.session_state.databroker.ingest_and_process_data()
+                st.sidebar.success(
+                    f"Database cleared and embeddings regenerated using {embedding_option}!"
+                )
+            ##Removed these buttons but they could be useful in the future for more granual control over what's happening to our DB
+            # # # Buttons inside the expander
+            # clear_db = st.button("Clear DB")
+            # generate_embeddings = st.button("Generate Embeddings")
+
+            # # Feedback based on button press
+            # if clear_db:
+            #     st.session_state.databroker.clear_db()  # Call the clear_db method from the session state
+            #     st.sidebar.success("Database cleared!")
+
+            # if generate_embeddings:
+            #     # Retrieve the current embedding model from the session state
+            #     current_embedding_model = st.session_state.databroker.get_embedding_model()
+            #     st.sidebar.info(f"Generating embeddings using {current_embedding_model}...")
+            #     st.session_state.databroker.ingest_and_process_data()
 
 
 def chat(tab):
