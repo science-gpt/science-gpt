@@ -1,0 +1,39 @@
+cookie:
+  expiry_days: 30
+  key: random_signature_key
+  name: random_cookie_name
+credentials:
+  usernames:
+    bhux:
+      email: bing.hu@phac-aspc.gc.ca
+      first_name: Bing
+      last_name: Hu
+      logged_in: false
+      password: $2b$12$2VY7SFAKVbw/n5bqf2kZB.q9NafpgDYzShHYlIb1y.ZTMmJz57B6u
+      password_hint: '-'
+      roles: null
+    jsmith:
+      email: jsmith@gmail.com
+      failed_login_attempts: 0
+      first_name: John
+      last_name: Smith
+      logged_in: false
+      password: $2b$12$fdXkuwMXuOWNWSrRodY4hO1bjWXzsBMYt9zOyXvFu5uhxQZy3mFDK
+    rbriggs:
+      email: rbriggs@gmail.com
+      failed_login_attempts: 0
+      first_name: Rebecca
+      last_name: Briggs
+      logged_in: false
+      password: $2b$12$N.D/dUAx0g7CaWi8lJQFnO5dn.11luC49xBJaLUp502wi7ykOdGsm
+pre-authorized:
+  emails:
+  - adam.aitchison@hc-sc.gc.ca
+  - suzanne.butt@hc-sc.gc.ca
+  - amanda.carlow@hc-sc.gc.ca
+  - spencer.crook@hc-sc.gc.ca
+  - haris.gisavi@hc-sc.gc.ca
+  - chantal.medina@hc-sc.gc.ca
+  - malik.talhat@hc-sc.gc.ca
+  - carter.demars@hc-sc.gc.ca
+  - areel.khan@hc-sc.gc.ca

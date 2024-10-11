@@ -9,6 +9,7 @@ langchain-openai
 langsmith
 pydantic
 streamlit
+streamlit-authenticator
 streamlit-feedback
 streamlit-survey
 streamlit-float
