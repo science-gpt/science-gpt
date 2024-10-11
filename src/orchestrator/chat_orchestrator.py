@@ -98,7 +98,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         self.system_prompt = new_prompt
 
     def triage_query(
-        self, model: str, query: str, query_config, chat_history=None, local=True
+        self, model: str, query: str, query_config, use_rag=False, chat_history=None, local=True
     ) -> tuple[str, float]:
         """
         Given a user query, the orchestrator detects user intent and leverages
@@ -106,14 +106,15 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         Returns the response text content (str) and cost (float)
         """
-        print(f"Using model: {self.config.model_name}")
-        print(self.config)
+        #print(f"Using model: {self.config.model_name}")
+        #print(self.config)
 
         print(query_config)
 
         # Set the model config and load the model
         self.set_model_config(query_config)
         self.load_model(model)
+        print(model)
 
         prompt = ConcretePrompt(self.system_prompt)
 
@@ -122,6 +123,9 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         #  involving user input.
         if query[:7].lower() == "search:":
             query = query[7:]
+            prompt = ContextRetrieval(prompt, self.config)
+        
+        if use_rag:
             prompt = ContextRetrieval(prompt, self.config)
 
         # look for moderation filter
