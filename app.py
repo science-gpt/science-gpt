@@ -157,7 +157,7 @@ def sidebar():
         st.session_state.moderationfilter = st.checkbox("Moderation Filter")
         st.session_state.onlyusecontext = st.checkbox("Only Use Knowledge Base")
 
-        st.session_state.use_rag = st.checkbox("Enable RAG")
+        st.session_state.use_rag = st.checkbox("Retrieval Augmented Generation")
         # Create an expandable section for advanced options
         if st.session_state.use_rag:
             st.session_state.top_k = st.slider("Top K", 0, 20, 1)
