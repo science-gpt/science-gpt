@@ -135,16 +135,14 @@ def sidebar():
 
     with st.sidebar:
 
-        st.write(f"Total Cost: ${format(st.session_state.cost, '.5f')}")
-
-        st.session_state.update_prompt = st.button("Modify System Prompt")
-
         st.session_state.model = st.selectbox(
             "Model",
             ["GPT-3.5", "GPT-4.0", "llama3.2:3B-instruct-fp16", "deepseek-v2:16b"],
             index=2,
             placeholder="Select a model",
         )
+
+        st.write(f"Total Cost: ${format(st.session_state.cost, '.5f')}")
 
         st.session_state.seed = st.number_input("Seed", value=0)
         st.session_state.temperature = st.select_slider(
@@ -153,6 +151,8 @@ def sidebar():
         st.session_state.top_p = st.select_slider(
             "Top P", options=[round(0.1 * i, 1) for i in range(0, 11)], value=0.2
         )
+
+        st.session_state.update_prompt = st.button("Modify System Prompt")
 
         st.session_state.moderationfilter = st.checkbox("Moderation Filter")
         st.session_state.onlyusecontext = st.checkbox("Only Use Knowledge Base")
