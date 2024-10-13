@@ -148,10 +148,10 @@ def sidebar():
 
         st.session_state.seed = st.number_input("Seed", value=0)
         st.session_state.temperature = st.select_slider(
-            "Temperature", options=[round(0.1 * i, 1) for i in range(0, 10)], value=0.2
+            "Temperature", options=[round(0.1 * i, 1) for i in range(0, 11)], value=0.2
         )
         st.session_state.top_p = st.select_slider(
-            "Top P", options=[round(0.1 * i, 1) for i in range(0, 10)], value=0.2
+            "Top P", options=[round(0.1 * i, 1) for i in range(0, 11)], value=0.2
         )
 
         st.session_state.moderationfilter = st.checkbox("Moderation Filter")
