@@ -9,7 +9,7 @@ import uuid
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from streamlit_feedback import streamlit_feedback
-from streamlit_float import *
+from streamlit_float import float_css_helper, float_init, float_parent
 from streamlit_survey import StreamlitSurvey
 
 from data_broker.data_broker import DataBroker
