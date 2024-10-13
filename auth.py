@@ -5,6 +5,9 @@ from yaml.loader import SafeLoader
 
 from app import main
 
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
 st.set_page_config(layout="wide")
 st.markdown(
     """
@@ -55,14 +58,18 @@ with col1:
         authenticator.login()
         if st.session_state["authentication_status"] is False:
             st.error("Username/password is incorrect")
+            st.session_state.logged_in = False
         elif st.session_state["authentication_status"] is None:
             st.warning("Please enter your username and password")
+            st.session_state.logged_in = False
     except Exception as e:
         st.error(e)
 
 if st.session_state["authentication_status"]:
     authenticator.logout(location="sidebar")
-    st.toast(f'Welcome *{st.session_state["name"]}*', icon="👋")
+    if not st.session_state.logged_in:
+        st.toast(f'Welcome *{st.session_state["name"]}*', icon="👋")
+        st.session_state.logged_in = True
     main()
 else:
     with col2:
