@@ -21,7 +21,8 @@ def init_streamlit():
 
     st.session_state.orchestrator = ChatOrchestrator()
     st.session_state.databroker = DataBroker()
-
+    
+    st.session_state.top_k = 1
     if "question_state" not in st.session_state:
         st.session_state.question_state = False
 
@@ -98,6 +99,7 @@ def display_answer():
         with st.chat_message(message["content"].type):
             st.markdown(message["content"].content)
 
+
         if "feedback" not in message:
             continue
         # If there is no feedback show N/A
@@ -161,6 +163,8 @@ def sidebar():
         # Create an expandable section for advanced options
         if st.session_state.use_rag:
             st.session_state.top_k = st.slider("Top K", 0, 20, 1)
+            st.session_state.show_chunks = st.checkbox("Show Chunks Returned", False)
+
             with st.sidebar.expander("Advanced DataBase Options", expanded=False):
                 # Dropdown for embedding models
                 embedding_option = st.selectbox(

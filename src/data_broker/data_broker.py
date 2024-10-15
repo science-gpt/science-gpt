@@ -59,10 +59,14 @@ class DataBroker(metaclass=SingletonMeta):
             config_name="data_config", config_dir=f"{os.getcwd()}/src/configs"
         )
         data_root = f"{os.getcwd()}/data/"
-        for fpath, fname in zip(
-            self.files["pdf"]["filepaths"], self.files["pdf"]["filenames"]
-        ):
-            pdf = PDFData(filepath=data_root + fpath, name=fname, data_type="pdf")
+        # List all PDF files in the data directory
+        pdf_files = [
+            file for file in os.listdir(data_root) if file.endswith('.pdf')
+        ]
+
+        # Process each PDF file
+        for pdf_file in pdf_files:
+            pdf = PDFData(filepath=os.path.join(data_root, pdf_file), name=pdf_file, data_type="pdf")
             try:
                 self.insert(pdf)
             except IOError as e:
@@ -89,10 +93,15 @@ class DataBroker(metaclass=SingletonMeta):
         Orchestrates the ingestion, chunking, embedding, and storing of data.
         """
         data_root = f"{os.getcwd()}/data/"
-        for fpath, fname in zip(
-            self.files["pdf"]["filepaths"], self.files["pdf"]["filenames"]
-        ):
-            pdf = PDFData(filepath=data_root + fpath, name=fname, data_type="pdf")
+        
+        # List all PDF files in the data directory
+        pdf_files = [
+            file for file in os.listdir(data_root) if file.endswith('.pdf')
+        ]
+
+        # Process each PDF file
+        for pdf_file in pdf_files:
+            pdf = PDFData(filepath=os.path.join(data_root, pdf_file), name=pdf_file, data_type="pdf")
             try:
                 print("inserting", pdf)
                 self.insert(pdf)
