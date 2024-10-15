@@ -21,7 +21,7 @@ def init_streamlit():
 
     st.session_state.orchestrator = ChatOrchestrator()
     st.session_state.databroker = DataBroker()
-    
+
     st.session_state.top_k = 1
     if "question_state" not in st.session_state:
         st.session_state.question_state = False
@@ -98,7 +98,6 @@ def display_answer():
     for i, message in enumerate(st.session_state.messages):
         with st.chat_message(message["content"].type):
             st.markdown(message["content"].content)
-
 
         if "feedback" not in message:
             continue
