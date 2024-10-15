@@ -2,10 +2,10 @@ _target_: orchestrator.config.SystemConfig
 model_name: gpt-3.5
 
 model_params:
-  seed: "42"
-  temperature: 0
+  seed: 42
+  temperature: 0.2
+  top_p: 0.2
   max_tokens: 512
-  top_p: 1
   num_ctx: 2500
 
 model_auth:
@@ -18,11 +18,10 @@ extraction:
   pdf_extract_method: "pypdf2"
 
 chunking:
-  method: "split_sentences"
+  method: "recursive_character"
 
 embedding:
-  method: "huggingface-sentence-transformer"
-  model: "sentence-transformers/all-mpnet-base-v2"
+  model: "mxbai-embed-large:latest"
 
 vector_db:
   type: "local-chromadb"

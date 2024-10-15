@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 from types import SimpleNamespace
@@ -14,15 +15,39 @@ from streamlit_survey import StreamlitSurvey
 
 from data_broker.data_broker import DataBroker
 from orchestrator.chat_orchestrator import ChatOrchestrator
+from orchestrator.config import SystemConfig
+from orchestrator.utils import load_config
 
 
 def init_streamlit():
     st.title("Science-GPT Prototype")
 
-    st.session_state.orchestrator = ChatOrchestrator()
-    st.session_state.databroker = DataBroker()
+    if "config" not in st.session_state:
+        st.session_state.config = load_config(
+            config_name="system_config", config_dir=f"{os.getcwd()}/src/configs"
+        )
+        st.session_state.query_config = None
+        st.session_state.seed = st.session_state.config.model_params.seed
+        st.session_state.temperature = st.session_state.config.model_params.temperature
+        st.session_state.top_p = st.session_state.config.model_params.top_p
 
-    st.session_state.top_k = 1
+        st.session_state.embedding_model = st.session_state.config.embedding.model
+        st.session_state.chunking_method = st.session_state.config.chunking.method
+        st.session_state.top_k = st.session_state.config.rag_params.top_k_retrieval
+
+        st.session_state.moderationfilter = False
+        st.session_state.onlyusecontext = False
+
+        st.session_state.orchestrator = ChatOrchestrator()
+
+        database_config = SimpleNamespace(
+            embedding_model=st.session_state.embedding_model,
+            chunking_method=st.session_state.chunking_method,
+            pdf_extractor=st.session_state.config.extraction,
+            vector_store=st.session_state.config.vector_db,
+        )
+        st.session_state.databroker = DataBroker(database_config)
+
     if "question_state" not in st.session_state:
         st.session_state.question_state = False
 
@@ -57,7 +82,7 @@ def create_answer(prompt):
     with st.chat_message("AI"):
         message_placeholder = st.empty()
 
-        query_config = SimpleNamespace(
+        st.session_state.query_config = SimpleNamespace(
             seed=st.session_state.seed,
             temperature=st.session_state.temperature,
             top_k=st.session_state.top_k,
@@ -70,7 +95,7 @@ def create_answer(prompt):
         response, cost = st.session_state.orchestrator.triage_query(
             st.session_state.model,
             prompt,
-            query_config,
+            st.session_state.query_config,
             use_rag=st.session_state.use_rag,
             chat_history=st.session_state.messages,
         )
@@ -132,6 +157,17 @@ def surveycb():
         print(st.session_state.feedback[-1].data)
 
 
+def databasecb(database_config):
+    try:
+        st.session_state.databroker.clear_db()
+        st.session_state.databroker.load_embedding_model(database_config)
+    except Exception as e:
+        st.sidebar.error(f"Failed to load embeddings: {e}")
+    st.sidebar.success(
+        f"Database cleared and embeddings regenerated using {database_config}!"
+    )
+
+
 def sidebar():
 
     with st.sidebar:
@@ -145,12 +181,16 @@ def sidebar():
 
         st.write(f"Total Cost: ${format(st.session_state.cost, '.5f')}")
 
-        st.session_state.seed = st.number_input("Seed", value=0)
+        st.session_state.seed = st.number_input("Seed", value=st.session_state.seed)
         st.session_state.temperature = st.select_slider(
-            "Temperature", options=[round(0.1 * i, 1) for i in range(0, 11)], value=0.2
+            "Temperature",
+            options=[round(0.1 * i, 1) for i in range(0, 11)],
+            value=st.session_state.temperature,
         )
         st.session_state.top_p = st.select_slider(
-            "Top P", options=[round(0.1 * i, 1) for i in range(0, 11)], value=0.2
+            "Top P",
+            options=[round(0.1 * i, 1) for i in range(0, 11)],
+            value=st.session_state.top_p,
         )
 
         st.session_state.update_prompt = st.button("Modify System Prompt")
@@ -165,23 +205,26 @@ def sidebar():
             st.session_state.show_chunks = st.checkbox("Show Chunks Returned", False)
 
             with st.sidebar.expander("Advanced DataBase Options", expanded=False):
-                # Dropdown for embedding models
-                embedding_option = st.selectbox(
-                    "Choose embedding model:",
-                    ("all-mpnet-base-v2", "mxbai-embed-large:latest"),
-                )
-                print(embedding_option)
-                # Check if embedding model has changed
-                if embedding_option != st.session_state.selected_embedding_model:
-                    st.session_state.selected_embedding_model = embedding_option
-                    try:
-                        st.session_state.databroker.load_embedding_model(
-                            embedding_option
-                        )
-                    except Exception as e:
-                        st.sidebar.error(f"Failed to load embeddings: {e}")
-                    st.sidebar.success(
-                        f"Database cleared and embeddings regenerated using {embedding_option}!"
+                with st.form("Database_settings"):
+                    # make sure first option matches system config
+                    st.session_state.embedding_model = st.selectbox(
+                        "Choose embedding model:",
+                        ("mxbai-embed-large:latest"),
+                    )
+                    # make sure first option matches system config
+                    st.session_state.chunking_method = st.selectbox(
+                        "Choose chunking method:",
+                        ("recursive_character"),
+                    )
+                    database_config = SimpleNamespace(
+                        embedding_model=st.session_state.embedding_model,
+                        chunking_method=st.session_state.chunking_method,
+                        # Load default values from config
+                        pdf_extractor=st.session_state.config.extraction,
+                        vector_store=st.session_state.config.vector_db,
+                    )
+                    submitted = st.form_submit_button(
+                        "Generate", on_click=(lambda: databasecb(database_config))
                     )
 
 

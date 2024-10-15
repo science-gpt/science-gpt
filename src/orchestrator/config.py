@@ -19,16 +19,15 @@ class ModelAuth(BaseModel):
 
 
 class Extraction(BaseModel):
-    pdf_extract_method: Literal["pypdf2"]
+    pdf_extract_method: str
 
 
 class Chunking(BaseModel):
-    method: Literal["split_sentences"]
+    method: str
 
 
 class Embedding(BaseModel):
-    method: Literal["huggingface-sentence-transformer"]
-    model: Literal["sentence-transformers/all-mpnet-base-v2"]
+    model: str
 
 
 class VectorDB(BaseModel):

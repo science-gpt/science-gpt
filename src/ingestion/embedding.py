@@ -5,6 +5,7 @@ from typing import List
 import numpy as np
 from langchain_community.embeddings.ollama import OllamaEmbeddings
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from tqdm import tqdm
 
 from .chunking import Chunk
 from .raw_data import Data
@@ -74,7 +75,7 @@ class HuggingFaceEmbedder(Embedder):
             List[Embedding]: A list of Embedding objects containing the embedded vectors and metadata.
         """
         embeddings = []
-        for chunk in chunks:
+        for chunk in tqdm(chunks):
             vector = self.model.embed_query(chunk.text)
             embedding = Embedding(
                 name=chunk.name,
@@ -117,7 +118,7 @@ class OllamaEmbedder(Embedder):
         """
 
         embeddings = []
-        for chunk in chunks:
+        for chunk in tqdm(chunks):
             vector = self.model.embed_query(chunk.text)
             embedding = Embedding(
                 name=chunk.name,
