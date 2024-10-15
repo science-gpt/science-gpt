@@ -9,7 +9,7 @@ import uuid
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from streamlit_feedback import streamlit_feedback
-from streamlit_float import *
+from streamlit_float import float_css_helper, float_init, float_parent
 from streamlit_survey import StreamlitSurvey
 
 from data_broker.data_broker import DataBroker
@@ -22,6 +22,7 @@ def init_streamlit():
     st.session_state.orchestrator = ChatOrchestrator()
     st.session_state.databroker = DataBroker()
 
+    st.session_state.top_k = 1
     if "question_state" not in st.session_state:
         st.session_state.question_state = False
 
@@ -41,6 +42,9 @@ def init_streamlit():
 
     if "show_textbox" not in st.session_state:
         st.session_state.show_textbox = False
+
+    if "selected_embedding_model" not in st.session_state:
+        st.session_state.selected_embedding_model = None
 
 
 def create_answer(prompt):
@@ -132,10 +136,6 @@ def sidebar():
 
     with st.sidebar:
 
-        st.write(f"Total Cost: ${format(st.session_state.cost, '.5f')}")
-
-        st.session_state.update_prompt = st.button("Modify System Prompt")
-
         st.session_state.model = st.selectbox(
             "Model",
             ["GPT-3.5", "GPT-4.0", "llama3.2:3B-instruct-fp16", "deepseek-v2:16b"],
@@ -143,92 +143,46 @@ def sidebar():
             placeholder="Select a model",
         )
 
-        col1, col2 = st.columns(2, vertical_alignment="center")
-
-        with col1:
-            st.write("Current Model:", st.session_state.model)
-
-        with col2:
-            test_con = st.button("Connect")
-
-        # TODO: add functionality to this button
-        if test_con:
-            with st.status("Testing connection...") as status:
-
-                # update model secrets in orchestrator
-                st.session_state.orchestrator.load_models(st.session_state.model)
-
-                time.sleep(1)
-                st.write("Found model credentials.")
-                time.sleep(1)
-                # send test prompt to model
-                status.update(
-                    label="Connection established!", state="complete", expanded=False
-                )
+        st.write(f"Total Cost: ${format(st.session_state.cost, '.5f')}")
 
         st.session_state.seed = st.number_input("Seed", value=0)
         st.session_state.temperature = st.select_slider(
-            "Temperature", options=[round(0.1 * i, 1) for i in range(0, 10)], value=0.2
+            "Temperature", options=[round(0.1 * i, 1) for i in range(0, 11)], value=0.2
         )
         st.session_state.top_p = st.select_slider(
-            "Top P", options=[round(0.1 * i, 1) for i in range(0, 10)], value=0.2
+            "Top P", options=[round(0.1 * i, 1) for i in range(0, 11)], value=0.2
         )
 
-        st.session_state.use_rag = st.checkbox(
-            "Enable RAG (Retrieval-Augmented Generation)"
-        )
-        st.session_state.top_k = st.slider("Top K", 0, 20, 1)
+        st.session_state.update_prompt = st.button("Modify System Prompt")
 
         st.session_state.moderationfilter = st.checkbox("Moderation Filter")
         st.session_state.onlyusecontext = st.checkbox("Only Use Knowledge Base")
 
-        st.sidebar.markdown("---")  # Horizontal line
+        st.session_state.use_rag = st.checkbox("Retrieval Augmented Generation")
         # Create an expandable section for advanced options
-        with st.sidebar.expander("Advanced DataBase Options", expanded=False):
-            # Dropdown for embedding models
-            embedding_option = st.selectbox(
-                "Choose embedding model:", ("Hugging Face", "mxbai-embed-large:latest")
-            )
+        if st.session_state.use_rag:
+            st.session_state.top_k = st.slider("Top K", 0, 20, 1)
+            st.session_state.show_chunks = st.checkbox("Show Chunks Returned", False)
 
-            # Check if embedding model has changed
-            if "selected_embedding_model" not in st.session_state:
-                st.session_state.selected_embedding_model = embedding_option
-
-            if embedding_option != st.session_state.selected_embedding_model:
-                # Update the session state with the new model
-                st.session_state.selected_embedding_model = embedding_option
-
-                # Update the embedding model in databroker
-                if embedding_option == "Hugging Face":
-                    st.session_state.databroker.set_embedding_model("huggingface")
-                elif embedding_option == "mxbai-embed-large:latest":
-                    st.session_state.databroker.set_embedding_model(
-                        "mxbai-embed-large:latest"
-                    )
-
-                try:
-                    st.session_state.databroker.clear_db()
-                except Exception as e:
-                    st.sidebar.warning(f"Could not clear the database: {e}")
-                st.session_state.databroker.ingest_and_process_data()
-                st.sidebar.success(
-                    f"Database cleared and embeddings regenerated using {embedding_option}!"
+            with st.sidebar.expander("Advanced DataBase Options", expanded=False):
+                # Dropdown for embedding models
+                embedding_option = st.selectbox(
+                    "Choose embedding model:",
+                    ("all-mpnet-base-v2", "mxbai-embed-large:latest"),
                 )
-            ##Removed these buttons but they could be useful in the future for more granual control over what's happening to our DB
-            # # # Buttons inside the expander
-            # clear_db = st.button("Clear DB")
-            # generate_embeddings = st.button("Generate Embeddings")
-
-            # # Feedback based on button press
-            # if clear_db:
-            #     st.session_state.databroker.clear_db()  # Call the clear_db method from the session state
-            #     st.sidebar.success("Database cleared!")
-
-            # if generate_embeddings:
-            #     # Retrieve the current embedding model from the session state
-            #     current_embedding_model = st.session_state.databroker.get_embedding_model()
-            #     st.sidebar.info(f"Generating embeddings using {current_embedding_model}...")
-            #     st.session_state.databroker.ingest_and_process_data()
+                print(embedding_option)
+                # Check if embedding model has changed
+                if embedding_option != st.session_state.selected_embedding_model:
+                    st.session_state.selected_embedding_model = embedding_option
+                    try:
+                        st.session_state.databroker.load_embedding_model(
+                            embedding_option
+                        )
+                    except Exception as e:
+                        st.sidebar.error(f"Failed to load embeddings: {e}")
+                    st.sidebar.success(
+                        f"Database cleared and embeddings regenerated using {embedding_option}!"
+                    )
 
 
 def chat(tab):

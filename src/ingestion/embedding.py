@@ -48,12 +48,12 @@ class Embedder(ABC):
         pass
 
 
-class HuggingFaceSentenceTransformerEmbedder(Embedder):
+class HuggingFaceEmbedder(Embedder):
     """
     An embedder that uses HuggingFace's Sentence Transformer models to create embeddings.
     """
 
-    def __init__(self, model_name: str = "sentence-transformers/all-mpnet-base-v2"):
+    def __init__(self, model_name: str = "all-mpnet-base-v2"):
         """
         Initialize the HuggingFaceSentenceTransformerEmbedder.
 

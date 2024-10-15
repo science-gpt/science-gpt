@@ -3,11 +3,7 @@ import os
 from typing import Dict, List
 
 from ingestion.chunking import Chunk, Chunker, SplitSentencesChunker
-from ingestion.embedding import (
-    Embedder,
-    HuggingFaceSentenceTransformerEmbedder,
-    OllamaEmbedder,
-)
+from ingestion.embedding import Embedder, HuggingFaceEmbedder, OllamaEmbedder
 from ingestion.extraction import PDFData, PyPDF2Extract, TextExtract
 from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, SearchResult, VectorDB
@@ -50,13 +46,7 @@ class DataBroker(metaclass=SingletonMeta):
         Instantiates an object of this class.
         """
 
-        self.embedding_model = "huggingface"  # Default to Hugging Face embeddings
-        # Instantiate your existing embedders
-        self.hf_embedder = (
-            HuggingFaceSentenceTransformerEmbedder()
-        )  # Hugging Face embedder
-        self.ollama_embedder = None  # Initialize as None for now
-
+        self.embedder = None
         self.config: SystemConfig = load_config(
             config_name="system_config", config_dir=f"{os.getcwd()}/src/configs"
         )
@@ -69,10 +59,16 @@ class DataBroker(metaclass=SingletonMeta):
             config_name="data_config", config_dir=f"{os.getcwd()}/src/configs"
         )
         data_root = f"{os.getcwd()}/data/"
-        for fpath, fname in zip(
-            self.files["pdf"]["filepaths"], self.files["pdf"]["filenames"]
-        ):
-            pdf = PDFData(filepath=data_root + fpath, name=fname, data_type="pdf")
+        # List all PDF files in the data directory
+        pdf_files = [file for file in os.listdir(data_root) if file.endswith(".pdf")]
+
+        # Process each PDF file
+        for pdf_file in pdf_files:
+            pdf = PDFData(
+                filepath=os.path.join(data_root, pdf_file),
+                name=pdf_file,
+                data_type="pdf",
+            )
             try:
                 self.insert(pdf)
             except IOError as e:
@@ -82,24 +78,34 @@ class DataBroker(metaclass=SingletonMeta):
         """Returns the currently set embedding model."""
         return self.embedding_model
 
-    def set_embedding_model(self, model_name: str):
+    def load_embedding_model(self, model_name: str):
         self.embedding_model = model_name  # Update the current embedding model name
-        """Sets the embedding model to use."""
-        if model_name == "mxbai-embed-large:latest":
-            # Initialize the Ollama embedder with the desired model name
-            self.ollama_embedder = OllamaEmbedder(
-                model_name="mxbai-embed-large:latest"
-            )  # Modify this line to pass different model names if needed
+        ollama_models = ["mxbai-embed-large:latest"]
+        hface_models = ["all-mpnet-base-v2"]
+        if model_name in ollama_models:
+            self.embedder = OllamaEmbedder(model_name=model_name)
+        elif model_name in hface_models:
+            self.embedder = HuggingFaceEmbedder(model_name=model_name)
+
+        self.clear_db()
+        self.ingest_and_process_data()
 
     def ingest_and_process_data(self):
         """
         Orchestrates the ingestion, chunking, embedding, and storing of data.
         """
         data_root = f"{os.getcwd()}/data/"
-        for fpath, fname in zip(
-            self.files["pdf"]["filepaths"], self.files["pdf"]["filenames"]
-        ):
-            pdf = PDFData(filepath=data_root + fpath, name=fname, data_type="pdf")
+
+        # List all PDF files in the data directory
+        pdf_files = [file for file in os.listdir(data_root) if file.endswith(".pdf")]
+
+        # Process each PDF file
+        for pdf_file in pdf_files:
+            pdf = PDFData(
+                filepath=os.path.join(data_root, pdf_file),
+                name=pdf_file,
+                data_type="pdf",
+            )
             try:
                 print("inserting", pdf)
                 self.insert(pdf)
@@ -130,15 +136,10 @@ class DataBroker(metaclass=SingletonMeta):
         extractor = self.extractors.get(data.data_type)
         text = extractor(data)
         chunks = self.chunker(text)
-        # embeddings = self.embedder(chunks)
+
         # Choose embedder based on selected embedding model
-        if self.embedding_model == "huggingface":
-            embeddings = self.hf_embedder(chunks)
-        elif (
-            self.embedding_model == "mxbai-embed-large:latest"
-            and self.ollama_embedder is not None
-        ):
-            embeddings = self.ollama_embedder(chunks)  # Use the Ollama embedder
+        embeddings = self.embedder(chunks)
+
         try:
             # Attempt to insert embeddings into the vector store
             self.vector_store.insert(embeddings)
@@ -181,13 +182,7 @@ class DataBroker(metaclass=SingletonMeta):
             for i, query in enumerate(queries)
         ]
 
-        # Use the appropriate embedding model based on the selected model
-        if self.embedding_model == "huggingface":
-            query_embeddings = self.hf_embedder(query_chunks)
-        elif self.embedding_model == "mxbai-embed-large:latest":
-            query_embeddings = self.ollama_embedder(query_chunks)
-        # query_embeddings = self.embedder(query_chunks)
-
+        query_embeddings = self.embedder(query_chunks)
         query_vectors = [embedding.vector for embedding in query_embeddings]
 
         try:
@@ -259,9 +254,7 @@ class DataBroker(metaclass=SingletonMeta):
         """
         embedding_config = config.embedding
         if embedding_config.method == "huggingface-sentence-transformer":
-            return HuggingFaceSentenceTransformerEmbedder(
-                model_name=embedding_config.model
-            )
+            return HuggingFaceEmbedder(model_name=embedding_config.model)
         else:
             raise ValueError(f"Unsupported embedding method: {embedding_config.method}")
 
