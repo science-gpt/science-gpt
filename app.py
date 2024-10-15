@@ -160,7 +160,7 @@ def surveycb():
 def databasecb(database_config):
     try:
         st.session_state.databroker.clear_db()
-        st.session_state.databroker.load_embedding_model(database_config)
+        st.session_state.databroker.load_database_config(database_config)
     except Exception as e:
         st.sidebar.error(f"Failed to load embeddings: {e}")
     st.sidebar.success(
@@ -224,7 +224,10 @@ def sidebar():
                         vector_store=st.session_state.config.vector_db,
                     )
                     submitted = st.form_submit_button(
-                        "Generate", on_click=(lambda: databasecb(database_config))
+                        "Generate",
+                        # disable functionality for now
+                        disabled=True,
+                        on_click=(lambda: databasecb(database_config)),
                     )
 
 

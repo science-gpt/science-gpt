@@ -3,5 +3,5 @@ notebooks/outputs
 secrets.toml
 venv/*
 .idea/*
-data/*
+*data/*
 vectorstore/*

@@ -50,6 +50,7 @@ class DataBroker(metaclass=SingletonMeta):
         """
         Instantiates an object of this class.
         """
+        print("---INIT---")
         self.load_database_config(database_config)
 
     def get_embedding_model(self):
@@ -124,26 +125,34 @@ class DataBroker(metaclass=SingletonMeta):
         except Exception as e:
             logger.error(f"Failed to get or create collection: {e}")
             return
+
         # TODO better logging and error handling
         extractor = self.extractors.get(data.data_type)
         text = extractor(data)
         chunks = self.chunker(text)
 
-        # Choose embedder based on selected embedding model
-        embeddings = self.embedder(chunks)
+        existing_items = self.vector_store.collection.get(include=[])
+        existing_ids = set(existing_items["ids"])
+        print(len(existing_ids))
 
-        try:
-            # Attempt to insert embeddings into the vector store
-            self.vector_store.insert(embeddings)
-        except:
-            logger.warning(
-                "Embedding dimension mismatch detected. Clearing the DB and regenerating embeddings."
-            )
-            print("I couldn't insert stuff... :( clearing DB and trying again")
-            self.clear_db()  # Clear the database to reset the collection
-            # Regenerate embeddings after clearing the database
-            self.ingest_and_process_data()  # Call to retry embedding after clearing the DB
-            return
+        # Only add missing chunks
+        new_chunks = []
+        for chunk in chunks:
+            if chunk.name not in existing_ids:
+                new_chunks.append(chunk)
+        print(len(new_chunks))
+
+        # Choose embedder based on selected embedding model
+        if len(new_chunks):
+            embeddings = self.embedder(new_chunks)
+            try:
+                # Attempt to insert embeddings into the vector store
+                self.vector_store.insert(embeddings)
+            except Exception as e:
+                logger.error(f"Failed to get or create collection: {e}")
+                return
+        else:
+            print("✅ No new documents to add")
 
     ### added clear db fuction here
     def clear_db(self):
