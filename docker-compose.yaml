@@ -8,6 +8,7 @@ services:
       - ./app/vectorstore:/usr/src/app/vectorstore
     networks:
       - app-network
+    restart: always
 
   nginx:
     image: nginx:latest
@@ -19,6 +20,7 @@ services:
       - science-gpt
     networks:
       - app-network
+    restart: always
 
 networks:
   app-network:
