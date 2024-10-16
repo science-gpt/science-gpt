@@ -3,7 +3,9 @@ from dataclasses import dataclass
 from typing import List
 
 import nltk
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from nltk.tokenize import sent_tokenize
+from tqdm import tqdm
 
 from .extraction import Text
 from .raw_data import Data
@@ -74,4 +76,25 @@ class SplitSentencesChunker(Chunker):
                 data_type=text.data_type,
             )
             for i, sentence in enumerate(sentences)
+        ]
+
+
+class SplitRecursiveCharacterChunker(Chunker):
+    def __init__(self, chunk_size=1600, chunk_overlap=160, is_separator_regex=False):
+        self.text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            length_function=len,
+            is_separator_regex=is_separator_regex,
+        )
+
+    def __call__(self, text: Text) -> List[Chunk]:
+        chunks = self.text_splitter.split_text(text.text)
+        return [
+            Chunk(
+                text=c,
+                name=f"{text.name} - Chunk {i+1}",
+                data_type=text.data_type,
+            )
+            for i, c in tqdm(enumerate(chunks))
         ]

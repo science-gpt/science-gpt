@@ -1,8 +1,9 @@
-from models.models import ChatModel
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent
 from prompt.prompts import TestDecorator
 from prompt.retrieval import TestRetrieval
+
+from models.models import ChatModel
 
 
 class LLMCallHandler:
@@ -24,4 +25,5 @@ class LLMCallHandler:
         print("-----The Prompt-----")
         print(prompt)
         print("--------------------")
-        return self.model(prompt)
+        response, cb = self.model(prompt)
+        return prompt, response, cb
