@@ -4,4 +4,5 @@ secrets.toml
 venv/*
 .idea/*
 *data/*
-vectorstore/*
+vectorstore/
+data/

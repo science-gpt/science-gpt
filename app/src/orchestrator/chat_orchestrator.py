@@ -1,13 +1,14 @@
 import os
 
 import toml
-from models.models import OpenAIChatModel
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
 from prompt.base_prompt import ConcretePrompt
 from prompt.prompts import ModerationDecorator, OnlyUseContextDecorator
 from prompt.retrieval import ContextRetrieval
+
+from models.models import LocalAIModel, OpenAIChatModel
 
 DEFAULT_SYSTEM_PROMPT: str = """ You are a helpful chatbot that answers questions from the perspective 
     of a regulatory toxicologist. You should answer the user's question in 
