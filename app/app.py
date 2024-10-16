@@ -231,7 +231,24 @@ def sidebar():
 
         st.session_state.model = st.selectbox(
             "Model",
-            ["GPT-3.5", "GPT-4.0", "llama3.2:3B-instruct-fp16", "deepseek-v2:16b"],
+            [
+                "GPT-3.5",
+                "GPT-4.0",
+                "llama3.2:3B-instruct-fp16",
+                "deepseek-v2:16b",
+                "dolphin-llama3:8b",
+                "llava:34b-v1.6-q5_K_M",
+                "mistral-nemo:12b-instruct-2407-q3_K_M",
+                "llama3.2:3b-instruct-q4_K_M",
+                "deepseek-v2:16b",
+                "llama3.1:8b-instruct-q4_K_M",
+                "Mistral-7B-Instruct-v0.3-Q4_K_M:latest",
+                "llama3.1:8b",
+                "phi3.5:3.8b",
+                "mistral-nemo:12b",
+                "gemma2:27b",
+                "llama3:latest",
+            ],
             index=2,
             placeholder="Select a model",
         )
