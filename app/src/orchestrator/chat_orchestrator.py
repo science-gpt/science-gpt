@@ -144,6 +144,10 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         handler = LLMCallHandler(self.model, prompt, self.config)
 
-        response, cb = handler.call_llm(query)
+        llm_prompt, response, cb = handler.call_llm(query)
 
-        return response, cb
+        return llm_prompt, response, cb
+
+    def query(self, prompt):
+        response, cb = self.model(prompt)
+        return prompt, response, cb

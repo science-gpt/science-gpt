@@ -35,6 +35,7 @@ def init_streamlit():
         st.session_state.chunking_method = st.session_state.config.chunking.method
         st.session_state.top_k = st.session_state.config.rag_params.top_k_retrieval
 
+        st.session_state.nprompt = None
         st.session_state.moderationfilter = False
         st.session_state.onlyusecontext = False
 
@@ -65,11 +66,58 @@ def init_streamlit():
     if "fbk" not in st.session_state:
         st.session_state.fbk = str(uuid.uuid4())
 
+    if "pk" not in st.session_state:
+        st.session_state.pk = [str(uuid.uuid4())]
+
     if "show_textbox" not in st.session_state:
         st.session_state.show_textbox = False
 
     if "selected_embedding_model" not in st.session_state:
         st.session_state.selected_embedding_model = None
+
+
+def get_pk(i):
+    if i < len(st.session_state.pk):
+        return st.session_state.pk[i]
+    st.session_state.pk += [
+        str(uuid.uuid4()) for _ in range(i - len(st.session_state.pk) + 1)
+    ]
+    return st.session_state.pk[i]
+
+
+def send_prompt(prompt):
+    llm_prompt, response, cost = st.session_state.orchestrator.query(
+        prompt,
+    )
+    st.session_state.cost += float(cost)
+    st.session_state.messages.append(
+        {
+            "content": HumanMessage(content=prompt),
+        }
+    )
+    st.session_state.messages.append(
+        {
+            "content": AIMessage(content=response),
+        }
+    )
+    st.session_state.messages.append(
+        {
+            "content": ToolMessage(content=llm_prompt, tool_call_id=response),
+        }
+    )
+
+
+def edit_prompt(prompt, key=0):
+    with st.popover("See LLM Prompt", use_container_width=True):
+        st.subheader("The LLM Prompt")
+        nprompt = st.text_area(
+            "Modify the LLM Prompt:", value=prompt, key="ta" + get_pk(key)
+        )
+        st.button(
+            "Submit Prompt",
+            on_click=(lambda: send_prompt(nprompt)),
+            key="b" + get_pk(key),
+        )
 
 
 def create_answer(prompt):
@@ -92,7 +140,7 @@ def create_answer(prompt):
         )
 
         # Now call the triage_query function without the 'local' argument
-        response, cost = st.session_state.orchestrator.triage_query(
+        llm_prompt, response, cost = st.session_state.orchestrator.triage_query(
             st.session_state.model,
             prompt,
             st.session_state.query_config,
@@ -117,12 +165,21 @@ def create_answer(prompt):
             "content": AIMessage(content=response),
         }
     )
+    st.session_state.messages.append(
+        {
+            "content": ToolMessage(content=llm_prompt, tool_call_id=response),
+        }
+    )
+    edit_prompt(llm_prompt)
 
 
 def display_answer():
     for i, message in enumerate(st.session_state.messages):
-        with st.chat_message(message["content"].type):
-            st.markdown(message["content"].content)
+        if message["content"].type in ["human", "ai"]:
+            with st.chat_message(message["content"].type):
+                st.markdown(message["content"].content)
+        else:
+            edit_prompt(message["content"].content, key=i + 1)
 
         if "feedback" not in message:
             continue
@@ -193,7 +250,7 @@ def sidebar():
             value=st.session_state.top_p,
         )
 
-        st.session_state.update_prompt = st.button("Modify System Prompt")
+        # st.session_state.update_prompt = st.button("Modify System Prompt")
 
         st.session_state.moderationfilter = st.checkbox("Moderation Filter")
         st.session_state.onlyusecontext = st.checkbox("Only Use Knowledge Base")
@@ -202,7 +259,6 @@ def sidebar():
         # Create an expandable section for advanced options
         if st.session_state.use_rag:
             st.session_state.top_k = st.slider("Top K", 0, 20, 1)
-            st.session_state.show_chunks = st.checkbox("Show Chunks Returned", False)
 
             with st.sidebar.expander("Advanced DataBase Options", expanded=False):
                 with st.form("Database_settings"):
@@ -234,23 +290,23 @@ def sidebar():
 def chat(tab):
     with tab:
         # Logic to update system prompt
-        if st.session_state.update_prompt:
-            st.session_state.show_textbox = True
+        # if st.session_state.update_prompt:
+        #     st.session_state.show_textbox = True
 
-        if st.session_state.get("show_textbox", False):
-            current_prompt = st.session_state.orchestrator.system_prompt
-            new_prompt = st.text_area("Modify the system prompt:", value=current_prompt)
-            if st.button("Submit New Prompt"):
-                st.session_state.orchestrator.update_system_prompt(new_prompt)
-                st.session_state.show_textbox = False
-                st.session_state.messages.append(
-                    {
-                        "content": AIMessage(
-                            content="System prompt updated successfully!"
-                        )
-                    }
-                )
-                st.rerun()
+        # if st.session_state.get("show_textbox", False):
+        #     current_prompt = st.session_state.orchestrator.system_prompt
+        #     new_prompt = st.text_area("Modify the system prompt:", value=current_prompt)
+        #     if st.button("Submit New Prompt"):
+        #         st.session_state.orchestrator.update_system_prompt(new_prompt)
+        #         st.session_state.show_textbox = False
+        #         st.session_state.messages.append(
+        #             {
+        #                 "content": AIMessage(
+        #                     content="System prompt updated successfully!"
+        #                 )
+        #             }
+        #         )
+        #         st.rerun()
 
         with st.container():
             if prompt := st.chat_input("Write your query here..."):
