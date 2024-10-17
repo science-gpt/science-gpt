@@ -46,12 +46,13 @@ class DataBroker(metaclass=SingletonMeta):
     chunking, embedding, storage and retrieval of text data.
     """
 
-    def __init__(self, database_config) -> None:
+    def __init__(self, database_config=None) -> None:
         """
         Instantiates an object of this class.
         """
-        print("---INIT---")
-        self.load_database_config(database_config)
+        if database_config != None:
+            print("---INIT---")
+            self.load_database_config(database_config)
 
     def get_embedding_model(self):
         """Returns the currently set embedding model."""
