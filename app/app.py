@@ -111,7 +111,7 @@ def edit_prompt(prompt, key=0):
     with st.popover("See LLM Prompt", use_container_width=True):
         st.subheader("The LLM Prompt")
         nprompt = st.text_area(
-            "Modify the LLM Prompt:", value=prompt, key="ta" + get_pk(key)
+            "Modify the LLM Prompt:", value=prompt, height=300, key="ta" + get_pk(key)
         )
         st.button(
             "Submit Prompt",
@@ -208,10 +208,9 @@ def fbcb(response):
 
 
 def surveycb():
-    with st.session_state.survey_form:
-        st.session_state.feedback.append(st.session_state.survey)
-        st.toast("Your feedback has been recorded.  Thank you!", icon="🎉")
-        print(st.session_state.feedback[-1].data)
+    st.session_state.feedback.append(st.session_state.survey)
+    st.toast("Your feedback has been recorded.  Thank you!", icon="🎉")
+    print(st.session_state.feedback[-1].data)
 
 
 def databasecb(database_config):
