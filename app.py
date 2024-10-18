@@ -66,6 +66,9 @@ def create_answer(prompt):
         response, cost = st.session_state.orchestrator.triage_query(
             prompt, query_config, chat_history=st.session_state.messages
         )
+        logger.info(
+            "Prompt: " + prompt + " Response: " + response, xtra={"user": "admin"}
+        )
         message_placeholder.markdown(response)
         st.session_state.cost += cost
 
@@ -159,7 +162,6 @@ with st.sidebar:
 
             else:
                 # update model secrets in orchestrator
-
                 st.session_state.orchestrator.load_secrets(model)
 
                 time.sleep(1)
@@ -249,7 +251,8 @@ with chat_tab:
                 {"content": AIMessage(content="System prompt updated successfully!")}
             )
             logger.info(
-                "System prompt updated successfully", xtra={"prompt": new_prompt}
+                "System prompt updated successfully: " + new_prompt,
+                xtra={"user": "admin"},
             )
             st.rerun()
 

@@ -2,6 +2,7 @@ import os
 
 import toml
 
+from logs.logger import logger
 from models.models import OpenAIChatModel
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
@@ -96,11 +97,13 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         Returns the response text content (str) and cost (float)
         """
-        print(self.config)
 
-        print(query_config)
+        # print(self.config)
+
+        # print(query_config)
 
         self.set_model_config(query_config)
+        logger.info(self.config.model_dump_json())
 
         # Basic use case
         model = OpenAIChatModel(self.config)
