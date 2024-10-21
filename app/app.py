@@ -233,7 +233,7 @@ def sidebar():
             [
                 "GPT-3.5",
                 "GPT-4.0",
-                "openbiollm-llama-3:8b_q6_k",
+                "openbiollm-llama-3:8b-q6_k",
                 "openbiollm-llama-3:8b_q8_0",
                 "llama3.2:3B-instruct-fp16",
                 "deepseek-v2:16b",

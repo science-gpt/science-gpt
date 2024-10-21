@@ -103,7 +103,7 @@ class OllamaEmbedder(Embedder):
 
         self.model_name = model_name  # Store the model name
         self.model = OllamaEmbeddings(
-            model=self.model_name, base_url="http://macbook1.sciencegpt.ca:11434"
+            model=self.model_name, base_url="http://macbook1.sciencegpt.ca"
         )
 
     def __call__(self, chunks: List[Chunk]) -> List[Embedding]:
