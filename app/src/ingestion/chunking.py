@@ -79,7 +79,7 @@ class SplitSentencesChunker(Chunker):
         ]
 
 
-class SplitRecursiveCharacterChunker(Chunker):
+class RecursiveCharacterChunker(Chunker):
     def __init__(self, chunk_size=1600, chunk_overlap=160, is_separator_regex=False):
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
