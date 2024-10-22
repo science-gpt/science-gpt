@@ -41,13 +41,13 @@ def init_streamlit():
 
         st.session_state.orchestrator = ChatOrchestrator()
 
-        database_config = SimpleNamespace(
+        st.session_state.database_config = SimpleNamespace(
             embedding_model=st.session_state.embedding_model,
             chunking_method=st.session_state.chunking_method,
             pdf_extractor=st.session_state.config.extraction,
             vector_store=st.session_state.config.vector_db,
         )
-        st.session_state.databroker = DataBroker(database_config)
+        st.session_state.databroker = DataBroker(st.session_state.database_config)
 
     if "question_state" not in st.session_state:
         st.session_state.question_state = False
@@ -290,7 +290,7 @@ def sidebar():
                         "recursive_character:small_chunks",
                     ),
                 )
-                database_config = SimpleNamespace(
+                st.session_state.database_config = SimpleNamespace(
                     embedding_model=st.session_state.embedding_model,
                     chunking_method=st.session_state.chunking_method,
                     # Load default values from config
@@ -299,7 +299,7 @@ def sidebar():
                 )
                 submitted = st.button(
                     "Generate",
-                    on_click=(lambda: databasecb(database_config)),
+                    on_click=(lambda: databasecb(st.session_state.database_config)),
                 )
 
 
