@@ -1,6 +1,7 @@
 import os
 
 import toml
+from logs.logger import logger
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
@@ -120,7 +121,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         # Set the model config and load the model
         self.set_model_config(query_config)
         self.load_model(model)
-        print(model)
+        logger.info(self.config.model_dump_json())
 
         prompt = ConcretePrompt(self.system_prompt)
 
