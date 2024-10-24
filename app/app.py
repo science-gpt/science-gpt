@@ -5,10 +5,12 @@ from types import SimpleNamespace
 
 sys.path.insert(0, "./src")
 
+import json
 import uuid
 
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from logs.logger import logger
 from orchestrator.chat_orchestrator import ChatOrchestrator
 from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
@@ -148,6 +150,11 @@ def create_answer(prompt):
             chat_history=st.session_state.messages,
         )
 
+        logger.info(
+            "Prompt: " + llm_prompt + " Response: " + response,
+            xtra={"user": st.session_state["name"]},
+        )
+
         print(cost)
         st.session_state.cost += float(cost)
 
@@ -209,8 +216,11 @@ def fbcb(response):
 
 def surveycb():
     st.session_state.feedback.append(st.session_state.survey)
+    logger.survey(
+        f"Survey response received: {st.session_state.survey.to_json()}",
+        xtra={"user": st.session_state["name"]},
+    )
     st.toast("Your feedback has been recorded.  Thank you!", icon="🎉")
-    print(st.session_state.feedback[-1].data)
 
 
 def databasecb(database_config):

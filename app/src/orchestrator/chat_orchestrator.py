@@ -1,6 +1,7 @@
 import os
 
 import toml
+from logs.logger import logger
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
@@ -51,7 +52,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         """
         Load secrets from toml file into config object.
         """
-        secrets = toml.load("secrets.toml")
+        secrets = toml.load("../secrets.toml")
 
         # TODO: dynamically select model secrets based on 'model' str input
         # hardcoded to use gpt3.5 for now
@@ -120,7 +121,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         # Set the model config and load the model
         self.set_model_config(query_config)
         self.load_model(model)
-        print(model)
+        logger.info(self.config.model_dump_json())
 
         prompt = ConcretePrompt(self.system_prompt)
 
