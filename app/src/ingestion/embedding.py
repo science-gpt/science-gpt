@@ -92,7 +92,7 @@ class OllamaEmbedder(Embedder):
     An embedder that uses API calls to our Ollama instances hosting embedding models to generate embeddings.
     """
 
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str, endpoint: str):
         """
         Initialize the embedding API call for the embedding model on Ollama.
 
@@ -102,9 +102,7 @@ class OllamaEmbedder(Embedder):
         """
 
         self.model_name = model_name  # Store the model name
-        self.model = OllamaEmbeddings(
-            model=self.model_name, base_url="http://macbook1.sciencegpt.ca"
-        )
+        self.model = OllamaEmbeddings(model=self.model_name, base_url=endpoint)
 
     def __call__(self, chunks: List[Chunk]) -> List[Embedding]:
         """

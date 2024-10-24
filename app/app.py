@@ -41,13 +41,13 @@ def init_streamlit():
 
         st.session_state.orchestrator = ChatOrchestrator()
 
-        database_config = SimpleNamespace(
+        st.session_state.database_config = SimpleNamespace(
             embedding_model=st.session_state.embedding_model,
             chunking_method=st.session_state.chunking_method,
             pdf_extractor=st.session_state.config.extraction,
             vector_store=st.session_state.config.vector_db,
         )
-        st.session_state.databroker = DataBroker(database_config)
+        st.session_state.databroker = DataBroker(st.session_state.database_config)
 
     if "question_state" not in st.session_state:
         st.session_state.question_state = False
@@ -215,7 +215,6 @@ def surveycb():
 
 def databasecb(database_config):
     try:
-        st.session_state.databroker.clear_db()
         st.session_state.databroker.load_database_config(database_config)
     except Exception as e:
         st.sidebar.error(f"Failed to load embeddings: {e}")
@@ -241,7 +240,6 @@ def sidebar():
                 "llava:34b-v1.6-q5_K_M",
                 "mistral-nemo:12b-instruct-2407-q3_K_M",
                 "llama3.2:3b-instruct-q4_K_M",
-                "deepseek-v2:16b",
                 "llama3.1:8b-instruct-q4_K_M",
                 "Mistral-7B-Instruct-v0.3-Q4_K_M:latest",
                 "llama3.1:8b",
@@ -279,30 +277,32 @@ def sidebar():
             st.session_state.top_k = st.slider("Top K", 0, 20, 1)
 
             with st.sidebar.expander("Advanced DataBase Options", expanded=False):
-                with st.form("Database_settings"):
-                    # make sure first option matches system config
-                    st.session_state.embedding_model = st.selectbox(
-                        "Choose embedding model:",
-                        ("mxbai-embed-large:latest"),
-                    )
-                    # make sure first option matches system config
-                    st.session_state.chunking_method = st.selectbox(
-                        "Choose chunking method:",
-                        ("recursive_character"),
-                    )
-                    database_config = SimpleNamespace(
-                        embedding_model=st.session_state.embedding_model,
-                        chunking_method=st.session_state.chunking_method,
-                        # Load default values from config
-                        pdf_extractor=st.session_state.config.extraction,
-                        vector_store=st.session_state.config.vector_db,
-                    )
-                    submitted = st.form_submit_button(
-                        "Generate",
-                        # disable functionality for now
-                        disabled=True,
-                        on_click=(lambda: databasecb(database_config)),
-                    )
+
+                # make sure first option matches system config
+                st.session_state.embedding_model = st.selectbox(
+                    "Choose embedding model:",
+                    ("mxbai-embed-large:latest", "nomic-embed-text"),
+                )
+                # make sure first option matches system config
+                st.session_state.chunking_method = st.selectbox(
+                    "Choose chunking method:",
+                    (
+                        "recursive_character",
+                        "recursive_character:large_chunks",
+                        "recursive_character:small_chunks",
+                    ),
+                )
+                st.session_state.database_config = SimpleNamespace(
+                    embedding_model=st.session_state.embedding_model,
+                    chunking_method=st.session_state.chunking_method,
+                    # Load default values from config
+                    pdf_extractor=st.session_state.config.extraction,
+                    vector_store=st.session_state.config.vector_db,
+                )
+                submitted = st.button(
+                    "Generate",
+                    on_click=(lambda: databasecb(st.session_state.database_config)),
+                )
 
 
 def chat(tab):

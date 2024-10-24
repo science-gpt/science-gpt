@@ -1,11 +1,13 @@
 import logging
 import os
+import string
 from typing import Dict, List
 
+import toml
 from ingestion.chunking import (
     Chunk,
     Chunker,
-    SplitRecursiveCharacterChunker,
+    RecursiveCharacterChunker,
     SplitSentencesChunker,
 )
 from ingestion.embedding import Embedder, HuggingFaceEmbedder, OllamaEmbedder
@@ -61,26 +63,53 @@ class DataBroker(metaclass=SingletonMeta):
     def load_database_config(self, database_config):
         self.embedding_model = database_config.embedding_model
 
-        ollama_models = ["mxbai-embed-large:latest"]
+        secrets = toml.load("secrets.toml")
+
+        ollama_models = ["mxbai-embed-large:latest", "nomic-embed-text"]
         hface_models = ["all-mpnet-base-v2"]
+        macbook_endpoint = secrets["localmodel"]["macbook_endpoint"]
         if self.embedding_model in ollama_models:
-            self.embedder = OllamaEmbedder(model_name=self.embedding_model)
+            self.embedder = OllamaEmbedder(
+                model_name=self.embedding_model, endpoint=macbook_endpoint
+            )
         elif self.embedding_model in hface_models:
             self.embedder = HuggingFaceEmbedder(model_name=self.embedding_model)
 
         if database_config.chunking_method == "split_sentences":
             self.chunker = SplitSentencesChunker()
         elif database_config.chunking_method == "recursive_character":
-            self.chunker = SplitRecursiveCharacterChunker()
+            self.chunker = RecursiveCharacterChunker(
+                chunk_size=1500,
+                chunk_overlap=250,
+            )
+        elif database_config.chunking_method == "recursive_character:large_chunks":
+            self.chunker = RecursiveCharacterChunker(
+                chunk_size=3000,
+                chunk_overlap=500,
+            )
+        elif database_config.chunking_method == "recursive_character:small_chunks":
+            self.chunker = RecursiveCharacterChunker(
+                chunk_size=750,
+                chunk_overlap=250,
+            )
 
         self.extractors = {}
         if database_config.pdf_extractor.pdf_extract_method == "pypdf2":
             self.extractors["pdf"] = PyPDF2Extract()
 
         if database_config.vector_store.type == "local-chromadb":
-            self.vector_store = ChromaDB(
-                collection_name=database_config.vector_store.instance_name
+            self.collection_name = database_config.vector_store.instance_name
+            self.collection_name += "_" + self.embedding_model.translate(
+                str.maketrans("", "", string.punctuation)
             )
+            self.collection_name += "_" + database_config.chunking_method.translate(
+                str.maketrans("", "", string.punctuation)
+            )
+
+            print("---")
+            print(self.collection_name)
+            print("---")
+            self.vector_store = ChromaDB(collection_name=self.collection_name)
 
         self.ingest_and_process_data()
 
@@ -120,7 +149,7 @@ class DataBroker(metaclass=SingletonMeta):
         try:
             self.vector_store.collection = (
                 self.vector_store.client.get_or_create_collection(
-                    name=self.vector_store.collection.name
+                    name=self.collection_name
                 )
             )
         except Exception as e:
@@ -160,9 +189,7 @@ class DataBroker(metaclass=SingletonMeta):
         """
         Clears all vectors from the vector store.
         """
-        collection_name = (
-            self.vector_store.collection.name
-        )  # Retrieve the collection name
+        collection_name = self.collection_name  # Retrieve the collection name
         print("I'm clearing the db:", collection_name)
         self.vector_store.client.delete_collection(collection_name)
 
