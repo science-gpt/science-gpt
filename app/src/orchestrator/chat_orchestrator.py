@@ -52,7 +52,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         """
         Load secrets from toml file into config object.
         """
-        secrets = toml.load("secrets.toml")
+        secrets = toml.load("../secrets.toml")
 
         # TODO: dynamically select model secrets based on 'model' str input
         # hardcoded to use gpt3.5 for now
