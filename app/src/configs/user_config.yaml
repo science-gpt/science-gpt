@@ -12,14 +12,6 @@ credentials:
       password: $2b$12$2VY7SFAKVbw/n5bqf2kZB.q9NafpgDYzShHYlIb1y.ZTMmJz57B6u
       password_hint: '-'
       roles: null
-    cdemars:
-      email: carter.demars@hc-sc.gc.ca
-      first_name: Carter
-      last_name: Demars
-      logged_in: false
-      password: $2b$12$e6b2cJS/NX2wpKMe6JmIa.fYIHrNqBFDaWQzCbMusRo8NMtoeIhY.
-      password_hint: default password
-      roles: null
     jsmith:
       email: jsmith@gmail.com
       failed_login_attempts: 0
@@ -50,4 +42,5 @@ pre-authorized:
   - haris.gisavi@hc-sc.gc.ca
   - chantal.medina@hc-sc.gc.ca
   - malik.talhat@hc-sc.gc.ca
+  - carter.demars@hc-sc.gc.ca
   - areel.khan@hc-sc.gc.ca
