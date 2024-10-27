@@ -11,7 +11,7 @@ from data_broker.data_broker import SingletonMeta
 
 SURVEY_LEVEL = 25  # Custom log level for survey responses
 AZURE_LOGS_CONNECTION_STRING = (
-    toml.load("../secrets.toml").get("azure-logging", {}).get("connection_string", None)
+    toml.load("secrets.toml").get("azure-logging", {}).get("connection_string", None)
 )
 
 
