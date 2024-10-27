@@ -57,7 +57,12 @@ class ContextRetrieval(PromptDecorator):
             return query  # Return the query itself if no context is found
 
         print(results)
-        context_text = "\n\n---\n\n".join([res.document for res in results[0]])
+        context_text = "\n\n---\n\n".join(
+            [
+                f"Context Source: {res.id}\nDocument: {res.document}"
+                for res in results[0]
+            ]
+        )
         return self._prompt.get_prompt(query).format(
             decorate=self.PromptTemplate.format(
                 context=context_text, decorate="{decorate}"
