@@ -36,7 +36,8 @@ class LogManager(logging.Logger, metaclass=SingletonMeta):
 
         # configure console logging
         handler = logging.StreamHandler()
-        formatter = logging.Formatter("%(levelname)s - %(user)s - %(message)s")
+        # todo: add user to log message
+        formatter = logging.Formatter("%(levelname)s - %(message)s")
         handler.setFormatter(formatter)
         self.addHandler(handler)
 
