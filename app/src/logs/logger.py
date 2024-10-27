@@ -36,8 +36,9 @@ class LogManager(logging.Logger, metaclass=SingletonMeta):
 
         # configure console logging
         handler = logging.StreamHandler()
-        # todo: add user to log message
-        formatter = logging.Formatter("%(levelname)s - %(message)s")
+        # todo (Carter): silence error message with %user in formatter. I have confirmed that the logs write successfully
+        # to azure monitor with the user field included.
+        formatter = logging.Formatter("%(levelname)s - %(user)s - %(message)s")
         handler.setFormatter(formatter)
         self.addHandler(handler)
 
