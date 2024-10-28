@@ -104,6 +104,13 @@ class OllamaEmbedder(Embedder):
         self.model_name = model_name  # Store the model name
         self.model = OllamaEmbeddings(model=self.model_name, base_url=endpoint)
 
+    def test_connection(self):
+        """(Carter) I've written this to test the connection to the macbook. We will default to Huggingface embeddings if this fails."""
+        try:
+            self.model.embed_query("test")
+        except Exception as e:
+            raise RuntimeError("Embedding model initialization failed") from e
+
     def __call__(self, chunks: List[Chunk]) -> List[Embedding]:
         """
         Embed a list of text chunks into vectors using the Ollama hosted embedding model
