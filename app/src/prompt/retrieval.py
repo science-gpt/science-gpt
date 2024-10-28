@@ -31,22 +31,27 @@ class ContextRetrieval(PromptDecorator):
     _prompt: PromptComponent = None
     PromptTemplate: str = """
     {decorate}
-    
-    Use the following context to answer the question:
+    Answer the question using the following context:
     {context}
     """
 
-    def __init__(self, prompt: PromptComponent, config: SystemConfig) -> None:
+    def __init__(
+        self, prompt: PromptComponent, config: SystemConfig, collection="base"
+    ) -> None:
         self._prompt = prompt
         self.data_broker = DataBroker()
         self.config: SystemConfig = config
+        self.collection = collection
 
     def get_prompt(self, query: str, top_k=None) -> str:
         if top_k == None:
             top_k = self.config.rag_params.top_k_retrieval
         print("Retrieval!\n", str(top_k))
-        results = self.data_broker.search([query], top_k=top_k)
+        results = self.data_broker.search(
+            [query], top_k=top_k, collection=self.collection
+        )
 
+        print(results)
         #### If no results found, we should log and we should also tell the user that their RAG search did not return any results for some reason
         if not results or len(results[0]) == 0:
             # No results found; handle the case here

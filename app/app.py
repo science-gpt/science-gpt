@@ -24,6 +24,14 @@ from data_broker.data_broker import DataBroker
 def init_streamlit():
     st.title("Science-GPT Prototype")
 
+    if "userpath" not in st.session_state:
+        st.session_state.username = st.session_state.get("username", "test-user")
+        st.session_state.userpath = (
+            f"{os.getcwd()}/data/" + st.session_state.username + "/"
+        )
+        if not os.path.exists(st.session_state.userpath):
+            os.makedirs(st.session_state.userpath)
+
     if "config" not in st.session_state:
         st.session_state.config = load_config(
             config_name="system_config", config_dir=f"{os.getcwd()}/src/configs"
@@ -40,10 +48,13 @@ def init_streamlit():
         st.session_state.nprompt = None
         st.session_state.moderationfilter = False
         st.session_state.onlyusecontext = False
+        st.session_state.useknowledgebase = False
 
         st.session_state.orchestrator = ChatOrchestrator()
 
         st.session_state.database_config = SimpleNamespace(
+            username=st.session_state.username,
+            userpath=st.session_state.userpath,
             embedding_model=st.session_state.embedding_model,
             chunking_method=st.session_state.chunking_method,
             pdf_extractor=st.session_state.config.extraction,
@@ -139,6 +150,7 @@ def create_answer(prompt):
             top_p=st.session_state.top_p,
             moderationfilter=st.session_state.moderationfilter,
             onlyusecontext=st.session_state.onlyusecontext,
+            useknowledgebase=st.session_state.useknowledgebase,
         )
 
         # Now call the triage_query function without the 'local' argument
@@ -228,9 +240,7 @@ def databasecb(database_config):
         st.session_state.databroker.load_database_config(database_config)
     except Exception as e:
         st.sidebar.error(f"Failed to load embeddings: {e}")
-    st.sidebar.success(
-        f"Database cleared and embeddings regenerated using {database_config}!"
-    )
+    st.sidebar.success(f"Database Generated!")
 
 
 def sidebar():
@@ -240,8 +250,13 @@ def sidebar():
         st.session_state.model = st.selectbox(
             "Model",
             [
-                "GPT-3.5",
+                "llama3:latest",
                 "GPT-4.0",
+                "GPT-3.5",
+                "llama3.1:8b",
+                "phi3.5:3.8b",
+                "mistral-nemo:12b",
+                "gemma2:27b",
                 "openbiollm-llama-3:8b-q6_k",
                 "openbiollm-llama-3:8b_q8_0",
                 "llama3.2:3B-instruct-fp16",
@@ -252,13 +267,8 @@ def sidebar():
                 "llama3.2:3b-instruct-q4_K_M",
                 "llama3.1:8b-instruct-q4_K_M",
                 "Mistral-7B-Instruct-v0.3-Q4_K_M:latest",
-                "llama3.1:8b",
-                "phi3.5:3.8b",
-                "mistral-nemo:12b",
-                "gemma2:27b",
-                "llama3:latest",
             ],
-            index=2,
+            index=0,
             placeholder="Select a model",
         )
 
@@ -291,7 +301,7 @@ def sidebar():
                 # make sure first option matches system config
                 st.session_state.embedding_model = st.selectbox(
                     "Choose embedding model:",
-                    ("mxbai-embed-large:latest", "nomic-embed-text"),
+                    ("mxbai-embed-large", "nomic-embed-text"),
                 )
                 # make sure first option matches system config
                 st.session_state.chunking_method = st.selectbox(
@@ -303,6 +313,8 @@ def sidebar():
                     ),
                 )
                 st.session_state.database_config = SimpleNamespace(
+                    username=st.session_state.username,
+                    userpath=st.session_state.userpath,
                     embedding_model=st.session_state.embedding_model,
                     chunking_method=st.session_state.chunking_method,
                     # Load default values from config
@@ -314,28 +326,26 @@ def sidebar():
                     on_click=(lambda: databasecb(st.session_state.database_config)),
                 )
 
+            with st.sidebar.expander("Upload Knowledge Base", expanded=False):
+
+                st.session_state.useknowledgebase = st.checkbox("Use Knowledge Base")
+
+                uploaded_files = st.file_uploader(
+                    "Choose PDF files", accept_multiple_files=True
+                )
+
+                for file in uploaded_files:
+                    bfile = file.read()
+                    with open(st.session_state.userpath + file.name, "wb") as f:
+                        f.write(bfile)
+                        f.close()
+                else:
+                    if st.session_state.useknowledgebase and len(uploaded_files) != 0:
+                        databasecb(st.session_state.database_config)
+
 
 def chat(tab):
     with tab:
-        # Logic to update system prompt
-        # if st.session_state.update_prompt:
-        #     st.session_state.show_textbox = True
-
-        # if st.session_state.get("show_textbox", False):
-        #     current_prompt = st.session_state.orchestrator.system_prompt
-        #     new_prompt = st.text_area("Modify the system prompt:", value=current_prompt)
-        #     if st.button("Submit New Prompt"):
-        #         st.session_state.orchestrator.update_system_prompt(new_prompt)
-        #         st.session_state.show_textbox = False
-        #         st.session_state.messages.append(
-        #             {
-        #                 "content": AIMessage(
-        #                     content="System prompt updated successfully!"
-        #                 )
-        #             }
-        #         )
-        #         st.rerun()
-
         with st.container():
             if prompt := st.chat_input("Write your query here..."):
                 st.session_state.question_state = True
@@ -410,7 +420,7 @@ def survey(tab):
         st.button("Submit", on_click=surveycb)
 
 
-def main():
+def sciencegpt():
     float_init(theme=True, include_unstable_primary=False)
     init_streamlit()
     sidebar()
@@ -420,4 +430,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sciencegpt()

@@ -21,7 +21,7 @@ chunking:
   method: "recursive_character"
 
 embedding:
-  model: "mxbai-embed-large:latest"
+  model: "mxbai-embed-large"
 
 vector_db:
   type: "local-chromadb"
