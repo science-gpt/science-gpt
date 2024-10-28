@@ -25,6 +25,9 @@ def init_streamlit():
     st.title("Science-GPT Prototype")
 
     if "config" not in st.session_state:
+
+        logger.set_user(st.session_state.get("name", "unknown"))
+
         st.session_state.config = load_config(
             config_name="system_config", config_dir=f"{os.getcwd()}/src/configs"
         )
@@ -152,7 +155,6 @@ def create_answer(prompt):
 
         logger.info(
             "Prompt: " + llm_prompt + " Response: " + response,
-            xtra={"user": st.session_state["name"]},
         )
 
         print(cost)
