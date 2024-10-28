@@ -146,7 +146,7 @@ class DataBroker(metaclass=SingletonMeta):
             )
             try:
                 print("inserting", pdf)
-                self.insert(pdf)
+                self.insert(pdf, collection=collection)
             except IOError as e:
                 logger.error(f"Failed to insert {pdf.name} into the vector store: {e}")
 

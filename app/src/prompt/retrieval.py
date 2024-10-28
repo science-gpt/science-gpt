@@ -31,8 +31,8 @@ class ContextRetrieval(PromptDecorator):
     _prompt: PromptComponent = None
     PromptTemplate: str = """
     {decorate}
-    Answer the question using the following context:
-    {context}
+    Answer the question using the following context between XML tags <context></context>:
+    <context>{context}</context>
     """
 
     def __init__(
