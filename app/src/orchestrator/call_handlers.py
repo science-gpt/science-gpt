@@ -25,5 +25,5 @@ class LLMCallHandler:
         print("-----The Prompt-----")
         print(prompt)
         print("--------------------")
-        response, cb = self.model(prompt)
-        return prompt, response, cb
+        response, cost = self.model(prompt)
+        return prompt, response, cost

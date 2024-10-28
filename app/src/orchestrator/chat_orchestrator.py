@@ -4,20 +4,16 @@ import toml
 from logs.logger import logger
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
-from orchestrator.utils import load_config
+from orchestrator.utils import (
+    DEFAULT_QUERY_REWRITER,
+    DEFAULT_SYSTEM_PROMPT,
+    load_config,
+)
 from prompt.base_prompt import ConcretePrompt
 from prompt.prompts import ModerationDecorator, OnlyUseContextDecorator
 from prompt.retrieval import ContextRetrieval
 
 from models.models import LocalAIModel, OpenAIChatModel
-
-DEFAULT_SYSTEM_PROMPT: str = """ You are a helpful chatbot that answers questions from the perspective 
-    of a regulatory toxicologist. You should answer the user's question in 
-    plain and precise language based on the below context. If the context 
-    doesn't contain any relevant information to the question, don't make 
-    something up. Instead, just say "I don't have information on that 
-    topic".
-    """
 
 
 class SingletonMeta(type):
@@ -145,9 +141,14 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         handler = LLMCallHandler(self.model, prompt, self.config)
 
-        llm_prompt, response, cb = handler.call_llm(query)
+        new_query, query_rewrite_cost = self.rewrite_query(query)
+        llm_prompt, response, cost = handler.call_llm(new_query)
 
-        return llm_prompt, response, cb
+        return llm_prompt, response, cost + query_rewrite_cost
+
+    def rewrite_query(self, query: str):
+        """Reformats the user query for improved search results"""
+        return self.model(DEFAULT_QUERY_REWRITER.format(question=query))
 
     def query(self, prompt):
         response, cb = self.model(prompt)
