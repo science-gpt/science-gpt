@@ -208,6 +208,30 @@ class DataBroker(metaclass=SingletonMeta):
         print("I'm clearing the db:", collection_name)
         self.vector_store[collection].client.delete_collection(collection_name)
 
+    def delete(self, pdf_file, collection="base"):
+        data_root = self.data_root[collection]
+
+        pdf = PDFData(
+            filepath=os.path.join(data_root, pdf_file),
+            name=pdf_file,
+            data_type="pdf",
+        )
+
+        try:
+            self.vector_store[collection].collection = self.vector_store[
+                collection
+            ].client.get_or_create_collection(name=self.collection_name[collection])
+        except Exception as e:
+            logger.error(f"Failed to get or create collection: {e}")
+            return
+
+        extractor = self.extractors.get(pdf.data_type)
+        text = extractor(pdf)
+        chunks = [c.name for c in self.chunker(text)]
+        print("count before", self.vector_store[collection].collection.count())
+        self.vector_store[collection].delete(ids=chunks)
+        print("count after", self.vector_store[collection].collection.count())
+
     def search(
         self, queries: List[str], top_k: int = 5, collection="base"
     ) -> List[List[SearchResult]]:

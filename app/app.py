@@ -8,6 +8,7 @@ sys.path.insert(0, "./src")
 import json
 import uuid
 
+import pandas as pd
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from logs.logger import logger
@@ -21,6 +22,46 @@ from streamlit_survey import StreamlitSurvey
 from data_broker.data_broker import DataBroker
 
 
+def file_upload_cb():
+    models_dir = st.session_state.userpath
+    for file in st.session_state["file_upload"]:
+        bfile = file.read()
+        with open(models_dir + file.name, "wb") as f:
+            f.write(bfile)
+    databasecb(st.session_state.database_config)
+
+
+def file_edit_cb():
+    files_dir = st.session_state.userpath
+    edited_rows = st.session_state["file_editor"]["edited_rows"]
+    rows_to_delete = []
+
+    for idx, value in edited_rows.items():
+        if value["x"] is True:
+            rows_to_delete.append(idx)
+
+    nfile_table = get_file_table().drop(rows_to_delete, axis=0).reset_index(drop=True)
+
+    files_keep = list(nfile_table["File"].values)
+    files_in_dir = os.listdir(files_dir)
+
+    for file in files_in_dir:
+        if file not in files_keep:
+            st.session_state.databroker.delete(file, collection="user")
+            os.remove(os.path.join(files_dir, file))
+
+
+def get_file_table():
+    files_dir = st.session_state.userpath
+    files_in_dir = os.listdir(files_dir)
+    file_sizes = [
+        format(os.path.getsize(os.path.join(files_dir, file)) / (1024 * 1024), f".{2}f")
+        for file in files_in_dir
+    ]
+
+    return pd.DataFrame(data=[files_in_dir, file_sizes], index=["File", "Size (MB)"]).T
+
+
 def init_streamlit():
     st.title("Science-GPT Prototype")
 
@@ -31,6 +72,8 @@ def init_streamlit():
         )
         if not os.path.exists(st.session_state.userpath):
             os.makedirs(st.session_state.userpath)
+
+        st.session_state.file_table = get_file_table()
 
     if "config" not in st.session_state:
         st.session_state.config = load_config(
@@ -294,6 +337,9 @@ def sidebar():
         st.session_state.use_rag = st.checkbox("Retrieval Augmented Generation")
         # Create an expandable section for advanced options
         if st.session_state.use_rag:
+
+            st.session_state.useknowledgebase = st.checkbox("Use Knowledge Base")
+
             st.session_state.top_k = st.slider("Top K", 0, 20, 1)
 
             with st.sidebar.expander("Advanced DataBase Options", expanded=False):
@@ -325,23 +371,6 @@ def sidebar():
                     "Generate",
                     on_click=(lambda: databasecb(st.session_state.database_config)),
                 )
-
-            with st.sidebar.expander("Upload Knowledge Base", expanded=False):
-
-                st.session_state.useknowledgebase = st.checkbox("Use Knowledge Base")
-
-                uploaded_files = st.file_uploader(
-                    "Choose PDF files", accept_multiple_files=True
-                )
-
-                for file in uploaded_files:
-                    bfile = file.read()
-                    with open(st.session_state.userpath + file.name, "wb") as f:
-                        f.write(bfile)
-                        f.close()
-                else:
-                    if st.session_state.useknowledgebase and len(uploaded_files) != 0:
-                        databasecb(st.session_state.database_config)
 
 
 def chat(tab):
@@ -420,12 +449,46 @@ def survey(tab):
         st.button("Submit", on_click=surveycb)
 
 
+def knowledgebase(tab):
+    with tab:
+        with st.form("my-form", clear_on_submit=True):
+            uploaded_files = st.file_uploader(
+                "Choose PDF files",
+                key="file_upload",
+                accept_multiple_files=True,
+            )
+            submitted = st.form_submit_button(
+                "Upload", on_click=lambda: file_upload_cb()
+            )
+
+        columns = get_file_table().columns
+        column_config = {
+            column: st.column_config.Column(disabled=True) for column in columns
+        }
+
+        modified_df = get_file_table().copy()
+        modified_df["x"] = False
+        modified_df = modified_df[["x"] + modified_df.columns[:-1].tolist()]
+
+        if len(modified_df.values) == 0:
+            st.subheader("No Files Uploaded")
+        else:
+            nfile_table = st.data_editor(
+                modified_df,
+                key="file_editor",
+                on_change=file_edit_cb,
+                hide_index=True,
+                column_config=column_config,
+            )
+
+
 def sciencegpt():
     float_init(theme=True, include_unstable_primary=False)
     init_streamlit()
     sidebar()
-    chat_tab, survey_tab = st.tabs(["Chat", "Survey"])
+    chat_tab, knowledge_base, survey_tab = st.tabs(["Chat", "Knowledge Base", "Survey"])
     chat(chat_tab)
+    knowledgebase(knowledge_base)
     survey(survey_tab)
 
 
