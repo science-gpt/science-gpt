@@ -28,7 +28,9 @@ def file_upload_cb():
         bfile = file.read()
         with open(models_dir + file.name, "wb") as f:
             f.write(bfile)
-    databasecb(st.session_state.database_config)
+
+    if len(st.session_state["file_upload"]) > 0:
+        databasecb(st.session_state.database_config)
 
 
 def file_edit_cb():
@@ -47,8 +49,8 @@ def file_edit_cb():
 
     for file in files_in_dir:
         if file not in files_keep:
-            st.session_state.databroker.delete(file, collection="user")
             os.remove(os.path.join(files_dir, file))
+    databasecb(st.session_state.database_config)
 
 
 def get_file_table():
@@ -280,6 +282,8 @@ def surveycb():
 
 def databasecb(database_config):
     try:
+        if "databroker" not in st.session_state:
+            st.session_state.databroker = DataBroker(st.session_state.database_config)
         st.session_state.databroker.load_database_config(database_config)
     except Exception as e:
         st.sidebar.error(f"Failed to load embeddings: {e}")
@@ -343,34 +347,35 @@ def sidebar():
             st.session_state.top_k = st.slider("Top K", 0, 20, 1)
 
             with st.sidebar.expander("Advanced DataBase Options", expanded=False):
+                with st.form("advanced", border=False):
 
-                # make sure first option matches system config
-                st.session_state.embedding_model = st.selectbox(
-                    "Choose embedding model:",
-                    ("mxbai-embed-large", "nomic-embed-text"),
-                )
-                # make sure first option matches system config
-                st.session_state.chunking_method = st.selectbox(
-                    "Choose chunking method:",
-                    (
-                        "recursive_character",
-                        "recursive_character:large_chunks",
-                        "recursive_character:small_chunks",
-                    ),
-                )
-                st.session_state.database_config = SimpleNamespace(
-                    username=st.session_state.username,
-                    userpath=st.session_state.userpath,
-                    embedding_model=st.session_state.embedding_model,
-                    chunking_method=st.session_state.chunking_method,
-                    # Load default values from config
-                    pdf_extractor=st.session_state.config.extraction,
-                    vector_store=st.session_state.config.vector_db,
-                )
-                submitted = st.button(
-                    "Generate",
-                    on_click=(lambda: databasecb(st.session_state.database_config)),
-                )
+                    # make sure first option matches system config
+                    st.session_state.embedding_model = st.selectbox(
+                        "Choose embedding model:",
+                        ("mxbai-embed-large", "nomic-embed-text"),
+                    )
+                    # make sure first option matches system config
+                    st.session_state.chunking_method = st.selectbox(
+                        "Choose chunking method:",
+                        (
+                            "recursive_character",
+                            "recursive_character:large_chunks",
+                            "recursive_character:small_chunks",
+                        ),
+                    )
+                    st.session_state.database_config = SimpleNamespace(
+                        username=st.session_state.username,
+                        userpath=st.session_state.userpath,
+                        embedding_model=st.session_state.embedding_model,
+                        chunking_method=st.session_state.chunking_method,
+                        # Load default values from config
+                        pdf_extractor=st.session_state.config.extraction,
+                        vector_store=st.session_state.config.vector_db,
+                    )
+                    submitted = st.form_submit_button(
+                        "Regenerate Database",
+                        on_click=(lambda: databasecb(st.session_state.database_config)),
+                    )
 
 
 def chat(tab):

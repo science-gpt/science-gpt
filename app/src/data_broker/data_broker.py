@@ -127,6 +127,7 @@ class DataBroker(metaclass=SingletonMeta):
 
         self.ingest_and_process_data(collection="base")
         self.ingest_and_process_data(collection="user")
+        self.ingest_and_prune_data(collection="user")
 
     def ingest_and_process_data(self, collection="base"):
         """
@@ -149,6 +150,39 @@ class DataBroker(metaclass=SingletonMeta):
                 self.insert(pdf, collection=collection)
             except IOError as e:
                 logger.error(f"Failed to insert {pdf.name} into the vector store: {e}")
+
+    def ingest_and_prune_data(self, collection="user"):
+
+        data_root = self.data_root[collection]
+
+        # List all PDF files in the data directory
+        pdf_files = [file for file in os.listdir(data_root) if file.endswith(".pdf")]
+
+        chunks = []
+        for pdf_file in pdf_files:
+            pdf = PDFData(
+                filepath=os.path.join(data_root, pdf_file),
+                name=pdf_file,
+                data_type="pdf",
+            )
+
+            extractor = self.extractors.get(pdf.data_type)
+            text = extractor(pdf)
+            chunks.extend(self.chunker(text))
+
+        chunks_ids = [c.name for c in chunks]
+        existing_items = self.vector_store[collection].collection.get(include=[])
+        existing_ids = list(set(existing_items["ids"]))
+
+        del_chunks = []
+        for id in existing_ids:
+            if id not in chunks_ids:
+                del_chunks.append(id)
+
+        if len(del_chunks) > 0:
+            print("count before", self.vector_store[collection].collection.count())
+            self.vector_store[collection].delete(ids=del_chunks)
+            print("count after", self.vector_store[collection].collection.count())
 
     def insert(self, data: Data, collection="base") -> None:
         """
@@ -207,30 +241,6 @@ class DataBroker(metaclass=SingletonMeta):
         ]  # Retrieve the collection name
         print("I'm clearing the db:", collection_name)
         self.vector_store[collection].client.delete_collection(collection_name)
-
-    def delete(self, pdf_file, collection="base"):
-        data_root = self.data_root[collection]
-
-        pdf = PDFData(
-            filepath=os.path.join(data_root, pdf_file),
-            name=pdf_file,
-            data_type="pdf",
-        )
-
-        try:
-            self.vector_store[collection].collection = self.vector_store[
-                collection
-            ].client.get_or_create_collection(name=self.collection_name[collection])
-        except Exception as e:
-            logger.error(f"Failed to get or create collection: {e}")
-            return
-
-        extractor = self.extractors.get(pdf.data_type)
-        text = extractor(pdf)
-        chunks = [c.name for c in self.chunker(text)]
-        print("count before", self.vector_store[collection].collection.count())
-        self.vector_store[collection].delete(ids=chunks)
-        print("count after", self.vector_store[collection].collection.count())
 
     def search(
         self, queries: List[str], top_k: int = 5, collection="base"
