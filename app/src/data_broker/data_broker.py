@@ -20,6 +20,10 @@ from orchestrator.utils import load_config
 logger = logging.getLogger(__name__)
 
 
+def squish(s):
+    return s.translate(str.maketrans("", "", string.punctuation))
+
+
 class SingletonMeta(type):
     """
     The Singleton class can be implemented in different ways in Python. Some
@@ -62,10 +66,11 @@ class DataBroker(metaclass=SingletonMeta):
 
     def load_database_config(self, database_config):
         self.embedding_model = database_config.embedding_model
+        print(self.embedding_model)
 
         secrets = toml.load("secrets.toml")
 
-        ollama_models = ["mxbai-embed-large:latest", "nomic-embed-text"]
+        ollama_models = ["mxbai-embed-large", "nomic-embed-text"]
         hface_models = ["all-mpnet-base-v2"]
         macbook_endpoint = secrets["localmodel"]["macbook_endpoint"]
         if self.embedding_model in ollama_models:
@@ -98,26 +103,37 @@ class DataBroker(metaclass=SingletonMeta):
             self.extractors["pdf"] = PyPDF2Extract()
 
         if database_config.vector_store.type == "local-chromadb":
-            self.collection_name = database_config.vector_store.instance_name
-            self.collection_name += "_" + self.embedding_model.translate(
-                str.maketrans("", "", string.punctuation)
-            )
-            self.collection_name += "_" + database_config.chunking_method.translate(
-                str.maketrans("", "", string.punctuation)
-            )
+            suffix = "_" + squish(self.embedding_model)
+            suffix += "_" + squish(database_config.chunking_method)
+
+            self.data_root = {
+                "base": f"{os.getcwd()}/data/",
+                "user": database_config.userpath,
+            }
+
+            self.collection_name = {
+                "base": database_config.vector_store.instance_name + suffix,
+                "user": database_config.username + suffix,
+            }
+
+            self.vector_store = {
+                "base": ChromaDB(collection_name=self.collection_name["base"]),
+                "user": ChromaDB(collection_name=self.collection_name["user"]),
+            }
 
             print("---")
             print(self.collection_name)
             print("---")
-            self.vector_store = ChromaDB(collection_name=self.collection_name)
 
-        self.ingest_and_process_data()
+        self.ingest_and_process_data(collection="base")
+        self.ingest_and_process_data(collection="user")
+        self.ingest_and_prune_data(collection="user")
 
-    def ingest_and_process_data(self):
+    def ingest_and_process_data(self, collection="base"):
         """
         Orchestrates the ingestion, chunking, embedding, and storing of data.
         """
-        data_root = f"{os.getcwd()}/data/"
+        data_root = self.data_root[collection]
 
         # List all PDF files in the data directory
         pdf_files = [file for file in os.listdir(data_root) if file.endswith(".pdf")]
@@ -131,11 +147,44 @@ class DataBroker(metaclass=SingletonMeta):
             )
             try:
                 print("inserting", pdf)
-                self.insert(pdf)
+                self.insert(pdf, collection=collection)
             except IOError as e:
                 logger.error(f"Failed to insert {pdf.name} into the vector store: {e}")
 
-    def insert(self, data: Data) -> None:
+    def ingest_and_prune_data(self, collection="user"):
+
+        data_root = self.data_root[collection]
+
+        # List all PDF files in the data directory
+        pdf_files = [file for file in os.listdir(data_root) if file.endswith(".pdf")]
+
+        chunks = []
+        for pdf_file in pdf_files:
+            pdf = PDFData(
+                filepath=os.path.join(data_root, pdf_file),
+                name=pdf_file,
+                data_type="pdf",
+            )
+
+            extractor = self.extractors.get(pdf.data_type)
+            text = extractor(pdf)
+            chunks.extend(self.chunker(text))
+
+        chunks_ids = [c.name for c in chunks]
+        existing_items = self.vector_store[collection].collection.get(include=[])
+        existing_ids = list(set(existing_items["ids"]))
+
+        del_chunks = []
+        for id in existing_ids:
+            if id not in chunks_ids:
+                del_chunks.append(id)
+
+        if len(del_chunks) > 0:
+            print("count before", self.vector_store[collection].collection.count())
+            self.vector_store[collection].delete(ids=del_chunks)
+            print("count after", self.vector_store[collection].collection.count())
+
+    def insert(self, data: Data, collection="base") -> None:
         """
         Process and insert the given raw data into the vector store.
 
@@ -147,11 +196,9 @@ class DataBroker(metaclass=SingletonMeta):
         """
         # Check if the collection exists, and if not, recreate it
         try:
-            self.vector_store.collection = (
-                self.vector_store.client.get_or_create_collection(
-                    name=self.collection_name
-                )
-            )
+            self.vector_store[collection].collection = self.vector_store[
+                collection
+            ].client.get_or_create_collection(name=self.collection_name[collection])
         except Exception as e:
             logger.error(f"Failed to get or create collection: {e}")
             return
@@ -161,7 +208,7 @@ class DataBroker(metaclass=SingletonMeta):
         text = extractor(data)
         chunks = self.chunker(text)
 
-        existing_items = self.vector_store.collection.get(include=[])
+        existing_items = self.vector_store[collection].collection.get(include=[])
         existing_ids = set(existing_items["ids"])
         print(len(existing_ids))
 
@@ -177,7 +224,7 @@ class DataBroker(metaclass=SingletonMeta):
             embeddings = self.embedder(new_chunks)
             try:
                 # Attempt to insert embeddings into the vector store
-                self.vector_store.insert(embeddings)
+                self.vector_store[collection].insert(embeddings)
             except Exception as e:
                 logger.error(f"Failed to get or create collection: {e}")
                 return
@@ -185,15 +232,19 @@ class DataBroker(metaclass=SingletonMeta):
             print("✅ No new documents to add")
 
     ### added clear db fuction here
-    def clear_db(self):
+    def clear_db(self, collection="base"):
         """
         Clears all vectors from the vector store.
         """
-        collection_name = self.collection_name  # Retrieve the collection name
+        collection_name = self.collection_name[
+            collection
+        ]  # Retrieve the collection name
         print("I'm clearing the db:", collection_name)
-        self.vector_store.client.delete_collection(collection_name)
+        self.vector_store[collection].client.delete_collection(collection_name)
 
-    def search(self, queries: List[str], top_k: int = 5) -> List[List[SearchResult]]:
+    def search(
+        self, queries: List[str], top_k: int = 5, collection="base"
+    ) -> List[List[SearchResult]]:
         """
         Searches the vector store for the most relevant docs based on the given queries.
 
@@ -215,7 +266,7 @@ class DataBroker(metaclass=SingletonMeta):
         query_vectors = [embedding.vector for embedding in query_embeddings]
 
         try:
-            results = self.vector_store.search(query_vectors, top_k)
+            results = self.vector_store[collection].search(query_vectors, top_k)
         except:
             logger.error(
                 "Connect search. probably an issue with the DB not initialized and nothing returned"

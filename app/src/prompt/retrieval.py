@@ -31,30 +31,32 @@ class ContextRetrieval(PromptDecorator):
     _prompt: PromptComponent = None
     PromptTemplate: str = """
     {decorate}
-    
-    Use the following context to answer the question:
-    {context}
+    Answer the question using the following context between XML tags <context></context>:
+    <context>{context}</context>
     """
 
-    def __init__(self, prompt: PromptComponent, config: SystemConfig) -> None:
+    def __init__(
+        self, prompt: PromptComponent, config: SystemConfig, collection="base"
+    ) -> None:
         self._prompt = prompt
         self.data_broker = DataBroker()
         self.config: SystemConfig = config
+        self.collection = collection
 
     def get_prompt(self, query: str, top_k=None) -> str:
         if top_k == None:
             top_k = self.config.rag_params.top_k_retrieval
         print("Retrieval!\n", str(top_k))
-        results = self.data_broker.search([query], top_k=top_k)
+        results = self.data_broker.search(
+            [query], top_k=top_k, collection=self.collection
+        )
 
+        print(results)
         #### If no results found, we should log and we should also tell the user that their RAG search did not return any results for some reason
         if not results or len(results[0]) == 0:
             # No results found; handle the case here
             # logger.warning("No documents found for the query. Returning only the query as the prompt.")
-            print(
-                "no results returned... probably something wrong with the DB not existing but trying to be queried"
-            )
-            return query  # Return the query itself if no context is found
+            print("no results returned...")
 
         print(results)
         context_text = "\n\n---\n\n".join([res.document for res in results[0]])

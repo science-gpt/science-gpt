@@ -8,6 +8,7 @@ sys.path.insert(0, "./src")
 import json
 import uuid
 
+import pandas as pd
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from logs.logger import logger
@@ -21,8 +22,60 @@ from streamlit_survey import StreamlitSurvey
 from data_broker.data_broker import DataBroker
 
 
+def file_upload_cb():
+    models_dir = st.session_state.userpath
+    for file in st.session_state["file_upload"]:
+        bfile = file.read()
+        with open(models_dir + file.name, "wb") as f:
+            f.write(bfile)
+
+    if len(st.session_state["file_upload"]) > 0:
+        databasecb(st.session_state.database_config)
+
+
+def file_edit_cb():
+    files_dir = st.session_state.userpath
+    edited_rows = st.session_state["file_editor"]["edited_rows"]
+    rows_to_delete = []
+
+    for idx, value in edited_rows.items():
+        if value["x"] is True:
+            rows_to_delete.append(idx)
+
+    nfile_table = get_file_table().drop(rows_to_delete, axis=0).reset_index(drop=True)
+
+    files_keep = list(nfile_table["File"].values)
+    files_in_dir = os.listdir(files_dir)
+
+    for file in files_in_dir:
+        if file not in files_keep:
+            os.remove(os.path.join(files_dir, file))
+    databasecb(st.session_state.database_config)
+
+
+def get_file_table():
+    files_dir = st.session_state.userpath
+    files_in_dir = os.listdir(files_dir)
+    file_sizes = [
+        format(os.path.getsize(os.path.join(files_dir, file)) / (1024 * 1024), f".{2}f")
+        for file in files_in_dir
+    ]
+
+    return pd.DataFrame(data=[files_in_dir, file_sizes], index=["File", "Size (MB)"]).T
+
+
 def init_streamlit():
     st.title("Science-GPT Prototype")
+
+    if "userpath" not in st.session_state:
+        st.session_state.username = st.session_state.get("username", "test-user")
+        st.session_state.userpath = (
+            f"{os.getcwd()}/data/" + st.session_state.username + "/"
+        )
+        if not os.path.exists(st.session_state.userpath):
+            os.makedirs(st.session_state.userpath)
+
+        st.session_state.file_table = get_file_table()
 
     if "config" not in st.session_state:
         st.session_state.config = load_config(
@@ -40,10 +93,13 @@ def init_streamlit():
         st.session_state.nprompt = None
         st.session_state.moderationfilter = False
         st.session_state.onlyusecontext = False
+        st.session_state.useknowledgebase = False
 
         st.session_state.orchestrator = ChatOrchestrator()
 
         st.session_state.database_config = SimpleNamespace(
+            username=st.session_state.username,
+            userpath=st.session_state.userpath,
             embedding_model=st.session_state.embedding_model,
             chunking_method=st.session_state.chunking_method,
             pdf_extractor=st.session_state.config.extraction,
@@ -139,6 +195,7 @@ def create_answer(prompt):
             top_p=st.session_state.top_p,
             moderationfilter=st.session_state.moderationfilter,
             onlyusecontext=st.session_state.onlyusecontext,
+            useknowledgebase=st.session_state.useknowledgebase,
         )
 
         # Now call the triage_query function without the 'local' argument
@@ -225,12 +282,12 @@ def surveycb():
 
 def databasecb(database_config):
     try:
+        if "databroker" not in st.session_state:
+            st.session_state.databroker = DataBroker(st.session_state.database_config)
         st.session_state.databroker.load_database_config(database_config)
     except Exception as e:
         st.sidebar.error(f"Failed to load embeddings: {e}")
-    st.sidebar.success(
-        f"Database cleared and embeddings regenerated using {database_config}!"
-    )
+    st.sidebar.success(f"Database Generated!")
 
 
 def sidebar():
@@ -240,8 +297,13 @@ def sidebar():
         st.session_state.model = st.selectbox(
             "Model",
             [
-                "GPT-3.5",
+                "llama3:latest",
                 "GPT-4.0",
+                "GPT-3.5",
+                "llama3.1:8b",
+                "phi3.5:3.8b",
+                "mistral-nemo:12b",
+                "gemma2:27b",
                 "openbiollm-llama-3:8b-q6_k",
                 "openbiollm-llama-3:8b_q8_0",
                 "llama3.2:3B-instruct-fp16",
@@ -252,13 +314,8 @@ def sidebar():
                 "llama3.2:3b-instruct-q4_K_M",
                 "llama3.1:8b-instruct-q4_K_M",
                 "Mistral-7B-Instruct-v0.3-Q4_K_M:latest",
-                "llama3.1:8b",
-                "phi3.5:3.8b",
-                "mistral-nemo:12b",
-                "gemma2:27b",
-                "llama3:latest",
             ],
-            index=2,
+            index=0,
             placeholder="Select a model",
         )
 
@@ -284,58 +341,45 @@ def sidebar():
         st.session_state.use_rag = st.checkbox("Retrieval Augmented Generation")
         # Create an expandable section for advanced options
         if st.session_state.use_rag:
+
+            st.session_state.useknowledgebase = st.checkbox("Use Knowledge Base")
+
             st.session_state.top_k = st.slider("Top K", 0, 20, 1)
 
             with st.sidebar.expander("Advanced DataBase Options", expanded=False):
+                with st.form("advanced", border=False):
 
-                # make sure first option matches system config
-                st.session_state.embedding_model = st.selectbox(
-                    "Choose embedding model:",
-                    ("mxbai-embed-large:latest", "nomic-embed-text"),
-                )
-                # make sure first option matches system config
-                st.session_state.chunking_method = st.selectbox(
-                    "Choose chunking method:",
-                    (
-                        "recursive_character",
-                        "recursive_character:large_chunks",
-                        "recursive_character:small_chunks",
-                    ),
-                )
-                st.session_state.database_config = SimpleNamespace(
-                    embedding_model=st.session_state.embedding_model,
-                    chunking_method=st.session_state.chunking_method,
-                    # Load default values from config
-                    pdf_extractor=st.session_state.config.extraction,
-                    vector_store=st.session_state.config.vector_db,
-                )
-                submitted = st.button(
-                    "Generate",
-                    on_click=(lambda: databasecb(st.session_state.database_config)),
-                )
+                    # make sure first option matches system config
+                    st.session_state.embedding_model = st.selectbox(
+                        "Choose embedding model:",
+                        ("mxbai-embed-large", "nomic-embed-text"),
+                    )
+                    # make sure first option matches system config
+                    st.session_state.chunking_method = st.selectbox(
+                        "Choose chunking method:",
+                        (
+                            "recursive_character",
+                            "recursive_character:large_chunks",
+                            "recursive_character:small_chunks",
+                        ),
+                    )
+                    st.session_state.database_config = SimpleNamespace(
+                        username=st.session_state.username,
+                        userpath=st.session_state.userpath,
+                        embedding_model=st.session_state.embedding_model,
+                        chunking_method=st.session_state.chunking_method,
+                        # Load default values from config
+                        pdf_extractor=st.session_state.config.extraction,
+                        vector_store=st.session_state.config.vector_db,
+                    )
+                    submitted = st.form_submit_button(
+                        "Regenerate Database",
+                        on_click=(lambda: databasecb(st.session_state.database_config)),
+                    )
 
 
 def chat(tab):
     with tab:
-        # Logic to update system prompt
-        # if st.session_state.update_prompt:
-        #     st.session_state.show_textbox = True
-
-        # if st.session_state.get("show_textbox", False):
-        #     current_prompt = st.session_state.orchestrator.system_prompt
-        #     new_prompt = st.text_area("Modify the system prompt:", value=current_prompt)
-        #     if st.button("Submit New Prompt"):
-        #         st.session_state.orchestrator.update_system_prompt(new_prompt)
-        #         st.session_state.show_textbox = False
-        #         st.session_state.messages.append(
-        #             {
-        #                 "content": AIMessage(
-        #                     content="System prompt updated successfully!"
-        #                 )
-        #             }
-        #         )
-        #         st.rerun()
-
         with st.container():
             if prompt := st.chat_input("Write your query here..."):
                 st.session_state.question_state = True
@@ -410,14 +454,48 @@ def survey(tab):
         st.button("Submit", on_click=surveycb)
 
 
-def main():
+def knowledgebase(tab):
+    with tab:
+        with st.form("my-form", clear_on_submit=True):
+            uploaded_files = st.file_uploader(
+                "Choose PDF files",
+                key="file_upload",
+                accept_multiple_files=True,
+            )
+            submitted = st.form_submit_button(
+                "Upload", on_click=lambda: file_upload_cb()
+            )
+
+        columns = get_file_table().columns
+        column_config = {
+            column: st.column_config.Column(disabled=True) for column in columns
+        }
+
+        modified_df = get_file_table().copy()
+        modified_df["x"] = False
+        modified_df = modified_df[["x"] + modified_df.columns[:-1].tolist()]
+
+        if len(modified_df.values) == 0:
+            st.subheader("No Files Uploaded")
+        else:
+            nfile_table = st.data_editor(
+                modified_df,
+                key="file_editor",
+                on_change=file_edit_cb,
+                hide_index=True,
+                column_config=column_config,
+            )
+
+
+def sciencegpt():
     float_init(theme=True, include_unstable_primary=False)
     init_streamlit()
     sidebar()
-    chat_tab, survey_tab = st.tabs(["Chat", "Survey"])
+    chat_tab, knowledge_base, survey_tab = st.tabs(["Chat", "Knowledge Base", "Survey"])
     chat(chat_tab)
+    knowledgebase(knowledge_base)
     survey(survey_tab)
 
 
 if __name__ == "__main__":
-    main()
+    sciencegpt()

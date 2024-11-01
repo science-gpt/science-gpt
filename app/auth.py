@@ -1,9 +1,11 @@
+import os
+
 import streamlit as st
 import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
 
-from app import main
+from app import sciencegpt
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -70,7 +72,8 @@ if st.session_state["authentication_status"]:
     if not st.session_state.logged_in:
         st.toast(f'Welcome *{st.session_state["name"]}*', icon="👋")
         st.session_state.logged_in = True
-    main()
+    sciencegpt()
+
 else:
     with col2:
         signup()
