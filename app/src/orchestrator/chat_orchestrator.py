@@ -67,9 +67,9 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             self.config.model_name = model
             self.model = OpenAIChatModel(self.config)
         else:
-            self.config.model_auth.macbook_endpoint = secrets["localmodel"][
-                "macbook_endpoint"
-            ]
+            self.config.model_auth.macbook_endpoint = (
+                secrets["localmodel"]["macbook_endpoint"] + "/api/generate"
+            )
             self.config.model_name = model
             self.model = LocalAIModel(self.config)
 
@@ -129,8 +129,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         if query[:7].lower() == "search:":
             query = query[7:]
             prompt = ContextRetrieval(prompt, self.config)
-
-        if use_rag:
+        elif use_rag:
             prompt = ContextRetrieval(prompt, self.config)
 
         # look for moderation filter
@@ -140,6 +139,9 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         # look for only use context
         if query_config.onlyusecontext:
             prompt = OnlyUseContextDecorator(prompt)
+            
+        if query_config.useknowledgebase:
+            prompt = ContextRetrieval(prompt, self.config, collection="user")
 
         try:
             handler = LLMCallHandler(self.model, prompt, self.config)
