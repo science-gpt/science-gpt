@@ -50,7 +50,6 @@ class ContextRetrieval(PromptDecorator):
             [query], top_k=top_k, collection=self.collection
         )
 
-        print(results)
         #### If no results found, we should log and we should also tell the user that their RAG search did not return any results for some reason
         if not results or len(results[0]) == 0:
             # No results found; handle the case here
@@ -58,7 +57,12 @@ class ContextRetrieval(PromptDecorator):
             print("no results returned...")
 
         print(results)
-        context_text = "\n\n---\n\n".join([res.document for res in results[0]])
+        context_text = "\n\n---\n\n".join(
+            [
+                f"Context Source: {res.id}\nDocument: {res.document}"
+                for res in results[0]
+            ]
+        )
         return self._prompt.get_prompt(query).format(
             decorate=self.PromptTemplate.format(
                 context=context_text, decorate="{decorate}"
