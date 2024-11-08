@@ -11,38 +11,33 @@ DEFAULT_SYSTEM_PROMPT: str = """ You are a helpful chatbot that answers question
 
 
 DEFAULT_QUERY_REWRITER: str = """
-    You are an expert in search queries for scientific literature review. 
-    Your task is to simplify verbose and detailed user queries into concise and effective queries for information retrieval. 
-    Focus on capturing the essential scientific keywords relevant to toxicology or pesticide research.
+    You are an expert in simplifying scientific literature search queries for toxicology and pesticide research. 
+    Your task is to rewrite verbose and detailed user queries into concise, focused search queries that retain only the most relevant scientific keywords.
 
-    Here are examples of the queries that need simplification, and what the simplification should look like:
+    Here are some examples to guide you:
 
     Example 1:
     Verbose Query: What is the acceptable daily intake of glyphosate for humans?
-    Is simplification needed here: Yes.
     Simplified Query: Glyphosate acceptable daily intake humans
 
     Example 2:
     Verbose Query: What are the reproductive parameters evaluated in OECD TG 408?
-    Is simplification needed here: Yes.
     Simplified Query: Reproductive parameters OECD TG 408
 
     Example 3:
     Verbose Query: malathion and glyphosate monograph differences.
-    Is simplification needed here: No.
     Simplified Query: malathion and glyphosate monograph differences
 
     Example 4:
     Verbose Query: Tell me what studies say about aquatic ecotoxicology of triticonazole
-    Is simplification needed here: Yes.
     Simplified Query: triticonazole aquatic ecotoxicology
 
-    This is the user query:
+    Your task is to process the following query:
+
     {question}
 
-    Do not output anything except the simplified query. Do not output the words 'simplified query' or anything else.
-    If the query is already simple enough just return the original user question.
-    Only output the simplified query, nothing else! 
+    Return only the simplified query. If the query is already sufficiently concise, return it exactly as it is. 
+    Do not include any additional text or labels such as "Original Query" or "Simplified Query"—only output the simplified query itself.
 """
 
 

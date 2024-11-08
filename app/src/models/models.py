@@ -29,10 +29,25 @@ class OpenAIChatModel(ChatModel):
             top_p=self.config.model_params.top_p,
         )
 
-    def __call__(self, query: str):
+    def __call__(self, query: str, override_config=None):
         with get_openai_callback() as cb:
+
+            # for cases like query reformatting, we want to override specific
+            # model parameters such as temperature. unfortunately I havent't found a nice way to do this.
+            if override_config:
+                old_params = {key: getattr(self.model, key) for key in override_config}
+                for key, value in override_config.items():
+                    setattr(self.model, key, value)
+
             response = self.model.invoke(query)
+
+            # after we get the model response, reset the default model parameters
+            if override_config:
+                for key, value in old_params.items():
+                    setattr(self.model, key, value)
+
             print(response)
+
             return str(response.content), cb.total_cost
 
     def test_connection(self):
@@ -56,15 +71,22 @@ class LocalAIModel(ChatModel):
             },
         }
 
-    def __call__(self, query: str):
+    def __call__(self, query: str, override_config=None):
         # Add the query to the request body when calling the model
         self.macbookmodel["prompt"] = query
-        response = requests.post(
-            self.macbook_endpoint, json=self.macbookmodel, stream=False
-        )
-        print(response)
-        print(response.json())
-        #    return response
+
+        if override_config:
+            temp_config = self.macbookmodel.copy()
+            temp_config["options"].update(override_config)
+
+            response = requests.post(
+                self.macbook_endpoint, json=temp_config, stream=False
+            )
+        else:
+            response = requests.post(
+                self.macbook_endpoint, json=self.macbookmodel, stream=False
+            )
+
         # Check if the response was successful
         if response.status_code == 200:
             response_json = response.json()  # Assuming the response is in JSON format

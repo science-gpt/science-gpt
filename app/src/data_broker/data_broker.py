@@ -172,14 +172,12 @@ class DataBroker(metaclass=SingletonMeta):
 
         existing_items = self.vector_store.collection.get(include=[])
         existing_ids = set(existing_items["ids"])
-        print(len(existing_ids))
 
         # Only add missing chunks
         new_chunks = []
         for chunk in chunks:
             if chunk.name not in existing_ids:
                 new_chunks.append(chunk)
-        print(len(new_chunks))
 
         # Choose embedder based on selected embedding model
         if len(new_chunks):
