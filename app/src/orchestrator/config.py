@@ -1,6 +1,6 @@
 from typing import Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ModelParams(BaseModel):
@@ -42,6 +42,7 @@ class RAGParams(BaseModel):
 
 
 class SystemConfig(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
     model_name: str
     model_params: ModelParams
     model_auth: ModelAuth

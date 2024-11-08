@@ -19,28 +19,28 @@ DEFAULT_QUERY_REWRITER: str = """
 
     Example 1:
     Verbose Query: What is the acceptable daily intake of glyphosate for humans?
-    Is simplification needed her: Yes.
+    Is simplification needed here: Yes.
     Simplified Query: Glyphosate acceptable daily intake humans
 
     Example 2:
     Verbose Query: What are the reproductive parameters evaluated in OECD TG 408?
-    Is simplification needed her: Yes.
+    Is simplification needed here: Yes.
     Simplified Query: Reproductive parameters OECD TG 408
 
     Example 3:
     Verbose Query: malathion and glyphosate monograph differences.
-    Is simplification needed her: No.
+    Is simplification needed here: No.
     Simplified Query: malathion and glyphosate monograph differences
 
     Example 4:
     Verbose Query: Tell me what studies say about aquatic ecotoxicology of triticonazole
-    Is simplification needed her: Yes.
+    Is simplification needed here: Yes.
     Simplified Query: triticonazole aquatic ecotoxicology
 
     This is the user query:
     {question}
 
-    Do not output anything except the simplified query. 
+    Do not output anything except the simplified query. Do not output the words 'simplified query' or anything else.
     If the query is already simple enough just return the original user question.
     Only output the simplified query, nothing else! 
 """
