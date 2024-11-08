@@ -126,10 +126,8 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         # Retrieval use case
         # TODO: This is clunky - ideally we would have a LLM detect the intent for use cases
         #  involving user input.
-        if query[:7].lower() == "search:":
-            query = query[7:]
-            prompt = ContextRetrieval(prompt, self.config)
-        elif use_rag:
+        if query.lower().startswith("search:") or use_rag:
+            query = query[7:] if query.lower().startswith("search:") else query
             prompt = ContextRetrieval(prompt, self.config)
 
         # look for moderation filter
@@ -139,7 +137,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         # look for only use context
         if query_config.onlyusecontext:
             prompt = OnlyUseContextDecorator(prompt)
-            
+
         if query_config.useknowledgebase:
             prompt = ContextRetrieval(prompt, self.config, collection="user")
 
