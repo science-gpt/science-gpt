@@ -32,7 +32,7 @@ class LogManager(logging.Logger, metaclass=SingletonMeta):
         """
         super().__init__(name, level)
         logging.addLevelName(SURVEY_LEVEL, "SURVEY")
-        self.extra_info = None
+        self.extra_info = {"user": "unknown"}
 
         # configure console logging
         handler = logging.StreamHandler()
@@ -58,12 +58,15 @@ class LogManager(logging.Logger, metaclass=SingletonMeta):
                 )
             )
 
+    def set_user(self, user: str):
+        self.extra_info["user"] = user
+
     def info(self, msg, *args, xtra=None, **kwargs):
-        extra_info = xtra if xtra is not None else self.extra_info
+        extra_info = self.extra_info | (xtra if xtra is not None else {})
         super().info(msg, *args, extra=extra_info, **kwargs)
 
     def survey(self, msg, *args, xtra=None, **kwargs):
-        extra_info = xtra if xtra is not None else self.extra_info
+        extra_info = self.extra_info | (xtra if xtra is not None else {})
         if self.isEnabledFor(SURVEY_LEVEL):
             self._log(SURVEY_LEVEL, msg, args, extra=extra_info, **kwargs)
 

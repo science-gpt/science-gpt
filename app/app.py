@@ -78,6 +78,9 @@ def init_streamlit():
         st.session_state.file_table = get_file_table()
 
     if "config" not in st.session_state:
+
+        logger.set_user(st.session_state.get("name", "unknown"))
+
         st.session_state.config = load_config(
             config_name="system_config", config_dir=f"{os.getcwd()}/src/configs"
         )
@@ -209,7 +212,6 @@ def create_answer(prompt):
 
         logger.info(
             "Prompt: " + llm_prompt + " Response: " + response,
-            xtra={"user": st.session_state["name"]},
         )
 
         print(cost)
@@ -342,9 +344,8 @@ def sidebar():
         # Create an expandable section for advanced options
         if st.session_state.use_rag:
 
+            st.session_state.top_k = st.slider("Top K", 0, 20, 5)
             st.session_state.useknowledgebase = st.checkbox("Use Knowledge Base")
-
-            st.session_state.top_k = st.slider("Top K", 0, 20, 1)
 
             with st.sidebar.expander("Advanced DataBase Options", expanded=False):
                 with st.form("advanced", border=False):

@@ -77,6 +77,15 @@ class DataBroker(metaclass=SingletonMeta):
             self.embedder = OllamaEmbedder(
                 model_name=self.embedding_model, endpoint=macbook_endpoint
             )
+
+            try:
+                self.embedder.test_connection()
+            except RuntimeError as e:
+                logger.error(
+                    "Failed to connect to the Ollama model. Defaulting to HuggingFace embeddings."
+                )
+                self.embedder = HuggingFaceEmbedder(model_name="all-mpnet-base-v2")
+
         elif self.embedding_model in hface_models:
             self.embedder = HuggingFaceEmbedder(model_name=self.embedding_model)
 
@@ -210,14 +219,12 @@ class DataBroker(metaclass=SingletonMeta):
 
         existing_items = self.vector_store[collection].collection.get(include=[])
         existing_ids = set(existing_items["ids"])
-        print(len(existing_ids))
 
         # Only add missing chunks
         new_chunks = []
         for chunk in chunks:
             if chunk.name not in existing_ids:
                 new_chunks.append(chunk)
-        print(len(new_chunks))
 
         # Choose embedder based on selected embedding model
         if len(new_chunks):

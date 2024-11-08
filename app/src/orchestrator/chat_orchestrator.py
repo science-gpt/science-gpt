@@ -1,23 +1,21 @@
 import os
 
+import requests
 import toml
 from logs.logger import logger
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
-from orchestrator.utils import load_config
+from orchestrator.utils import (
+    DEFAULT_QUERY_REWRITER,
+    DEFAULT_SYSTEM_PROMPT,
+    load_config,
+)
 from prompt.base_prompt import ConcretePrompt
 from prompt.prompts import ModerationDecorator, OnlyUseContextDecorator
 from prompt.retrieval import ContextRetrieval
+from requests.exceptions import ConnectTimeout
 
 from models.models import LocalAIModel, OpenAIChatModel
-
-DEFAULT_SYSTEM_PROMPT: str = """ You are a helpful chatbot that answers questions from the perspective 
-    of a regulatory toxicologist. You should answer the user's question in 
-    plain and precise language based on the below context. If the context 
-    doesn't contain any relevant information to the question, don't make 
-    something up. Instead, just say "I don't have information on that 
-    topic".
-    """
 
 
 class SingletonMeta(type):
@@ -128,10 +126,8 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         # Retrieval use case
         # TODO: This is clunky - ideally we would have a LLM detect the intent for use cases
         #  involving user input.
-        if query[:7].lower() == "search:":
-            query = query[7:]
-            prompt = ContextRetrieval(prompt, self.config)
-        elif use_rag:
+        if query.lower().startswith("search:") or use_rag:
+            query = query[7:] if query.lower().startswith("search:") else query
             prompt = ContextRetrieval(prompt, self.config)
 
         # look for moderation filter
@@ -145,11 +141,25 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         if query_config.useknowledgebase:
             prompt = ContextRetrieval(prompt, self.config, collection="user")
 
-        handler = LLMCallHandler(self.model, prompt, self.config)
+        try:
+            handler = LLMCallHandler(self.model, prompt, self.config)
+            new_query, query_rewrite_cost = self.rewrite_query(query)
+            llm_prompt, response, cost = handler.call_llm(new_query)
 
-        llm_prompt, response, cb = handler.call_llm(query)
+        # Carter: we will want a better solution here but we need error handling for the time being.
+        # This catches errors when the local models are offline
+        except ConnectTimeout:
+            logger.error("Unable to connect to local model.")
+            return "N/A", "The model you selected is not online.", 0.0
 
-        return llm_prompt, response, cb
+        return llm_prompt, response, cost + query_rewrite_cost
+
+    def rewrite_query(self, query: str):
+        """Reformats the user query for improved search results."""
+        return self.model(
+            DEFAULT_QUERY_REWRITER.format(question=query),
+            override_config={"temperature": 0.0},
+        )
 
     def query(self, prompt):
         response, cb = self.model(prompt)
