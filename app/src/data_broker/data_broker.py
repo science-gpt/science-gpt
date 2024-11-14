@@ -59,6 +59,10 @@ class DataBroker(metaclass=SingletonMeta):
         if database_config != None:
             print("---INIT---")
             self.load_database_config(database_config)
+            self.data_cache = {
+                "base": {},
+                "user": {},
+            }
 
     def get_embedding_model(self):
         """Returns the currently set embedding model."""
@@ -146,9 +150,11 @@ class DataBroker(metaclass=SingletonMeta):
 
         # List all PDF files in the data directory
         pdf_files = [file for file in os.listdir(data_root) if file.endswith(".pdf")]
+        existing_files = list(self.data_cache[collection].keys())
+        new_files = list(set(pdf_files) - set(existing_files))
 
         # Process each PDF file
-        for pdf_file in pdf_files:
+        for pdf_file in new_files:
             pdf = PDFData(
                 filepath=os.path.join(data_root, pdf_file),
                 name=pdf_file,
@@ -156,7 +162,8 @@ class DataBroker(metaclass=SingletonMeta):
             )
             try:
                 print("inserting", pdf)
-                self.insert(pdf, collection=collection)
+                chunk_ids = self.insert(pdf, collection=collection)
+                self.data_cache[collection][pdf_file] = chunk_ids
             except IOError as e:
                 logger.error(f"Failed to insert {pdf.name} into the vector store: {e}")
 
@@ -166,20 +173,14 @@ class DataBroker(metaclass=SingletonMeta):
 
         # List all PDF files in the data directory
         pdf_files = [file for file in os.listdir(data_root) if file.endswith(".pdf")]
+        existing_files = list(self.data_cache[collection].keys())
+        remove_files = list(set(existing_files) - set(pdf_files))
 
-        chunks = []
-        for pdf_file in pdf_files:
-            pdf = PDFData(
-                filepath=os.path.join(data_root, pdf_file),
-                name=pdf_file,
-                data_type="pdf",
-            )
+        chunks_ids = []
+        for pdf_file in remove_files:
+            chunks_ids.extend(self.data_cache[collection][pdf_file])
+            self.data_cache[collection].pop(pdf_file)
 
-            extractor = self.extractors.get(pdf.data_type)
-            text = extractor(pdf)
-            chunks.extend(self.chunker(text))
-
-        chunks_ids = [c.name for c in chunks]
         existing_items = self.vector_store[collection].collection.get(include=[])
         existing_ids = list(set(existing_items["ids"]))
 
@@ -234,9 +235,11 @@ class DataBroker(metaclass=SingletonMeta):
                 self.vector_store[collection].insert(embeddings)
             except Exception as e:
                 logger.error(f"Failed to get or create collection: {e}")
-                return
+                return []
         else:
             print("✅ No new documents to add")
+
+        return [chunk.name for chunk in chunks]
 
     ### added clear db fuction here
     def clear_db(self, collection="base"):

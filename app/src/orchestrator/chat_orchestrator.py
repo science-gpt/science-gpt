@@ -5,11 +5,7 @@ import toml
 from logs.logger import logger
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
-from orchestrator.utils import (
-    DEFAULT_QUERY_REWRITER,
-    DEFAULT_SYSTEM_PROMPT,
-    load_config,
-)
+from orchestrator.utils import DEFAULT_SYSTEM_PROMPT, load_config
 from prompt.base_prompt import ConcretePrompt
 from prompt.prompts import ModerationDecorator, OnlyUseContextDecorator
 from prompt.retrieval import ContextRetrieval
