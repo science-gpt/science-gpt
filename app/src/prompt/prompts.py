@@ -17,10 +17,7 @@ class TestDecorator(PromptDecorator):
         self.cost = self._prompt.cost
 
     def get_prompt(self, query: str) -> str:
-        return (
-            self._prompt.get_prompt(query).format(decorate=self.PromptTemplate),
-            self.cost,
-        )
+        return self._prompt.get_prompt(query).format(decorate=self.PromptTemplate)
 
 
 class DefinitionsDecorator(PromptDecorator):
@@ -38,13 +35,10 @@ class DefinitionsDecorator(PromptDecorator):
         self.cost = self._prompt.cost
 
     def get_prompt(self, query: str) -> str:
-        return (
-            self._prompt.get_prompt(query).format(
-                decorate=self.PromptTemplate.format(
-                    definitions="\n\n".join(self.definitions), decorate="{decorate}"
-                )
-            ),
-            self.cost,
+        return self._prompt.get_prompt(query).format(
+            decorate=self.PromptTemplate.format(
+                definitions="\n\n".join(self.definitions), decorate="{decorate}"
+            )
         )
 
 
