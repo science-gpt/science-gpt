@@ -106,8 +106,9 @@ class ContextRetrieval(PromptDecorator):
         print(results)
         context_text = "\n\n---\n\n".join(
             [
-                f"Context Source: {res.id}\nDocument: {res.document}"
-                for res in results[0]
+                f"Context Source: {chunk.id}\nDocument: {chunk.document}"
+                for result in results
+                for chunk in result
             ]
         )
         return self._prompt.get_prompt(query).format(
