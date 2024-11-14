@@ -89,6 +89,7 @@ class DataBroker(metaclass=SingletonMeta):
                     "Failed to connect to the Ollama model. Defaulting to HuggingFace embeddings."
                 )
                 self.embedder = HuggingFaceEmbedder(model_name="all-mpnet-base-v2")
+                self.embedding_model = "all-mpnet-base-v2"
 
         elif self.embedding_model in hface_models:
             self.embedder = HuggingFaceEmbedder(model_name=self.embedding_model)
@@ -134,6 +135,9 @@ class DataBroker(metaclass=SingletonMeta):
                 "user": ChromaDB(collection_name=self.collection_name["user"]),
             }
 
+            self.data_cache["base"][self.collection_name["base"]] = {}
+            self.data_cache["user"][self.collection_name["user"]] = {}
+
             print("---")
             print(self.collection_name)
             print("---")
@@ -147,10 +151,11 @@ class DataBroker(metaclass=SingletonMeta):
         Orchestrates the ingestion, chunking, embedding, and storing of data.
         """
         data_root = self.data_root[collection]
+        collection_name = self.collection_name[collection]
 
         # List all PDF files in the data directory
         pdf_files = [file for file in os.listdir(data_root) if file.endswith(".pdf")]
-        existing_files = list(self.data_cache[collection].keys())
+        existing_files = list(self.data_cache[collection][collection_name].keys())
         new_files = list(set(pdf_files) - set(existing_files))
 
         # Process each PDF file
@@ -163,23 +168,24 @@ class DataBroker(metaclass=SingletonMeta):
             try:
                 print("inserting", pdf)
                 chunk_ids = self.insert(pdf, collection=collection)
-                self.data_cache[collection][pdf_file] = chunk_ids
+                self.data_cache[collection][collection_name][pdf_file] = chunk_ids
             except IOError as e:
                 logger.error(f"Failed to insert {pdf.name} into the vector store: {e}")
 
     def ingest_and_prune_data(self, collection="user"):
 
         data_root = self.data_root[collection]
+        collection_name = self.collection_name[collection]
 
         # List all PDF files in the data directory
         pdf_files = [file for file in os.listdir(data_root) if file.endswith(".pdf")]
-        existing_files = list(self.data_cache[collection].keys())
+        existing_files = list(self.data_cache[collection][collection_name].keys())
         remove_files = list(set(existing_files) - set(pdf_files))
 
         chunks_ids = []
         for pdf_file in remove_files:
             chunks_ids.extend(self.data_cache[collection][pdf_file])
-            self.data_cache[collection].pop(pdf_file)
+            self.data_cache[collection][collection_name].pop(pdf_file)
 
         existing_items = self.vector_store[collection].collection.get(include=[])
         existing_ids = list(set(existing_items["ids"]))
