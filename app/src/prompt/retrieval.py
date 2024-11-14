@@ -98,7 +98,7 @@ class ContextRetrieval(PromptDecorator):
         )
 
         #### If no results found, we should log and we should also tell the user that their RAG search did not return any results for some reason
-        if not results or len(results[0]) == 0:
+        if len(results) == 0 or len(results[0]) == 0:
             # No results found; handle the case here
             # logger.warning("No documents found for the query. Returning only the query as the prompt.")
             print("no results returned...")
