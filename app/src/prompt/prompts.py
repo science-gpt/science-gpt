@@ -14,9 +14,13 @@ class TestDecorator(PromptDecorator):
         prompt: PromptComponent,
     ) -> None:
         self._prompt = prompt
+        self.cost = self._prompt.cost
 
     def get_prompt(self, query: str) -> str:
-        return self._prompt.get_prompt(query).format(decorate=self.PromptTemplate)
+        return (
+            self._prompt.get_prompt(query).format(decorate=self.PromptTemplate),
+            self.cost,
+        )
 
 
 class DefinitionsDecorator(PromptDecorator):
@@ -31,12 +35,16 @@ class DefinitionsDecorator(PromptDecorator):
     def __init__(self, prompt: PromptComponent, definitions: list[str]) -> None:
         self._prompt = prompt
         self.definitions = definitions
+        self.cost = self._prompt.cost
 
     def get_prompt(self, query: str) -> str:
-        return self._prompt.get_prompt(query).format(
-            decorate=self.PromptTemplate.format(
-                definitions="\n\n".join(self.definitions), decorate="{decorate}"
-            )
+        return (
+            self._prompt.get_prompt(query).format(
+                decorate=self.PromptTemplate.format(
+                    definitions="\n\n".join(self.definitions), decorate="{decorate}"
+                )
+            ),
+            self.cost,
         )
 
 
@@ -54,6 +62,7 @@ class OnlyUseContextDecorator(PromptDecorator):
         prompt: PromptComponent,
     ) -> None:
         self._prompt = prompt
+        self.cost = self._prompt.cost
 
     def get_prompt(self, query: str) -> str:
         return self._prompt.get_prompt(query).format(decorate=self.PromptTemplate)
@@ -72,6 +81,7 @@ class ModerationDecorator(PromptDecorator):
         prompt: PromptComponent,
     ) -> None:
         self._prompt = prompt
+        self.cost = self._prompt.cost
 
     def get_prompt(self, query: str) -> str:
         return self._prompt.get_prompt(query).format(decorate=self.PromptTemplate)
@@ -89,6 +99,7 @@ class ExamplesDecorator(PromptDecorator):
         self._prompt = prompt
         self.question = question
         self.examples = examples
+        self.cost = self._prompt.cost
 
     def get_prompt(self, query: str) -> str:
         return self._prompt.get_prompt(query).format(
