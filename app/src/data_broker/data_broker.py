@@ -1,6 +1,7 @@
 import logging
 import os
 import string
+from types import SimpleNamespace
 from typing import Dict, List, Optional
 
 import toml
@@ -14,10 +15,8 @@ from ingestion.embedding import Embedder, HuggingFaceEmbedder, OllamaEmbedder
 from ingestion.extraction import PDFData, PyPDF2Extract, TextExtract
 from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, SearchResult, VectorDB
-from orchestrator.config import SystemConfig
-from orchestrator.utils import load_config
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)  # using custom logger causes circular dependency
 
 
 def squish(s):
@@ -52,10 +51,13 @@ class DataBroker(metaclass=SingletonMeta):
     chunking, embedding, storage and retrieval of text data.
     """
 
-    def __init__(self, database_config=None) -> None:
+    def __init__(self, database_config: SimpleNamespace = None) -> None:
         """
         Instantiates an object of this class.
         """
+        self._database_config = database_config
+        self.secrets = toml.load("secrets.toml")
+        self.init_databroker_pipeline()
         if database_config != None:
             print("---INIT---")
             self.load_database_config(database_config)
@@ -64,19 +66,32 @@ class DataBroker(metaclass=SingletonMeta):
                 "user": {},
             }
 
-    def get_embedding_model(self):
-        """Returns the currently set embedding model."""
-        return self.embedding_model
+    def get_database_config(self) -> SimpleNamespace:
+        """
+        Returns the database configuration.
+        """
+        return self._database_config
 
-    def load_database_config(self, database_config):
-        self.embedding_model = database_config.embedding_model
-        print(self.embedding_model)
+    def get_embedding_model(self) -> str:
+        """
+        Returns the currently set embedding model.
+        """
+        return self._database_config.embedding_model
 
-        secrets = toml.load("secrets.toml")
+    def init_databroker_pipeline(self) -> None:
+        """
+        Initializes the data broker pipeline.
+        """
+        logger.info("Initializing data broker pipeline")
+        if self._database_config is None:
+            raise ValueError("Database configuration is not set")
 
+        database_config = self._database_config
+
+        # embedding factory function
         ollama_models = ["mxbai-embed-large", "nomic-embed-text"]
         hface_models = ["all-mpnet-base-v2"]
-        macbook_endpoint = secrets["localmodel"]["macbook_endpoint"]
+        macbook_endpoint = self.secrets["localmodel"]["macbook_endpoint"]
         if self.embedding_model in ollama_models:
             self.embedder = OllamaEmbedder(
                 model_name=self.embedding_model, endpoint=macbook_endpoint
@@ -94,6 +109,9 @@ class DataBroker(metaclass=SingletonMeta):
         elif self.embedding_model in hface_models:
             self.embedder = HuggingFaceEmbedder(model_name=self.embedding_model)
 
+        # finish embedding
+
+        # chunking factory function
         if database_config.chunking_method == "split_sentences":
             self.chunker = SplitSentencesChunker()
         elif database_config.chunking_method == "recursive_character":
@@ -111,11 +129,15 @@ class DataBroker(metaclass=SingletonMeta):
                 chunk_size=750,
                 chunk_overlap=250,
             )
+        # chunking ends
 
+        # extract factory function
         self.extractors = {}
         if database_config.pdf_extractor.pdf_extract_method == "pypdf2":
             self.extractors["pdf"] = PyPDF2Extract()
+        # end extract factory function
 
+        # create vector db factory function
         if database_config.vector_store.type == "local-chromadb":
             suffix = "_" + squish(self.embedding_model)
             suffix += "_" + squish(database_config.chunking_method)
@@ -141,6 +163,7 @@ class DataBroker(metaclass=SingletonMeta):
             print("---")
             print(self.collection_name)
             print("---")
+        # end
 
         self.ingest_and_process_data(collection="base")
         self.ingest_and_process_data(collection="user")

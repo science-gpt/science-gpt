@@ -288,7 +288,7 @@ def databasecb(database_config):
     try:
         if "databroker" not in st.session_state:
             st.session_state.databroker = DataBroker(st.session_state.database_config)
-        st.session_state.databroker.load_database_config(database_config)
+        st.session_state.databroker.init_databroker_pipeline(database_config)
     except Exception as e:
         st.sidebar.error(f"Failed to load embeddings: {e}")
     st.sidebar.success(f"Database Generated!")
