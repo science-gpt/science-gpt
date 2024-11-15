@@ -78,6 +78,39 @@ class DataBroker(metaclass=SingletonMeta):
         """
         return self._database_config.embedding_model
 
+    def _create_embedder(self) -> Embedder:
+        """
+        Creates an embedder based on the configured embedding model.
+        Returns:
+            Embedder: An instance of the appropriate Embedder subclass
+        Raises:
+            ValueError: If the configured embedding method is not supported
+        """
+        OLLAMA_MODELS = ["mxbai-embed-large", "nomic-embed-text"]
+        HFACE_MODELS = ["all-mpnet-base-v2"]
+
+        embedding_model = self._database_config.embedding_model
+        if embedding_model in OLLAMA_MODELS:
+            macbook_endpoint = self.secrets["localmodel"]["macbook_endpoint"]
+            embedder = OllamaEmbedder(
+                model_name=embedding_model, endpoint=macbook_endpoint
+            )
+            try:
+                embedder.test_connection()
+            except RuntimeError as e:
+                logger.error(
+                    "Failed to connect to the Ollama model. Defaulting to HuggingFace embeddings."
+                )
+                embedder = HuggingFaceEmbedder(model_name="all-mpnet-base-v2")
+        elif embedding_model in HFACE_MODELS:
+            embedder = HuggingFaceEmbedder(model_name=embedding_model)
+        else:
+            raise ValueError(
+                f"Unsupported embedding method: {self._database_config.embedding_model}"
+            )
+
+        return embedder
+
     def init_databroker_pipeline(self) -> None:
         """
         Initializes the data broker pipeline.
@@ -87,29 +120,7 @@ class DataBroker(metaclass=SingletonMeta):
             raise ValueError("Database configuration is not set")
 
         database_config = self._database_config
-
-        # embedding factory function
-        ollama_models = ["mxbai-embed-large", "nomic-embed-text"]
-        hface_models = ["all-mpnet-base-v2"]
-        macbook_endpoint = self.secrets["localmodel"]["macbook_endpoint"]
-        if self.embedding_model in ollama_models:
-            self.embedder = OllamaEmbedder(
-                model_name=self.embedding_model, endpoint=macbook_endpoint
-            )
-
-            try:
-                self.embedder.test_connection()
-            except RuntimeError as e:
-                logger.error(
-                    "Failed to connect to the Ollama model. Defaulting to HuggingFace embeddings."
-                )
-                self.embedder = HuggingFaceEmbedder(model_name="all-mpnet-base-v2")
-                self.embedding_model = "all-mpnet-base-v2"
-
-        elif self.embedding_model in hface_models:
-            self.embedder = HuggingFaceEmbedder(model_name=self.embedding_model)
-
-        # finish embedding
+        self.embedder = self._create_embedder()
 
         # chunking factory function
         if database_config.chunking_method == "split_sentences":
