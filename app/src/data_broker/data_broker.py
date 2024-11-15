@@ -146,6 +146,19 @@ class DataBroker(metaclass=SingletonMeta):
             )
         return chunker
 
+    def _create_extractors(self) -> Dict[str, TextExtract]:
+        """
+        Creates a dictionary of extractors for different data types.
+        Each of the supported data types receives its own extractor.
+        Extractors are set using the config.
+        Returns:
+            Dict[str, TextExtract]: A dictionary mapping data types to their respective extractors
+        """
+        extractors = {}
+        if self._database_config.pdf_extractor.pdf_extract_method == "pypdf2":
+            extractors["pdf"] = PyPDF2Extract()
+        return extractors
+
     def init_databroker_pipeline(self) -> None:
         """
         Initializes the data broker pipeline.
@@ -157,11 +170,7 @@ class DataBroker(metaclass=SingletonMeta):
         database_config = self._database_config
         self.embedder = self._create_embedder()
         self.chunker = self._create_chunker()
-
-        # extract factory function
-        self.extractors = {}
-        if database_config.pdf_extractor.pdf_extract_method == "pypdf2":
-            self.extractors["pdf"] = PyPDF2Extract()
+        self.extractors = self._create_extractors()
         # end extract factory function
 
         # create vector db factory function
