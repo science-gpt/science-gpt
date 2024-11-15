@@ -42,12 +42,12 @@ class ContextRetrieval(PromptDecorator):
         self.config: SystemConfig = config
         self.collection = collection
 
-    def get_prompt(self, query: str, top_k=None) -> str:
+    def get_prompt(self, query: str, top_k=None, where_document=None) -> str:
         if top_k == None:
             top_k = self.config.rag_params.top_k_retrieval
         print("Retrieval!\n", str(top_k))
         results = self.data_broker.search(
-            [query], top_k=top_k, collection=self.collection
+            [query], top_k=top_k, collection=self.collection, where_document=self.config.rag_params.filters
         )
 
         #### If no results found, we should log and we should also tell the user that their RAG search did not return any results for some reason
