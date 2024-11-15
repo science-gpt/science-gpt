@@ -39,6 +39,7 @@ class VectorDB(BaseModel):
 
 class RAGParams(BaseModel):
     top_k_retrieval: int
+    filters: None
 
 
 class SystemConfig(BaseModel):

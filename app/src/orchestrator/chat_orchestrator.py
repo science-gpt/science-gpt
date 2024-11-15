@@ -80,6 +80,12 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         self.config.rag_params.top_k_retrieval = query_config.top_k
         self.config.model_params.top_p = query_config.top_p
 
+        if query_config.keywords: #checks for any keywords. If there are keywords, creates dict with keywords to pass to where_documents
+            self.config.rag_params.filters = {}
+            self.config.rag_params.filters["$contains"] = query_config.keywords
+        logger.info(self.config.rag_params.filters)
+
+
     def test_connection(self, local=False):
         """
         Test connection to the local or remote chat model.
@@ -129,6 +135,11 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         if query.lower().startswith("search:") or use_rag:
             query = query[7:] if query.lower().startswith("search:") else query
             prompt = ContextRetrieval(prompt, self.config)
+        
+        #checks to see if there is any inputed keywords
+        if query_config.keywords: 
+            prompt = ContextRetrieval(prompt, self.config)
+
 
         # look for moderation filter
         if query_config.moderationfilter:
@@ -140,6 +151,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         if query_config.useknowledgebase:
             prompt = ContextRetrieval(prompt, self.config, collection="user")
+    
 
         try:
             handler = LLMCallHandler(self.model, prompt, self.config)

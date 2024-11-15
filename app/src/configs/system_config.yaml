@@ -31,4 +31,4 @@ vector_db:
 
 rag_params:
   top_k_retrieval: 5
-
+  filters: None
