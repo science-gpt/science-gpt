@@ -111,6 +111,41 @@ class DataBroker(metaclass=SingletonMeta):
 
         return embedder
 
+    def _create_chunker(self) -> Chunker:
+        """
+        Creates a chunker based on the configured chunking method.
+        Returns:
+            Chunker: An instance of the appropriate Chunker subclass
+        Raises:
+            ValueError: If the configured chunking method is not supported
+        """
+        if self._database_config.chunking_method == "split_sentences":
+            chunker = SplitSentencesChunker()
+        elif self._database_config.chunking_method == "recursive_character":
+            chunker = RecursiveCharacterChunker(
+                chunk_size=1500,
+                chunk_overlap=250,
+            )
+        elif (
+            self._database_config.chunking_method == "recursive_character:large_chunks"
+        ):
+            chunker = RecursiveCharacterChunker(
+                chunk_size=3000,
+                chunk_overlap=500,
+            )
+        elif (
+            self._database_config.chunking_method == "recursive_character:small_chunks"
+        ):
+            chunker = RecursiveCharacterChunker(
+                chunk_size=750,
+                chunk_overlap=250,
+            )
+        else:
+            raise ValueError(
+                f"Unsupported chunking method: {self._database_config.chunking_method}"
+            )
+        return chunker
+
     def init_databroker_pipeline(self) -> None:
         """
         Initializes the data broker pipeline.
@@ -121,26 +156,7 @@ class DataBroker(metaclass=SingletonMeta):
 
         database_config = self._database_config
         self.embedder = self._create_embedder()
-
-        # chunking factory function
-        if database_config.chunking_method == "split_sentences":
-            self.chunker = SplitSentencesChunker()
-        elif database_config.chunking_method == "recursive_character":
-            self.chunker = RecursiveCharacterChunker(
-                chunk_size=1500,
-                chunk_overlap=250,
-            )
-        elif database_config.chunking_method == "recursive_character:large_chunks":
-            self.chunker = RecursiveCharacterChunker(
-                chunk_size=3000,
-                chunk_overlap=500,
-            )
-        elif database_config.chunking_method == "recursive_character:small_chunks":
-            self.chunker = RecursiveCharacterChunker(
-                chunk_size=750,
-                chunk_overlap=250,
-            )
-        # chunking ends
+        self.chunker = self._create_chunker()
 
         # extract factory function
         self.extractors = {}
