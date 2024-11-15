@@ -18,9 +18,10 @@ from orchestrator.utils import load_config
 from streamlit_feedback import streamlit_feedback
 from streamlit_float import float_css_helper, float_init, float_parent
 from streamlit_survey import StreamlitSurvey
+from streamlit_tags import st_tags
+
 
 from data_broker.data_broker import DataBroker
-
 
 def file_upload_cb():
     models_dir = st.session_state.userpath
@@ -97,6 +98,7 @@ def init_streamlit():
         st.session_state.moderationfilter = False
         st.session_state.onlyusecontext = False
         st.session_state.useknowledgebase = False
+        st.session_state.keywords = None
 
         st.session_state.orchestrator = ChatOrchestrator()
 
@@ -199,6 +201,7 @@ def create_answer(prompt):
             moderationfilter=st.session_state.moderationfilter,
             onlyusecontext=st.session_state.onlyusecontext,
             useknowledgebase=st.session_state.useknowledgebase,
+            keywords=st.session_state.keywords
         )
 
         # Now call the triage_query function without the 'local' argument
@@ -340,12 +343,27 @@ def sidebar():
         st.session_state.moderationfilter = st.checkbox("Moderation Filter")
         st.session_state.onlyusecontext = st.checkbox("Only Use Knowledge Base")
 
+        #creates a tag section to enter keywords
+        st.session_state.keywords = st_tags(
+            label="Keyword Filtered Retrieval",
+            text="Enter keywords and press enter",
+            value=st.session_state.get("keywords", []),
+            suggestions=["Toxicology", "Regulation", "Environment"],
+            maxtags=10,  # Max number of tags
+            key="keyword_tags",
+        )
+
+        keywords = st.session_state.get("keywords", [])
+        logger.info(keywords)
+        
+
         st.session_state.use_rag = st.checkbox("Retrieval Augmented Generation")
         # Create an expandable section for advanced options
         if st.session_state.use_rag:
 
             st.session_state.top_k = st.slider("Top K", 0, 20, 5)
             st.session_state.useknowledgebase = st.checkbox("Use Knowledge Base")
+
 
             with st.sidebar.expander("Advanced DataBase Options", expanded=False):
                 with st.form("advanced", border=False):
