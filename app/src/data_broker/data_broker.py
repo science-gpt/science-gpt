@@ -19,10 +19,6 @@ from ingestion.vectordb import ChromaDB, SearchResult, VectorDB
 logger = logging.getLogger(__name__)  # using custom logger causes circular dependency
 
 
-def squish(s):
-    return s.translate(str.maketrans("", "", string.punctuation))
-
-
 class SingletonMeta(type):
     """
     The Singleton class can be implemented in different ways in Python. Some
@@ -43,7 +39,6 @@ class SingletonMeta(type):
         return cls._instances[cls]
 
 
-# TODO: error handling throughout this class is absent or inconsistent
 class DataBroker(metaclass=SingletonMeta):
     """
     The interface between the client (the app) and all data
@@ -159,6 +154,21 @@ class DataBroker(metaclass=SingletonMeta):
             extractors["pdf"] = PyPDF2Extract()
         return extractors
 
+    def _create_vectorstore(self) -> VectorDB:
+
+        if self._database_config.vector_store.type == "local-chromadb":
+            vector_store = {
+                "base": ChromaDB(
+                    collection_name=self.db_instance_names["base"]
+                ),  # TODO maybe the instance should take the collection name
+                "user": ChromaDB(collection_name=self.db_instance_names["user"]),
+            }
+        else:
+            raise ValueError(
+                f"Unsupported chunking method: {self._database_config.chunking_method}"
+            )
+        return vector_store
+
     def init_databroker_pipeline(self) -> None:
         """
         Initializes the data broker pipeline.
@@ -167,39 +177,31 @@ class DataBroker(metaclass=SingletonMeta):
         if self._database_config is None:
             raise ValueError("Database configuration is not set")
 
-        database_config = self._database_config
+        self.data_roots = {
+            "base": f"{os.getcwd()}/data/",
+            "user": self._database_config.userpath,
+        }
+
+        def strip(s):
+            """
+            Remove punctuation from a string
+            """
+            return s.translate(str.maketrans("", "", string.punctuation))
+
+        suffix = f"_{strip(self._database_config.embedding_model)}_{strip(self._database_config.chunking_method)}"
+
+        self.db_instance_names = {
+            "base": self._database_config.vector_store.instance_name + suffix,
+            "user": self._database_config.username + suffix,
+        }
+
+        self.data_cache["base"][self.collection_name["base"]] = {}
+        self.data_cache["user"][self.collection_name["user"]] = {}
+
         self.embedder = self._create_embedder()
         self.chunker = self._create_chunker()
         self.extractors = self._create_extractors()
-        # end extract factory function
-
-        # create vector db factory function
-        if database_config.vector_store.type == "local-chromadb":
-            suffix = "_" + squish(self.embedding_model)
-            suffix += "_" + squish(database_config.chunking_method)
-
-            self.data_root = {
-                "base": f"{os.getcwd()}/data/",
-                "user": database_config.userpath,
-            }
-
-            self.collection_name = {
-                "base": database_config.vector_store.instance_name + suffix,
-                "user": database_config.username + suffix,
-            }
-
-            self.vector_store = {
-                "base": ChromaDB(collection_name=self.collection_name["base"]),
-                "user": ChromaDB(collection_name=self.collection_name["user"]),
-            }
-
-            self.data_cache["base"][self.collection_name["base"]] = {}
-            self.data_cache["user"][self.collection_name["user"]] = {}
-
-            print("---")
-            print(self.collection_name)
-            print("---")
-        # end
+        self.vector_store = self._create_vectorstore()
 
         self.ingest_and_process_data(collection="base")
         self.ingest_and_process_data(collection="user")
@@ -209,7 +211,7 @@ class DataBroker(metaclass=SingletonMeta):
         """
         Orchestrates the ingestion, chunking, embedding, and storing of data.
         """
-        data_root = self.data_root[collection]
+        data_root = self.data_roots[collection]
         collection_name = self.collection_name[collection]
 
         # List all PDF files in the data directory
@@ -273,7 +275,7 @@ class DataBroker(metaclass=SingletonMeta):
         try:
             self.vector_store[collection].collection = self.vector_store[
                 collection
-            ].client.get_or_create_collection(name=self.collection_name[collection])
+            ].client.get_or_create_collection(name=self.db_instance_names[collection])
         except Exception as e:
             logger.error(f"Failed to get or create collection: {e}")
             return
@@ -311,7 +313,7 @@ class DataBroker(metaclass=SingletonMeta):
         """
         Clears all vectors from the vector store.
         """
-        collection_name = self.collection_name[
+        collection_name = self.db_instance_names[
             collection
         ]  # Retrieve the collection name
         print("I'm clearing the db:", collection_name)
