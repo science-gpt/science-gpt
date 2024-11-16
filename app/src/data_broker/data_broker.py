@@ -254,7 +254,7 @@ class DataBroker(metaclass=SingletonMeta):
         queries: List[str],
         top_k: int = 5,
         collection="base",
-        where_document: Optional[dict] = None,
+        keywords: Optional[list[str]] = None,
     ) -> List[List[SearchResult]]:
         """
         Searches the vector store for the most relevant docs based on the given queries.
@@ -273,12 +273,13 @@ class DataBroker(metaclass=SingletonMeta):
             for i, query in enumerate(queries)
         ]
 
+
         query_embeddings = self.embedder(query_chunks)
         query_vectors = [embedding.vector for embedding in query_embeddings]
 
         try:
             results = self.vector_store[collection].search(
-                query_vectors, top_k, where_document
+                query_vectors, top_k, keywords
             )
         except:
             logger.error(
