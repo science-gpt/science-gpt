@@ -349,7 +349,7 @@ def sidebar():
             text="Enter keywords and press enter",
             value=st.session_state.get("keywords", []),
             suggestions=["Toxicology", "Regulation", "Environment"],
-            maxtags=10,  # Max number of tags
+            maxtags=10,  #max number of tags
             key="keyword_tags",
         )
 
