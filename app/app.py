@@ -352,7 +352,6 @@ def sidebar():
             key="keyword_tags",
         )
 
-
         st.session_state.use_rag = st.checkbox("Retrieval Augmented Generation")
         # Create an expandable section for advanced options
         if st.session_state.use_rag:

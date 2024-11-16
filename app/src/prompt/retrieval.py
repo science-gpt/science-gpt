@@ -1,6 +1,6 @@
 import os
-from typing import Optional
 from logging import log
+from typing import Optional
 
 from data_broker.data_broker import DataBroker
 from langchain_community.vectorstores import Chroma
@@ -52,7 +52,6 @@ class ContextRetrieval(PromptDecorator):
         if top_k == None:
             top_k = self.config.rag_params.top_k_retrieval
         print("Retrieval!\n", str(top_k))
-
 
         results = self.data_broker.search(
             [query],

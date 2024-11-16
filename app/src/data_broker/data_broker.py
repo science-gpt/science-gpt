@@ -273,7 +273,6 @@ class DataBroker(metaclass=SingletonMeta):
             for i, query in enumerate(queries)
         ]
 
-
         query_embeddings = self.embedder(query_chunks)
         query_vectors = [embedding.vector for embedding in query_embeddings]
 

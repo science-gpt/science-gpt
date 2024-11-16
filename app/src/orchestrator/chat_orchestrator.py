@@ -128,7 +128,6 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         if query.lower().startswith("search:") or use_rag:
             query = query[7:] if query.lower().startswith("search:") else query
             prompt = ContextRetrieval(prompt, self.config)
-    
 
         # look for moderation filter
         if query_config.moderationfilter:
