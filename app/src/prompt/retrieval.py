@@ -1,9 +1,9 @@
 import os
 from typing import Optional
+from logging import log
 
 from data_broker.data_broker import DataBroker
 from langchain_community.vectorstores import Chroma
-from logs.logger import logger
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent, PromptDecorator
 
@@ -40,7 +40,7 @@ class ContextRetrieval(PromptDecorator):
         prompt: PromptComponent,
         config: SystemConfig,
         collection="base",
-        keyword_filter: Optional[dict] = None,
+        keyword_filter: Optional[list[str]] = None,
     ) -> None:
         self._prompt = prompt
         self.data_broker = DataBroker()
@@ -48,25 +48,19 @@ class ContextRetrieval(PromptDecorator):
         self.collection = collection
         self.keyword_filter = keyword_filter
 
-    def get_prompt(self, query: str, top_k=None, where_document=None) -> str:
+    def get_prompt(self, query: str, top_k=None) -> str:
         if top_k == None:
             top_k = self.config.rag_params.top_k_retrieval
         print("Retrieval!\n", str(top_k))
 
-        # if self.keyword_filter: #if there are keywords it will format them to use in the search function
-        #     where_document = {"$contains": self.keyword_filter}
-
-        # logger.info(where_document)
-
-        if self.keyword_filter:
-            where_document = {"$contains": self.keyword_filter}
 
         results = self.data_broker.search(
             [query],
             top_k=top_k,
             collection=self.collection,
-            where_document=where_document,
+            keywords=self.keyword_filter,
         )
+        log.info(self.keyword_filter)
 
         #### If no results found, we should log and we should also tell the user that their RAG search did not return any results for some reason
         if not results or len(results[0]) == 0:
