@@ -59,7 +59,6 @@ class ContextRetrieval(PromptDecorator):
             collection=self.collection,
             keywords=self.keyword_filter,
         )
-        log.info(self.keyword_filter)
 
         #### If no results found, we should log and we should also tell the user that their RAG search did not return any results for some reason
         if not results or len(results[0]) == 0:
