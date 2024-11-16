@@ -1,12 +1,11 @@
 import os
-
-from langchain_community.vectorstores import Chroma
-from orchestrator.config import SystemConfig
-from prompt.base_prompt import PromptComponent, PromptDecorator
 from typing import Optional
 
 from data_broker.data_broker import DataBroker
+from langchain_community.vectorstores import Chroma
 from logs.logger import logger
+from orchestrator.config import SystemConfig
+from prompt.base_prompt import PromptComponent, PromptDecorator
 
 
 class TestRetrieval(PromptDecorator):
@@ -37,29 +36,36 @@ class ContextRetrieval(PromptDecorator):
     """
 
     def __init__(
-        self, prompt: PromptComponent, config: SystemConfig, collection="base", keyword_filter:Optional[dict]=None
+        self,
+        prompt: PromptComponent,
+        config: SystemConfig,
+        collection="base",
+        keyword_filter: Optional[dict] = None,
     ) -> None:
         self._prompt = prompt
         self.data_broker = DataBroker()
         self.config: SystemConfig = config
         self.collection = collection
-        self.keyword_filter=keyword_filter
+        self.keyword_filter = keyword_filter
 
     def get_prompt(self, query: str, top_k=None, where_document=None) -> str:
         if top_k == None:
             top_k = self.config.rag_params.top_k_retrieval
         print("Retrieval!\n", str(top_k))
-        
+
         # if self.keyword_filter: #if there are keywords it will format them to use in the search function
         #     where_document = {"$contains": self.keyword_filter}
-        
+
         # logger.info(where_document)
 
         if self.keyword_filter:
             where_document = {"$contains": self.keyword_filter}
 
         results = self.data_broker.search(
-            [query], top_k=top_k, collection=self.collection, where_document=where_document
+            [query],
+            top_k=top_k,
+            collection=self.collection,
+            where_document=where_document,
         )
 
         #### If no results found, we should log and we should also tell the user that their RAG search did not return any results for some reason

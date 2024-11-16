@@ -3,6 +3,7 @@ import os
 import requests
 import toml
 from logs.logger import logger
+from models.models import LocalAIModel, OpenAIChatModel
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
 from orchestrator.utils import (
@@ -14,8 +15,6 @@ from prompt.base_prompt import ConcretePrompt
 from prompt.prompts import ModerationDecorator, OnlyUseContextDecorator
 from prompt.retrieval import ContextRetrieval
 from requests.exceptions import ConnectTimeout
-
-from models.models import LocalAIModel, OpenAIChatModel
 
 
 class SingletonMeta(type):
@@ -80,8 +79,6 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         self.config.rag_params.top_k_retrieval = query_config.top_k
         self.config.model_params.top_p = query_config.top_p
 
-
-
     def test_connection(self, local=False):
         """
         Test connection to the local or remote chat model.
@@ -131,13 +128,13 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         if query.lower().startswith("search:") or use_rag:
             query = query[7:] if query.lower().startswith("search:") else query
             prompt = ContextRetrieval(prompt, self.config)
-        
-        #checks to see if there are any inputed keywords
-        if query_config.keywords: 
-            prompt = ContextRetrieval(prompt, self.config, keyword_filter=query_config.keywords)
+
+        # checks to see if there are any inputed keywords
+        if query_config.keywords:
+            prompt = ContextRetrieval(
+                prompt, self.config, keyword_filter=query_config.keywords
+            )
             logger.info(query_config.keywords)
-
-
 
         # look for moderation filter
         if query_config.moderationfilter:
@@ -149,7 +146,6 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         if query_config.useknowledgebase:
             prompt = ContextRetrieval(prompt, self.config, collection="user")
-    
 
         try:
             handler = LLMCallHandler(self.model, prompt, self.config)

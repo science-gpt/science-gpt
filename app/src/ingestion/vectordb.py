@@ -101,7 +101,10 @@ class ChromaDB(VectorDB):
         self.collection.add(ids=ids, embeddings=vectors, documents=documents)
 
     def search(
-        self, query_vectors: List[np.ndarray], top_k: int = 5, where_document: Optional[dict]=None
+        self,
+        query_vectors: List[np.ndarray],
+        top_k: int = 5,
+        where_document: Optional[dict] = None,
     ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database.
@@ -116,14 +119,16 @@ class ChromaDB(VectorDB):
                                       The i-th inner list corresponds to the results for the i-th query vector.
         """
 
-        if not where_document: #defaults where document to None if it doesn't exist or if it is an empty dict
+        if (
+            not where_document
+        ):  # defaults where document to None if it doesn't exist or if it is an empty dict
             where_document = None
 
         query_embeddings = [vector.tolist() for vector in query_vectors]
         results = self.collection.query(
             query_embeddings=query_embeddings,
             n_results=top_k,
-            where_document=where_document
+            where_document=where_document,
         )
 
         all_results = []

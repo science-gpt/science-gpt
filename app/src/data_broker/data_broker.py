@@ -250,7 +250,11 @@ class DataBroker(metaclass=SingletonMeta):
         self.vector_store[collection].client.delete_collection(collection_name)
 
     def search(
-        self, queries: List[str], top_k: int = 5, collection="base", where_document: Optional[dict]=None
+        self,
+        queries: List[str],
+        top_k: int = 5,
+        collection="base",
+        where_document: Optional[dict] = None,
     ) -> List[List[SearchResult]]:
         """
         Searches the vector store for the most relevant docs based on the given queries.
@@ -273,7 +277,9 @@ class DataBroker(metaclass=SingletonMeta):
         query_vectors = [embedding.vector for embedding in query_embeddings]
 
         try:
-            results = self.vector_store[collection].search(query_vectors, top_k, where_document)
+            results = self.vector_store[collection].search(
+                query_vectors, top_k, where_document
+            )
         except:
             logger.error(
                 "Connect search. probably an issue with the DB not initialized and nothing returned"
