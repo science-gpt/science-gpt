@@ -1,5 +1,4 @@
 import os
-from logging import log
 from typing import Optional
 
 from data_broker.data_broker import DataBroker
