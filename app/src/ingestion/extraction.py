@@ -2,8 +2,9 @@ import pathlib
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+import pymupdf4llm
 import PyPDF2
-
+import fitz
 from .raw_data import RAW_DATA_TYPES, Data
 
 
@@ -112,3 +113,93 @@ class PyPDF2Extract(TextExtract):
             raise IOError(f"Error reading PDF file: {e}")
         except Exception as e:
             raise ValueError(f"Error extracting text from PDF: {e}")
+
+
+
+class PyMuPDF4LLMExtract(TextExtract):
+    """
+    Concrete implementation of TextExtract for PDF data sources using PyMuPDF4LLM.
+
+    This class provides functionality to extract Markdown-formatted text from PDF files using pymupdf4llm.
+    """
+
+    def __init__(self) -> None:
+        """
+        Instantiates a PyMuPDF4LLMExtract object.
+        """
+        super().__init__(data_type="pdf")
+
+    def __call__(self, data: PDFData) -> Text:
+        """
+        Extracts Markdown-formatted text from the given PDF data using pymupdf4llm.
+
+        Args:
+            data (PDFData): The PDF data to extract text from.
+
+        Returns:
+            Text: A Text object containing the extracted Markdown-formatted text from the PDF.
+
+        Raises:
+            IOError: If there's an error reading the PDF file.
+            ValueError: If there's an error extracting text from the PDF.
+        """
+        # Validate that the provided data is a PDFData object
+        if not isinstance(data, PDFData):
+            raise ValueError("Input data must be a PDFData object.")
+
+        try:
+            # Use pymupdf4llm to extract the document as Markdown
+            md_text = pymupdf4llm.to_markdown(data.filepath)
+
+            # Ensure the Markdown text is not empty
+            if not md_text.strip():
+                raise ValueError("Extracted text is empty.")
+
+            # Return the Markdown text as a Text object
+            return Text(text=md_text, name=data.name, data_type="pdf")
+        except IOError as e:
+            raise IOError(f"Error reading PDF file: {e}")
+        except Exception as e:
+            raise ValueError(f"Error extracting text from PDF using pymupdf4llm: {e}")
+
+class PyMuPDFExtract(TextExtract):
+    """
+    Concrete implementation of TextExtract for PDF data sources using PyMuPDF.
+
+    This class provides functionality to extract text from PDF files using the PyMuPDF library.
+    """
+
+    def __init__(self) -> None:
+        """
+        Instantiates a PyMuPDFExtract object.
+        """
+        super().__init__(data_type="pdf")
+
+    def __call__(self, data: PDFData) -> Text:
+        """
+        Extracts text from the given PDF data using PyMuPDF.
+
+        Args:
+            data (PDFData): The PDF data to extract text from.
+
+        Returns:
+            Text: A Text object containing the extracted text from the PDF.
+
+        Raises:
+            IOError: If there's an error reading the PDF file.
+            ValueError: If there's an error extracting text from the PDF.
+        """
+        try:
+            with fitz.open(data.filepath) as pdf:
+                text = ""
+                for page in pdf:
+                    text += page.get_text() + "\n"
+                # Validate extracted text is not empty
+                if not text.strip():
+                    raise ValueError("No text extracted from the PDF.")
+                return Text(text=text.strip(), name=data.name, data_type="pdf")
+        except IOError as e:
+            raise IOError(f"Error reading PDF file: {e}")
+        except Exception as e:
+            raise ValueError(f"Error extracting text from PDF: {e}")
+

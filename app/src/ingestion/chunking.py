@@ -4,6 +4,7 @@ from typing import List
 
 import nltk
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain.text_splitter import MarkdownTextSplitter
 from nltk.tokenize import sent_tokenize
 from tqdm import tqdm
 
@@ -97,4 +98,39 @@ class RecursiveCharacterChunker(Chunker):
                 data_type=text.data_type,
             )
             for i, c in tqdm(enumerate(chunks))
+        ]
+
+class MarkdownChunker(Chunker):
+    """
+    A Chunker implementation that splits Markdown text using LangChain's MarkdownTextSplitter.
+    """
+
+    def __init__(self, chunk_size: int = 40, chunk_overlap: int = 0):
+        """
+        Initialize the MarkdownChunker.
+
+        Args:
+            chunk_size (int): Maximum size of each chunk.
+            chunk_overlap (int): Overlap between consecutive chunks.
+        """
+        self.text_splitter = MarkdownTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+
+    def __call__(self, text: Text) -> List[Chunk]:
+        """
+        Split the given Markdown text into chunks.
+
+        Args:
+            text (Text): The text to be split into chunks.
+
+        Returns:
+            List[Chunk]: A list of Chunk objects representing the split Markdown text.
+        """
+        documents = self.text_splitter.create_documents([text.text])
+        return [
+            Chunk(
+                text=doc.page_content,
+                name=f"{text.name} - Chunk {i+1}",
+                data_type=text.data_type,
+            )
+            for i, doc in enumerate(documents)
         ]

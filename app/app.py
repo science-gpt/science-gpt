@@ -302,6 +302,7 @@ def sidebar():
             "Model",
             [
                 "llama3:latest",
+                "llama3.1:70b-instruct-q2_k",
                 "GPT-4.0",
                 "GPT-3.5",
                 "llama3.1:8b",
