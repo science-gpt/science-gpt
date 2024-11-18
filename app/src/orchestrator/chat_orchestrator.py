@@ -5,11 +5,7 @@ import toml
 from logs.logger import logger
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
-from orchestrator.utils import (
-    DEFAULT_QUERY_REWRITER,
-    DEFAULT_SYSTEM_PROMPT,
-    load_config,
-)
+from orchestrator.utils import DEFAULT_SYSTEM_PROMPT, load_config
 from prompt.base_prompt import ConcretePrompt
 from prompt.prompts import ModerationDecorator, OnlyUseContextDecorator
 from prompt.retrieval import ContextRetrieval
@@ -111,8 +107,6 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         Returns the response text content (str) and cost (float)
         """
-        # print(f"Using model: {self.config.model_name}")
-        # print(self.config)
 
         print(query_config)
 
@@ -126,9 +120,10 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         # Retrieval use case
         # TODO: This is clunky - ideally we would have a LLM detect the intent for use cases
         #  involving user input.
+
         if query.lower().startswith("search:") or use_rag:
             query = query[7:] if query.lower().startswith("search:") else query
-            prompt = ContextRetrieval(prompt, self.config)
+            prompt = ContextRetrieval(prompt, self.config, self.model)
 
         # look for moderation filter
         if query_config.moderationfilter:
@@ -143,8 +138,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         try:
             handler = LLMCallHandler(self.model, prompt, self.config)
-            new_query, query_rewrite_cost = self.rewrite_query(query)
-            llm_prompt, response, cost = handler.call_llm(new_query)
+            llm_prompt, response, cost = handler.call_llm(query)
 
         # Carter: we will want a better solution here but we need error handling for the time being.
         # This catches errors when the local models are offline
@@ -152,14 +146,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             logger.error("Unable to connect to local model.")
             return "N/A", "The model you selected is not online.", 0.0
 
-        return llm_prompt, response, cost + query_rewrite_cost
-
-    def rewrite_query(self, query: str):
-        """Reformats the user query for improved search results."""
-        return self.model(
-            DEFAULT_QUERY_REWRITER.format(question=query),
-            override_config={"temperature": 0.0},
-        )
+        return llm_prompt, response, cost
 
     def query(self, prompt):
         response, cb = self.model(prompt)
