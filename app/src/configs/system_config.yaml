@@ -15,7 +15,7 @@ model_auth:
   version: 
 
 extraction:
-  pdf_extract_method: "pymupdf"
+  pdf_extract_method: "pymupdf4llm"
 
 chunking:
   method: "recursive_character"

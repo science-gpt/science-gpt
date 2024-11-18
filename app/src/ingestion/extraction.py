@@ -149,13 +149,14 @@ class PyMuPDF4LLMExtract(TextExtract):
 
         try:
             # Use pymupdf4llm to extract the document as Markdown
+            text = ""
             md_text = pymupdf4llm.to_markdown(data.filepath)
 
             # Ensure the Markdown text is not empty
             if not md_text.strip():
                 raise ValueError("Extracted text is empty.")
 
-            # Return the Markdown text as a Text object
+            # Return the Markdown text as a Text object with 'text' attribute
             return Text(text=md_text, name=data.name, data_type="pdf")
         except IOError as e:
             raise IOError(f"Error reading PDF file: {e}")

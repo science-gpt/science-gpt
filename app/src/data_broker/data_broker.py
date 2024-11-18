@@ -121,7 +121,7 @@ class DataBroker(metaclass=SingletonMeta):
             self.extractors["pdf"] = PyPDF2Extract()
         if database_config.pdf_extractor.pdf_extract_method == "pymupdf":
             self.extractors["pdf"] = PyMuPDFExtract()
-        if database_config.pdf_extractor.pdf_extract_method == "pypdf4llm":
+        if database_config.pdf_extractor.pdf_extract_method == "pymupdf4llm":
             self.extractors["pdf"] = PyMuPDF4LLMExtract()
 
         if database_config.vector_store.type == "local-chromadb":
