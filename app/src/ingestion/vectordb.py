@@ -1,7 +1,6 @@
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from logging import log
 from typing import Any, Dict, List, Optional
 
 import chromadb
@@ -119,29 +118,22 @@ class ChromaDB(VectorDB):
             List[List[SearchResult]]: List of lists of SearchResult objects containing search results.
                                       The i-th inner list corresponds to the results for the i-th query vector.
         """
-        # Serena : Can opt for more readable code if we want
-        # where_document = None
-        # if keywords:
-        #     if len(keywords) > 1:
-        #         where_document = {"$or": [{"$contains": keyword} for keyword in keywords]}
-        #     else:
-        #         where_document = {"$contains": keywords[0]}
+
+        where_document = None
+        if keywords:
+            if len(keywords) > 1:
+                where_document = {
+                    "$or": [{"$contains": keyword} for keyword in keywords]
+                }
+            else:
+                where_document = {"$contains": keywords[0]}
 
         query_embeddings = [vector.tolist() for vector in query_vectors]
         results = self.collection.query(
             query_embeddings=query_embeddings,
             n_results=top_k,
-            where_document=(
-                {"$contains": keywords[0]}
-                if keywords and len(keywords) == 1
-                else (
-                    {"$or": [{"$contains": keyword} for keyword in keywords]}
-                    if keywords
-                    else None
-                )
-            ),  # can pass None into the where document arg
+            where_document=where_document,
         )
-        log.info("keyword filter" + keywords)
 
         all_results = []
         for i in range(len(query_vectors)):

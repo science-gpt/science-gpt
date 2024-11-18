@@ -3,7 +3,7 @@ model_name: gpt-3.5
 
 model_params:
   seed: 42
-  temperature: 0.2
+  temperature: 0.0
   top_p: 0.2
   max_tokens: 512
   num_ctx: 2500

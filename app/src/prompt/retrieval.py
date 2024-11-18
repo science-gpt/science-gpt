@@ -1,10 +1,11 @@
 import os
 from typing import Optional
 
-from data_broker.data_broker import DataBroker
 from langchain_community.vectorstores import Chroma
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent, PromptDecorator
+
+from data_broker.data_broker import DataBroker
 
 
 class TestRetrieval(PromptDecorator):
@@ -63,7 +64,7 @@ class ContextRetrieval(PromptDecorator):
         if not results or len(results[0]) == 0:
             # No results found; handle the case here
             # logger.warning("No documents found for the query. Returning only the query as the prompt.")
-            print("no results returned...")
+            return "No results found for the query. Please relay that no documents were retrieved for the given query."
 
         print(results)
         context_text = "\n\n---\n\n".join(
