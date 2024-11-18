@@ -203,11 +203,31 @@ class DataBroker(metaclass=SingletonMeta):
         self.extractors = self._create_extractors()
         self.vector_store = self._create_vectorstore()
 
-        self.ingest_and_process_data(collection="base")
-        self.ingest_and_process_data(collection="user")
+        """
+        this is how i understand the flow goes:
+        init:
+            if the collection already exists (and has some data in it):
+                load the collection
+            else:
+                create a new collection
+
+            ingest everything from data root into this collection.
+            if the collection was new, there is nothing but the root data inside it now.
+            if the collection already existed, it is possible there was some data in it already.
+                this means we can end up with the root data + some other data from earlier
+
+            then we ingest and prune. where we remove anything from the vectorstore that is NOT in
+                the current data root.
+            whats the point of doing this? if we are ingesting everything from data root earlier anyways,
+                why now do extra work to remove data that doesnt belong to data root?
+                isnt it better to clear the collection, load everything from data root and thats it?
+                so no pruning step required?
+        """
+        self.ingest_root_data(collection="base")
+        self.ingest_root_data(collection="user")
         self.ingest_and_prune_data(collection="user")
 
-    def ingest_and_process_data(self, collection="base"):
+    def ingest_root_data(self, collection="base"):
         """
         Orchestrates the ingestion, chunking, embedding, and storing of data.
         """
@@ -288,6 +308,7 @@ class DataBroker(metaclass=SingletonMeta):
         text = extractor(data)
         chunks = self.chunker(text)
 
+        # and another example of the violation of abstraction
         existing_items = self.vector_store[collection].collection.get(include=[])
         existing_ids = set(existing_items["ids"])
 
@@ -320,6 +341,7 @@ class DataBroker(metaclass=SingletonMeta):
             collection
         ]  # Retrieve the collection name
         print("I'm clearing the db:", collection_name)
+        # more violations of abstraction
         self.vector_store[collection].client.delete_collection(collection_name)
 
     def search(
