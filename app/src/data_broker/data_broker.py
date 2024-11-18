@@ -158,11 +158,11 @@ class DataBroker(metaclass=SingletonMeta):
 
         if self._database_config.vector_store.type == "local-chromadb":
             vector_store = {
-                "base": ChromaDB(
-                    collection_name=self.db_instance_names["base"]
-                ),  # TODO maybe the instance should take the collection name
+                "base": ChromaDB(collection_name=self.db_instance_names["base"]),
                 "user": ChromaDB(collection_name=self.db_instance_names["user"]),
             }
+        elif self._database_config.vector_store.type == "local-milvus":
+            vector_store = {}
         else:
             raise ValueError(
                 f"Unsupported chunking method: {self._database_config.chunking_method}"
@@ -271,7 +271,11 @@ class DataBroker(metaclass=SingletonMeta):
         Args:
             data (Data): The raw data to be processed and inserted
         """
-        # Check if the collection exists, and if not, recreate it
+        # why accessing the collection directly? this violates the abstraction
+        # now the databroker only works with chroma db, and no other vector stores
+        # we should have a method in the vector stores that handles this
+        # also why creating the collection here at all, this is the insert method not the init
+        # why would there ever be a case where the collection doesn't exist?
         try:
             self.vector_store[collection].collection = self.vector_store[
                 collection
@@ -280,7 +284,6 @@ class DataBroker(metaclass=SingletonMeta):
             logger.error(f"Failed to get or create collection: {e}")
             return
 
-        # TODO better logging and error handling
         extractor = self.extractors.get(data.data_type)
         text = extractor(data)
         chunks = self.chunker(text)
