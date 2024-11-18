@@ -21,3 +21,4 @@ omegaconf
 nltk
 PyPDF2
 ChromaDB
+pymilvus
