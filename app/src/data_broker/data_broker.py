@@ -51,11 +51,9 @@ class DataBroker(metaclass=SingletonMeta):
         Instantiates an object of this class.
         """
         self._database_config = database_config
-        self.secrets = toml.load("secrets.toml")
-        self.init_databroker_pipeline()
-        if database_config != None:
-            print("---INIT---")
-            self.load_database_config(database_config)
+        self._secrets = toml.load("secrets.toml")
+        if database_config is not None:
+            self._init_databroker_pipeline()
             self.data_cache = {
                 "base": {},
                 "user": {},
@@ -86,7 +84,7 @@ class DataBroker(metaclass=SingletonMeta):
 
         embedding_model = self._database_config.embedding_model
         if embedding_model in OLLAMA_MODELS:
-            macbook_endpoint = self.secrets["localmodel"]["macbook_endpoint"]
+            macbook_endpoint = self._secrets["localmodel"]["macbook_endpoint"]
             embedder = OllamaEmbedder(
                 model_name=embedding_model, endpoint=macbook_endpoint
             )
@@ -169,7 +167,7 @@ class DataBroker(metaclass=SingletonMeta):
             )
         return vector_store
 
-    def init_databroker_pipeline(self) -> None:
+    def _init_databroker_pipeline(self) -> None:
         """
         Initializes the data broker pipeline.
         """
@@ -223,11 +221,11 @@ class DataBroker(metaclass=SingletonMeta):
                 isnt it better to clear the collection, load everything from data root and thats it?
                 so no pruning step required?
         """
-        self.ingest_root_data(collection="base")
-        self.ingest_root_data(collection="user")
-        self.ingest_and_prune_data(collection="user")
+        self._ingest_root_data(collection="base")
+        self._ingest_root_data(collection="user")
+        self._ingest_and_prune_data(collection="user")
 
-    def ingest_root_data(self, collection="base"):
+    def _ingest_root_data(self, collection="base"):
         """
         Orchestrates the ingestion, chunking, embedding, and storing of data.
         """
@@ -253,7 +251,7 @@ class DataBroker(metaclass=SingletonMeta):
             except IOError as e:
                 logger.error(f"Failed to insert {pdf.name} into the vector store: {e}")
 
-    def ingest_and_prune_data(self, collection="user"):
+    def _ingest_and_prune_data(self, collection="user"):
 
         data_root = self.data_roots[collection]
         collection_name = self.collection_name[collection]
@@ -302,7 +300,7 @@ class DataBroker(metaclass=SingletonMeta):
             ].client.get_or_create_collection(name=self.collection_name[collection])
         except Exception as e:
             logger.error(f"Failed to get or create collection: {e}")
-            return
+            return []
 
         extractor = self.extractors.get(data.data_type)
         text = extractor(data)
@@ -332,7 +330,6 @@ class DataBroker(metaclass=SingletonMeta):
 
         return [chunk.name for chunk in chunks]
 
-    ### added clear db fuction here
     def clear_db(self, collection="base"):
         """
         Clears all vectors from the vector store.
