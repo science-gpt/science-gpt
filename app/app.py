@@ -375,6 +375,7 @@ def sidebar():
                             "recursive_character",
                             "recursive_character:large_chunks",
                             "recursive_character:small_chunks",
+                            "MarkdownChunker",
                         ),
                     )
                     st.session_state.database_config = SimpleNamespace(
@@ -390,6 +391,7 @@ def sidebar():
                         "Regenerate Database",
                         on_click=(lambda: databasecb(st.session_state.database_config)),
                     )
+#                    st.button("clear db", on_click=data_broker.clear_db(collection="base"))
 
 
 def chat(tab):

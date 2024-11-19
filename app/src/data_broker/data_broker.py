@@ -9,6 +9,7 @@ from ingestion.chunking import (
     Chunker,
     RecursiveCharacterChunker,
     SplitSentencesChunker,
+    MarkdownChunker,
 )
 from ingestion.embedding import Embedder, HuggingFaceEmbedder, OllamaEmbedder
 from ingestion.extraction import PDFData, PyPDF2Extract, TextExtract, PyMuPDFExtract, PyMuPDF4LLMExtract
@@ -113,7 +114,7 @@ class DataBroker(metaclass=SingletonMeta):
             )
         elif database_config.chunking_method == "MarkdownChunker":
             self.chunker = MarkdownChunker(
-                chunk_size=40,
+                chunk_size=2000,
                 chunk_overlap=0,
             )
         self.extractors = {}

@@ -4,7 +4,7 @@ from typing import List
 
 import nltk
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain.text_splitter import MarkdownTextSplitter
+from langchain.text_splitter import MarkdownTextSplitter, MarkdownHeaderTextSplitter
 from nltk.tokenize import sent_tokenize
 from tqdm import tqdm
 
@@ -102,18 +102,36 @@ class RecursiveCharacterChunker(Chunker):
 
 class MarkdownChunker(Chunker):
     """
-    A Chunker implementation that splits Markdown text using LangChain's MarkdownTextSplitter.
+    A Chunker implementation that splits Markdown text into sections based on headers,
+    and then further splits within each section using a character-level splitter.
     """
 
-    def __init__(self, chunk_size: int = 40, chunk_overlap: int = 0):
+    def __init__(self, chunk_size: int = 2000, chunk_overlap: int = 0):
         """
         Initialize the MarkdownChunker.
 
         Args:
-            chunk_size (int): Maximum size of each chunk.
-            chunk_overlap (int): Overlap between consecutive chunks.
+            chunk_size (int): Maximum size of each chunk (number of characters).
+            chunk_overlap (int): Overlap between consecutive chunks (number of characters).
         """
-        self.text_splitter = MarkdownTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
+
+        # Header-based splitting
+        self.markdown_splitter = MarkdownHeaderTextSplitter(
+            headers_to_split_on=[
+                ("#", "Header 1"),
+                ("##", "Header 2"),
+                ("###", "Header 3"),
+                ("####", "Header 4"),
+            ],
+            strip_headers=False,
+        )
+
+        # Recursive character-level splitting
+        self.text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size, chunk_overlap=chunk_overlap
+        )
 
     def __call__(self, text: Text) -> List[Chunk]:
         """
@@ -125,12 +143,37 @@ class MarkdownChunker(Chunker):
         Returns:
             List[Chunk]: A list of Chunk objects representing the split Markdown text.
         """
-        documents = self.text_splitter.create_documents([text.text])
-        return [
-            Chunk(
-                text=doc.page_content,
-                name=f"{text.name} - Chunk {i+1}",
-                data_type=text.data_type,
-            )
-            for i, doc in enumerate(documents)
-        ]
+        # Step 1: Split Markdown text into sections based on headers
+        sections = self.markdown_splitter.split_text(text.text)
+
+        # Step 2: Further split each section into smaller chunks
+        chunks = []
+        for section in sections:
+            # Extract the actual text from the Document object
+            section_text = section.page_content if hasattr(section, "page_content") else section
+
+            # Avoid splitting very small sections
+            if len(section_text) <= self.chunk_size:
+                chunks.append(
+                    Chunk(
+                        text=section_text,
+                        name=f"{text.name} - Section",
+                        data_type=text.data_type,
+                    )
+                )
+                continue
+
+            # Split larger sections using the RecursiveCharacterTextSplitter
+            documents = self.text_splitter.split_text(section_text)
+            for i, doc in enumerate(documents):
+                chunk_text = doc.page_content if hasattr(doc, "page_content") else doc
+
+                chunks.append(
+                    Chunk(
+                        text=chunk_text,
+                        name=f"{text.name} - Section {i+1}",
+                        data_type=text.data_type,
+                    )
+                )
+
+        return chunks
