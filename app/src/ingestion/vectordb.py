@@ -34,7 +34,10 @@ class VectorDB(ABC):
 
     @abstractmethod
     def search(
-        self, query_vectors: List[np.ndarray], top_k: int = 5
+        self,
+        query_vectors: List[np.ndarray],
+        top_k: int = 5,
+        keywords: Optional[list[str]] = None,
     ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database.
