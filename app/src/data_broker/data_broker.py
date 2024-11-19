@@ -152,20 +152,19 @@ class DataBroker(metaclass=SingletonMeta):
             extractors["pdf"] = PyPDF2Extract()
         return extractors
 
-    def _create_vectorstore(self) -> VectorDB:
-
+    def _create_vectorstore(self) -> Dict[str, VectorDB]:
         if self._database_config.vector_store.type == "local-chromadb":
-            vector_store = {
+            vectorstore = {
                 "base": ChromaDB(collection_name=self.collection_name["base"]),
                 "user": ChromaDB(collection_name=self.collection_name["user"]),
             }
         elif self._database_config.vector_store.type == "local-milvus":
-            vector_store = {}
+            vectorstore = {}
         else:
             raise ValueError(
                 f"Unsupported chunking method: {self._database_config.chunking_method}"
             )
-        return vector_store
+        return vectorstore
 
     def _init_databroker_pipeline(self) -> None:
         """
@@ -199,7 +198,7 @@ class DataBroker(metaclass=SingletonMeta):
         self.embedder = self._create_embedder()
         self.chunker = self._create_chunker()
         self.extractors = self._create_extractors()
-        self.vector_store = self._create_vectorstore()
+        self.vectorstore = self._create_vectorstore()
 
         """
         this is how i understand the flow goes:
@@ -232,12 +231,10 @@ class DataBroker(metaclass=SingletonMeta):
         data_root = self.data_roots[collection]
         collection_name = self.collection_name[collection]
 
-        # List all PDF files in the data directory
         pdf_files = [file for file in os.listdir(data_root) if file.endswith(".pdf")]
         existing_files = list(self.data_cache[collection][collection_name].keys())
         new_files = list(set(pdf_files) - set(existing_files))
 
-        # Process each PDF file
         for pdf_file in new_files:
             pdf = PDFData(
                 filepath=os.path.join(data_root, pdf_file),
@@ -245,7 +242,7 @@ class DataBroker(metaclass=SingletonMeta):
                 data_type="pdf",
             )
             try:
-                print("inserting", pdf)
+                logger.info("Inserting", pdf)
                 chunk_ids = self.insert(pdf, collection=collection)
                 self.data_cache[collection][collection_name][pdf_file] = chunk_ids
             except IOError as e:
@@ -256,7 +253,6 @@ class DataBroker(metaclass=SingletonMeta):
         data_root = self.data_roots[collection]
         collection_name = self.collection_name[collection]
 
-        # List all PDF files in the data directory
         pdf_files = [file for file in os.listdir(data_root) if file.endswith(".pdf")]
         existing_files = list(self.data_cache[collection][collection_name].keys())
         remove_files = list(set(existing_files) - set(pdf_files))
@@ -266,18 +262,21 @@ class DataBroker(metaclass=SingletonMeta):
             chunks_ids.extend(self.data_cache[collection][pdf_file])
             self.data_cache[collection][collection_name].pop(pdf_file)
 
-        existing_items = self.vector_store[collection].collection.get(include=[])
+        # replace with a get all vector store method
+        existing_items = self.vectorstore[collection].collection.get(include=[])
         existing_ids = list(set(existing_items["ids"]))
 
         del_chunks = []
-        for id in existing_ids:
-            if id not in chunks_ids:
-                del_chunks.append(id)
+        for _id in existing_ids:
+            if _id not in chunks_ids:
+                del_chunks.append(_id)
 
         if len(del_chunks) > 0:
-            print("count before", self.vector_store[collection].collection.count())
-            self.vector_store[collection].delete(ids=del_chunks)
-            print("count after", self.vector_store[collection].collection.count())
+            logging.info(
+                "Count before", self.vectorstore[collection].collection.count()
+            )
+            self.vectorstore[collection].delete(ids=del_chunks)
+            logger.info("Count after", self.vectorstore[collection].collection.count())
 
     def insert(self, data: Data, collection="base") -> List[str]:
         """
@@ -295,7 +294,7 @@ class DataBroker(metaclass=SingletonMeta):
         # also why creating the collection here at all, this is the insert method not the init
         # why would there ever be a case where the collection doesn't exist?
         try:
-            self.vector_store[collection].collection = self.vector_store[
+            self.vectorstore[collection].collection = self.vectorstore[
                 collection
             ].client.get_or_create_collection(name=self.collection_name[collection])
         except Exception as e:
@@ -307,7 +306,7 @@ class DataBroker(metaclass=SingletonMeta):
         chunks = self.chunker(text)
 
         # and another example of the violation of abstraction
-        existing_items = self.vector_store[collection].collection.get(include=[])
+        existing_items = self.vectorstore[collection].collection.get(include=[])
         existing_ids = set(existing_items["ids"])
 
         # Only add missing chunks
@@ -321,7 +320,7 @@ class DataBroker(metaclass=SingletonMeta):
             embeddings = self.embedder(new_chunks)
             try:
                 # Attempt to insert embeddings into the vector store
-                self.vector_store[collection].insert(embeddings)
+                self.vectorstore[collection].insert(embeddings)
             except Exception as e:
                 logger.error(f"Failed to get or create collection: {e}")
                 return []
@@ -339,7 +338,7 @@ class DataBroker(metaclass=SingletonMeta):
         ]  # Retrieve the collection name
         print("I'm clearing the db:", collection_name)
         # more violations of abstraction
-        self.vector_store[collection].client.delete_collection(collection_name)
+        self.vectorstore[collection].client.delete_collection(collection_name)
 
     def search(
         self,
@@ -369,7 +368,7 @@ class DataBroker(metaclass=SingletonMeta):
         query_vectors = [embedding.vector for embedding in query_embeddings]
 
         try:
-            results = self.vector_store[collection].search(
+            results = self.vectorstore[collection].search(
                 query_vectors, top_k, keywords
             )
         except:
