@@ -158,8 +158,8 @@ class DataBroker(metaclass=SingletonMeta):
 
         if self._database_config.vector_store.type == "local-chromadb":
             vector_store = {
-                "base": ChromaDB(collection_name=self.db_instance_names["base"]),
-                "user": ChromaDB(collection_name=self.db_instance_names["user"]),
+                "base": ChromaDB(collection_name=self.collection_name["base"]),
+                "user": ChromaDB(collection_name=self.collection_name["user"]),
             }
         elif self._database_config.vector_store.type == "local-milvus":
             vector_store = {}
@@ -190,7 +190,7 @@ class DataBroker(metaclass=SingletonMeta):
 
         suffix = f"_{strip(self._database_config.embedding_model)}_{strip(self._database_config.chunking_method)}"
 
-        self.db_instance_names = {
+        self.collection_name = {
             "base": self._database_config.vector_store.instance_name + suffix,
             "user": self._database_config.username + suffix,
         }
@@ -255,7 +255,7 @@ class DataBroker(metaclass=SingletonMeta):
 
     def ingest_and_prune_data(self, collection="user"):
 
-        data_root = self.data_root[collection]
+        data_root = self.data_roots[collection]
         collection_name = self.collection_name[collection]
 
         # List all PDF files in the data directory
@@ -281,7 +281,7 @@ class DataBroker(metaclass=SingletonMeta):
             self.vector_store[collection].delete(ids=del_chunks)
             print("count after", self.vector_store[collection].collection.count())
 
-    def insert(self, data: Data, collection="base") -> None:
+    def insert(self, data: Data, collection="base") -> List[str]:
         """
         Process and insert the given raw data into the vector store.
 
@@ -299,7 +299,7 @@ class DataBroker(metaclass=SingletonMeta):
         try:
             self.vector_store[collection].collection = self.vector_store[
                 collection
-            ].client.get_or_create_collection(name=self.db_instance_names[collection])
+            ].client.get_or_create_collection(name=self.collection_name[collection])
         except Exception as e:
             logger.error(f"Failed to get or create collection: {e}")
             return
@@ -337,7 +337,7 @@ class DataBroker(metaclass=SingletonMeta):
         """
         Clears all vectors from the vector store.
         """
-        collection_name = self.db_instance_names[
+        collection_name = self.collection_name[
             collection
         ]  # Retrieve the collection name
         print("I'm clearing the db:", collection_name)
