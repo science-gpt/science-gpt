@@ -268,6 +268,7 @@ class DataBroker(metaclass=SingletonMeta):
         Args:
             data (Data): The raw data to be processed and inserted
         """
+        # check if the collection exists, if not throw error
         try:
             self.vectorstore[collection].collection = self.vectorstore[
                 collection
@@ -280,11 +281,11 @@ class DataBroker(metaclass=SingletonMeta):
         text = extractor(data)
         chunks = self.chunker(text)
 
-        # and another example of the violation of abstraction
+        # reuse get all vectorstore method
         existing_items = self.vectorstore[collection].collection.get(include=[])
         existing_ids = set(existing_items["ids"])
 
-        # Only add missing chunks
+        # IGNORE, TEMPORARY: adding small comment to allow pr comment
         new_chunks = []
         for chunk in chunks:
             if chunk.name not in existing_ids:
