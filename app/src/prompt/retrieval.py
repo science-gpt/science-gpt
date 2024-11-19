@@ -3,12 +3,9 @@ from typing import Optional
 
 from data_broker.data_broker import DataBroker
 from langchain_community.vectorstores import Chroma
+from models.models import ChatModel
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent, PromptDecorator
-
-
-from data_broker.data_broker import DataBroker
-from models.models import ChatModel
 
 DEFAULT_QUERY_REWRITER: str = """
     You are an expert in simplifying scientific literature search queries for toxicology and pesticide research. 
@@ -73,10 +70,9 @@ class ContextRetrieval(PromptDecorator):
         self,
         prompt: PromptComponent,
         config: SystemConfig,
-        collection="base",
-        keyword_filter: Optional[list[str]] = None,
         rewrite_model: ChatModel,
         collection="base",
+        keyword_filter: Optional[list[str]] = None,
     ) -> None:
         self._prompt = prompt
         self.data_broker = DataBroker()
@@ -101,11 +97,10 @@ class ContextRetrieval(PromptDecorator):
         print("Retrieval!\n", str(top_k))
 
         results = self.data_broker.search(
-            [query],
+            [retrieval_query],
             top_k=top_k,
             collection=self.collection,
             keywords=self.keyword_filter,
-            [retrieval_query], top_k=top_k, collection=self.collection
         )
 
         #### If no results found, we should log and we should also tell the user that their RAG search did not return any results for some reason
