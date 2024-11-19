@@ -200,26 +200,6 @@ class DataBroker(metaclass=SingletonMeta):
         self.extractors = self._create_extractors()
         self.vectorstore = self._create_vectorstore()
 
-        """
-        this is how i understand the flow goes:
-        init:
-            if the collection already exists (and has some data in it):
-                load the collection
-            else:
-                create a new collection
-
-            ingest everything from data root into this collection.
-            if the collection was new, there is nothing but the root data inside it now.
-            if the collection already existed, it is possible there was some data in it already.
-                this means we can end up with the root data + some other data from earlier
-
-            then we ingest and prune. where we remove anything from the vectorstore that is NOT in
-                the current data root.
-            whats the point of doing this? if we are ingesting everything from data root earlier anyways,
-                why now do extra work to remove data that doesnt belong to data root?
-                isnt it better to clear the collection, load everything from data root and thats it?
-                so no pruning step required?
-        """
         self._ingest_root_data(collection="base")
         self._ingest_root_data(collection="user")
         self._ingest_and_prune_data(collection="user")
@@ -288,11 +268,6 @@ class DataBroker(metaclass=SingletonMeta):
         Args:
             data (Data): The raw data to be processed and inserted
         """
-        # why accessing the collection directly? this violates the abstraction
-        # now the databroker only works with chroma db, and no other vector stores
-        # we should have a method in the vector stores that handles this
-        # also why creating the collection here at all, this is the insert method not the init
-        # why would there ever be a case where the collection doesn't exist?
         try:
             self.vectorstore[collection].collection = self.vectorstore[
                 collection
