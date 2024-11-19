@@ -38,6 +38,10 @@ class PromptComponent(ABC):
         """
         pass
 
+    @abstractmethod
+    def get_cost(self) -> float:
+        pass
+
 
 class PromptDecorator(PromptComponent):
     """
@@ -72,6 +76,7 @@ class PromptDecorator(PromptComponent):
                 prompt (PromptComponent): The prompt class to decorate
         """
         self._prompt = prompt
+        self.cost = self._prompt.cost
 
     def get_prompt(self, query: str) -> str:
         """
@@ -89,6 +94,9 @@ class PromptDecorator(PromptComponent):
         # format(decorate = RagString)
         print("Decorator Prompt")
         return self._prompt.get_prompt(query).format(decorate=self.PromptTemplate)
+
+    def get_cost(self) -> float:
+        return self.cost
 
 
 class ConcretePrompt(PromptComponent):
@@ -120,7 +128,11 @@ class ConcretePrompt(PromptComponent):
     def __init__(self, system_prompt: str):
         """Overrides the prompt template if initialized with a different prompt"""
         self.PromptTemplate = system_prompt + ConcretePrompt.PromptTemplate
+        self.cost = 0
 
     def get_prompt(self, query):
         print("Base Prompt")
         return self.PromptTemplate.format(query=query, decorate="{decorate}")
+
+    def get_cost(self) -> float:
+        return self.cost
