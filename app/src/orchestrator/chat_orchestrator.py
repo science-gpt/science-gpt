@@ -3,6 +3,7 @@ import os
 import requests
 import toml
 from logs.logger import logger
+from models.models import LocalAIModel, OpenAIChatModel
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
 from orchestrator.utils import DEFAULT_SYSTEM_PROMPT, load_config
@@ -10,8 +11,6 @@ from prompt.base_prompt import ConcretePrompt
 from prompt.prompts import ModerationDecorator, OnlyUseContextDecorator
 from prompt.retrieval import ContextRetrieval
 from requests.exceptions import ConnectTimeout
-
-from models.models import LocalAIModel, OpenAIChatModel
 
 
 class SingletonMeta(type):
@@ -119,11 +118,22 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         # Retrieval use case
         # TODO: This is clunky - ideally we would have a LLM detect the intent for use cases
-        #  involving user input.
 
+        # involving user input.
         if query.lower().startswith("search:") or use_rag:
             query = query[7:] if query.lower().startswith("search:") else query
-            prompt = ContextRetrieval(prompt, self.config, self.model)
+            prompt = ContextRetrieval(
+                prompt, self.config, keyword_filter=query_config.keywords
+            )
+        # we want to avoid the case of wrapping the prompt in two ContextRetrival decorators.
+        # note - if use_rag and useknowledgebase are on at the same time the app will not work.
+        if query_config.useknowledgebase:
+            prompt = ContextRetrieval(
+                prompt,
+                self.config,
+                collection="user",
+                keyword_filter=query_config.keywords,
+            )
 
         # look for moderation filter
         if query_config.moderationfilter:
@@ -132,9 +142,6 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         # look for only use context
         if query_config.onlyusecontext:
             prompt = OnlyUseContextDecorator(prompt)
-
-        if query_config.useknowledgebase:
-            prompt = ContextRetrieval(prompt, self.config, collection="user")
 
         try:
             handler = LLMCallHandler(self.model, prompt, self.config)

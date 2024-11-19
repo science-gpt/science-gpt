@@ -1,7 +1,7 @@
 import logging
 import os
 import string
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import toml
 from ingestion.chunking import (
@@ -259,7 +259,11 @@ class DataBroker(metaclass=SingletonMeta):
         self.vector_store[collection].client.delete_collection(collection_name)
 
     def search(
-        self, queries: List[str], top_k: int = 5, collection="base"
+        self,
+        queries: List[str],
+        top_k: int = 5,
+        collection="base",
+        keywords: Optional[list[str]] = None,
     ) -> List[List[SearchResult]]:
         """
         Searches the vector store for the most relevant docs based on the given queries.
@@ -282,7 +286,9 @@ class DataBroker(metaclass=SingletonMeta):
         query_vectors = [embedding.vector for embedding in query_embeddings]
 
         try:
-            results = self.vector_store[collection].search(query_vectors, top_k)
+            results = self.vector_store[collection].search(
+                query_vectors, top_k, keywords
+            )
         except:
             logger.error(
                 "Connect search. probably an issue with the DB not initialized and nothing returned"

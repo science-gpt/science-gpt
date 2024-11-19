@@ -1,7 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import chromadb
 import numpy as np
@@ -34,7 +34,10 @@ class VectorDB(ABC):
 
     @abstractmethod
     def search(
-        self, query_vectors: List[np.ndarray], top_k: int = 5
+        self,
+        query_vectors: List[np.ndarray],
+        top_k: int = 5,
+        keywords: Optional[list[str]] = None,
     ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database.
@@ -101,7 +104,10 @@ class ChromaDB(VectorDB):
         self.collection.add(ids=ids, embeddings=vectors, documents=documents)
 
     def search(
-        self, query_vectors: List[np.ndarray], top_k: int = 5
+        self,
+        query_vectors: List[np.ndarray],
+        top_k: int = 5,
+        keywords: Optional[list[str]] = None,
     ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database.
@@ -109,15 +115,27 @@ class ChromaDB(VectorDB):
         Args:
             query_vectors (List[np.ndarray]): The query vectors to search for.
             top_k (int): The number of most similar vectors to return for each query.
+            keywords: An optional list that has filter for content in the list
 
         Returns:
             List[List[SearchResult]]: List of lists of SearchResult objects containing search results.
                                       The i-th inner list corresponds to the results for the i-th query vector.
         """
+
+        where_document = None
+        if keywords:
+            if len(keywords) > 1:
+                where_document = {
+                    "$or": [{"$contains": keyword} for keyword in keywords]
+                }
+            else:
+                where_document = {"$contains": keywords[0]}
+
         query_embeddings = [vector.tolist() for vector in query_vectors]
         results = self.collection.query(
             query_embeddings=query_embeddings,
             n_results=top_k,
+            where_document=where_document,
         )
 
         all_results = []
