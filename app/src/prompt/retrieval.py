@@ -74,12 +74,14 @@ class ContextRetrieval(PromptDecorator):
         rewrite_model: ChatModel,
         collection="base",
         keyword_filter: Optional[list[str]] = None,
+        filename_filter: Optional[list[str]] = None,
     ) -> None:
         self._prompt = prompt
         self.data_broker = DataBroker()
         self.config: SystemConfig = config
         self.collection = collection
         self.keyword_filter = keyword_filter
+        self.filename_filter = filename_filter
         self.rewrite_model = rewrite_model
         self.cost = self._prompt.cost
 
@@ -102,6 +104,7 @@ class ContextRetrieval(PromptDecorator):
             top_k=top_k,
             collection=self.collection,
             keywords=self.keyword_filter,
+            filenames=self.filename_filter,
         )
 
         #### If no results found, we should log and we should also tell the user that their RAG search did not return any results for some reason

@@ -205,6 +205,7 @@ def create_answer(prompt):
             onlyusecontext=st.session_state.onlyusecontext,
             useknowledgebase=st.session_state.useknowledgebase,
             keywords=st.session_state.keywords,
+            filenames=st.session_state.filenames,
         )
 
         # Now call the triage_query function without the 'local' argument

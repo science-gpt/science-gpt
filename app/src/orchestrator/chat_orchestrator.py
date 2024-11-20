@@ -127,6 +127,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
                 prompt,
                 self.config,
                 keyword_filter=query_config.keywords,
+                filename_filter=query_config.filenames,
                 rewrite_model=self.model,
             )
         # we want to avoid the case of wrapping the prompt in two ContextRetrival decorators.
@@ -137,6 +138,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
                 self.config,
                 collection="user",
                 keyword_filter=query_config.keywords,
+                filename_filter=query_config.filenames,
                 rewrite_model=self.model,
             )
 
