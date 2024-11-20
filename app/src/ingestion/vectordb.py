@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 import chromadb
 import numpy as np
+from chromadb.types import Vector
 
 from .embedding import Embedding
 
@@ -15,6 +16,7 @@ class SearchResult:
     distance: float
     metadata: Dict[str, Any]
     document: str
+    embedding: List[Vector]
 
 
 class VectorDB(ABC):
@@ -91,7 +93,7 @@ class ChromaDB(VectorDB):
         self.client = chromadb.PersistentClient(path=chromadb_path)
         self.collection = self.client.get_or_create_collection(name=collection_name)
 
-    def insert(self, embeddings: List[Embedding]) -> None:
+    def insert(self, embeddings: List[Embedding], metadatas: List[dict]) -> None:
         """
         Insert embeddings into the vector database.
 
@@ -101,13 +103,17 @@ class ChromaDB(VectorDB):
         documents = [embedding.text for embedding in embeddings]
         ids = [embedding.name for embedding in embeddings]
         vectors = [embedding.vector.tolist() for embedding in embeddings]
-        self.collection.add(ids=ids, embeddings=vectors, documents=documents)
+        self.collection.add(
+            ids=ids, embeddings=vectors, documents=documents, metadatas=metadatas
+        )
 
     def search(
         self,
         query_vectors: List[np.ndarray],
         top_k: int = 5,
         keywords: Optional[list[str]] = None,
+        filenames: Optional[list[str]] = None,
+        chunk_ids: Optional[list[str]] = None,
     ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database.
@@ -123,7 +129,7 @@ class ChromaDB(VectorDB):
         """
 
         where_document = None
-        if keywords:
+        if len(keywords) > 0:
             if len(keywords) > 1:
                 where_document = {
                     "$or": [{"$contains": keyword} for keyword in keywords]
@@ -131,24 +137,39 @@ class ChromaDB(VectorDB):
             else:
                 where_document = {"$contains": keywords[0]}
 
+        where = None
+        if filenames:
+            if len(filenames) > 0:
+                where = {"source": {"$in": filenames}}
+        elif chunk_ids:
+            if len(chunk_ids) > 0:
+                where = {"id": {"$in": chunk_ids}}
+
         query_embeddings = [vector.tolist() for vector in query_vectors]
         results = self.collection.query(
             query_embeddings=query_embeddings,
             n_results=top_k,
+            where=where,
             where_document=where_document,
+            include=["documents", "embeddings", "metadatas", "distances"],
         )
 
         all_results = []
         for i in range(len(query_vectors)):
             query_results = [
                 SearchResult(
-                    id=id, distance=distance, metadata=metadata, document=document
+                    id=id,
+                    distance=distance,
+                    metadata=metadata,
+                    document=document,
+                    embedding=embedding,
                 )
-                for id, distance, metadata, document in zip(
+                for id, distance, metadata, document, embedding in zip(
                     results["ids"][i],
                     results["distances"][i],
                     results["metadatas"][i],
                     results["documents"][i],
+                    results["embeddings"][i],
                 )
             ]
             all_results.append(query_results)

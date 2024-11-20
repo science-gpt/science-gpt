@@ -58,11 +58,11 @@ class DataBroker(metaclass=SingletonMeta):
         """
         if database_config != None:
             print("---INIT---")
-            self.load_database_config(database_config)
             self.data_cache = {
                 "base": {},
                 "user": {},
             }
+            self.load_database_config(database_config)
 
     def get_embedding_model(self):
         """Returns the currently set embedding model."""
@@ -229,16 +229,18 @@ class DataBroker(metaclass=SingletonMeta):
 
         # Only add missing chunks
         new_chunks = []
+        metadatas = []
         for chunk in chunks:
             if chunk.name not in existing_ids:
                 new_chunks.append(chunk)
+                metadatas.append({"source": data.name, "id": chunk.name})
 
         # Choose embedder based on selected embedding model
         if len(new_chunks):
             embeddings = self.embedder(new_chunks)
             try:
                 # Attempt to insert embeddings into the vector store
-                self.vector_store[collection].insert(embeddings)
+                self.vector_store[collection].insert(embeddings, metadatas)
             except Exception as e:
                 logger.error(f"Failed to get or create collection: {e}")
                 return []
@@ -264,6 +266,8 @@ class DataBroker(metaclass=SingletonMeta):
         top_k: int = 5,
         collection="base",
         keywords: Optional[list[str]] = None,
+        filenames: Optional[list[str]] = None,
+        chunk_ids: Optional[list[str]] = None,
     ) -> List[List[SearchResult]]:
         """
         Searches the vector store for the most relevant docs based on the given queries.
@@ -285,9 +289,24 @@ class DataBroker(metaclass=SingletonMeta):
         query_embeddings = self.embedder(query_chunks)
         query_vectors = [embedding.vector for embedding in query_embeddings]
 
+        results = self.vector_store[collection].search(
+            query_vectors, top_k, keywords, filenames, chunk_ids
+        )
+
+        return results
+
+    def search_vector(
+        self,
+        query_vector,
+        top_k: int = 5,
+        collection="base",
+        keywords: Optional[list[str]] = None,
+        filenames: Optional[list[str]] = None,
+        chunk_ids: Optional[list[str]] = None,
+    ) -> List[List[SearchResult]]:
         try:
             results = self.vector_store[collection].search(
-                query_vectors, top_k, keywords
+                query_vector, top_k, keywords, filenames, chunk_ids
             )
         except:
             logger.error(

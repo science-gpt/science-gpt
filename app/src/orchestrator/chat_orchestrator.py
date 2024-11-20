@@ -3,7 +3,6 @@ import os
 import requests
 import toml
 from logs.logger import logger
-from models.models import LocalAIModel, OpenAIChatModel
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
 from orchestrator.utils import DEFAULT_SYSTEM_PROMPT, load_config
@@ -11,6 +10,8 @@ from prompt.base_prompt import ConcretePrompt
 from prompt.prompts import ModerationDecorator, OnlyUseContextDecorator
 from prompt.retrieval import ContextRetrieval
 from requests.exceptions import ConnectTimeout
+
+from models.models import LocalAIModel, OpenAIChatModel
 
 
 class SingletonMeta(type):
@@ -123,7 +124,10 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         if query.lower().startswith("search:") or use_rag:
             query = query[7:] if query.lower().startswith("search:") else query
             prompt = ContextRetrieval(
-                prompt, self.config, keyword_filter=query_config.keywords
+                prompt,
+                self.config,
+                keyword_filter=query_config.keywords,
+                rewrite_model=self.model,
             )
         # we want to avoid the case of wrapping the prompt in two ContextRetrival decorators.
         # note - if use_rag and useknowledgebase are on at the same time the app will not work.
@@ -133,6 +137,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
                 self.config,
                 collection="user",
                 keyword_filter=query_config.keywords,
+                rewrite_model=self.model,
             )
 
         # look for moderation filter

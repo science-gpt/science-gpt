@@ -8,18 +8,21 @@ sys.path.insert(0, "./src")
 import json
 import uuid
 
+import numpy as np
 import pandas as pd
 import streamlit as st
-from data_broker.data_broker import DataBroker
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from logs.logger import logger
 from orchestrator.chat_orchestrator import ChatOrchestrator
 from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
+from streamlit_agraph import Config, Edge, Node, agraph
 from streamlit_feedback import streamlit_feedback
 from streamlit_float import float_css_helper, float_init, float_parent
 from streamlit_survey import StreamlitSurvey
 from streamlit_tags import st_tags
+
+from data_broker.data_broker import DataBroker
 
 
 def file_upload_cb():
@@ -98,6 +101,7 @@ def init_streamlit():
         st.session_state.onlyusecontext = False
         st.session_state.useknowledgebase = False
         st.session_state.keywords = None
+        st.session_state.filenames = None
 
         st.session_state.orchestrator = ChatOrchestrator()
 
@@ -342,21 +346,11 @@ def sidebar():
         st.session_state.moderationfilter = st.checkbox("Moderation Filter")
         st.session_state.onlyusecontext = st.checkbox("Only Use Knowledge Base")
 
-        # creates a tag section to enter keywords
-        st.session_state.keywords = st_tags(
-            label="Keyword Filtered Retrieval",
-            text="Enter keywords and press enter",
-            value=st.session_state.get("keywords", []),
-            suggestions=["Toxicology", "Regulation", "Environment"],
-            maxtags=10,  # max number of tags
-            key="keyword_tags",
-        )
-
         st.session_state.use_rag = st.checkbox("Retrieval Augmented Generation")
         # Create an expandable section for advanced options
         if st.session_state.use_rag:
 
-            st.session_state.top_k = st.slider("Top K", 0, 20, 5)
+            st.session_state.top_k = st.slider("Top K", 0, 50, 5)
             st.session_state.useknowledgebase = st.checkbox("Use Knowledge Base")
 
             with st.sidebar.expander("Advanced DataBase Options", expanded=False):
@@ -500,11 +494,82 @@ def knowledgebase(tab):
             )
 
 
+def search(search_tab):
+    with search_tab:
+        query = st.text_input("Search Query", "")
+        st.session_state.filenames = st_tags(
+            label="File Filtered Retrieval",
+            text="Enter filenames and press enter",
+            value=st.session_state.get("keywords", []),
+            suggestions=["Acephate.pdf", "Atrazine.pdf", "Paraquat.pdf"],
+            maxtags=15,  # max number of tags
+            key="filename_tags",
+        )
+        # creates a tag section to enter keywords
+        st.session_state.keywords = st_tags(
+            label="Keyword Filtered Retrieval",
+            text="Enter keywords and press enter",
+            value=st.session_state.get("keywords", []),
+            suggestions=["Toxicology", "Regulation", "Environment"],
+            maxtags=10,  # max number of tags
+            key="keyword_tags",
+        )
+
+        if len(query) > 0:
+            search_results = st.session_state.databroker.search(
+                [query],
+                st.session_state.top_k + 10,
+                collection="base",
+                keywords=st.session_state.keywords,
+                filenames=st.session_state.filenames,
+            )
+
+            nodes = [
+                Node(
+                    id=r.id,
+                    title=r.document,
+                    label=r.id,
+                    color="#ff80ed" if i < st.session_state.top_k else "#065535",
+                )
+                for i, r in enumerate(search_results[0])
+            ]
+            dist = [
+                np.linalg.norm(np.array(j.embedding) - np.array(k.embedding))
+                for i, k in enumerate(search_results[0])
+                for j in search_results[0][i + 1 :]
+            ]
+            thresh = min(dist) + st.session_state.edge_thresh * (max(dist) - min(dist))
+            edges = [
+                Edge(source=k.id, target=j.id, type="CURVE_SMOOTH")
+                for i, k in enumerate(search_results[0])
+                for h, j in enumerate(search_results[0][i + 1 :])
+                if dist[int(i * (i + 1) / 2) + h] > thresh
+            ]
+
+            config = Config(
+                width=500,
+                height=500,
+                directed=True,
+                nodeHighlightBehavior=False,
+                highlightColor="#F7A7A6",  # or "blue"
+                collapsible=False,
+                node={"labelProperty": "label"},
+                # **kwargs e.g. node_size=1000 or node_color="blue"
+            )
+
+            return_value = agraph(nodes=nodes, edges=edges, config=config)
+
+        st.session_state.edge_thresh = st.slider("Edge Threshold", 0.0, 1.0, 0.9)
+
+
 def sciencegpt():
     float_init(theme=True, include_unstable_primary=False)
     init_streamlit()
     sidebar()
-    chat_tab, knowledge_base, survey_tab = st.tabs(["Chat", "Knowledge Base", "Survey"])
+    knowledge_base, search_tab, chat_tab, survey_tab = st.tabs(
+        ["Knowledge Base", "Search", "Chat", "Survey"]
+    )
+    search(search_tab)
     chat(chat_tab)
     knowledgebase(knowledge_base)
     survey(survey_tab)

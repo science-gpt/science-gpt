@@ -1,11 +1,12 @@
 import os
 from typing import Optional
 
-from data_broker.data_broker import DataBroker
 from langchain_community.vectorstores import Chroma
-from models.models import ChatModel
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent, PromptDecorator
+
+from data_broker.data_broker import DataBroker
+from models.models import ChatModel
 
 DEFAULT_QUERY_REWRITER: str = """
     You are an expert in simplifying scientific literature search queries for toxicology and pesticide research. 
@@ -104,12 +105,11 @@ class ContextRetrieval(PromptDecorator):
         )
 
         #### If no results found, we should log and we should also tell the user that their RAG search did not return any results for some reason
-        if len(results) == 0 or len(results[0]) == 0:
+        if len(results[0]) == 0:
             # No results found; handle the case here
             # logger.warning("No documents found for the query. Returning only the query as the prompt.")
             return "No results found for the query. Please relay that no documents were retrieved for the given query."
 
-        print(results)
         context_text = "\n\n---\n\n".join(
             [
                 f"Context Source: {chunk.id}\nDocument: {chunk.document}"
