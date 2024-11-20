@@ -304,18 +304,9 @@ class DataBroker(metaclass=SingletonMeta):
         filenames: Optional[list[str]] = None,
         chunk_ids: Optional[list[str]] = None,
     ) -> List[List[SearchResult]]:
-        try:
-            results = self.vector_store[collection].search(
-                query_vector, top_k, keywords, filenames, chunk_ids
-            )
-        except:
-            logger.error(
-                "Connect search. probably an issue with the DB not initialized and nothing returned"
-            )
-            # You could prompt the user to reprocess data or clear and reset the DB here
-            print(
-                "Could not search, vector DB probably doesn't exist. We should flag this and tell the user the error"
-            )
-            results = []
+
+        results = self.vector_store[collection].search(
+            query_vector, top_k, keywords, filenames, chunk_ids
+        )
 
         return results
