@@ -529,6 +529,7 @@ def search(search_tab):
                     id=r.id,
                     title=r.document,
                     label=r.id,
+                    # link= Use this to open up a PDF view?
                     color="#ff80ed" if i < st.session_state.top_k else "#065535",
                 )
                 for i, r in enumerate(search_results[0])
@@ -566,8 +567,8 @@ def sciencegpt():
     float_init(theme=True, include_unstable_primary=False)
     init_streamlit()
     sidebar()
-    knowledge_base, search_tab, chat_tab, survey_tab = st.tabs(
-        ["Knowledge Base", "Search", "Chat", "Survey"]
+    chat_tab, search_tab, knowledge_base, survey_tab = st.tabs(
+        ["Chat", "Search", "Knowledge Base", "Survey"]
     )
     search(search_tab)
     chat(chat_tab)
