@@ -204,3 +204,73 @@ class PyMuPDFExtract(TextExtract):
         except Exception as e:
             raise ValueError(f"Error extracting text from PDF: {e}")
 
+# class AzureAIDocumentExtract(TextExtract):
+#     """
+#     Concrete implementation of TextExtract for document data sources using Azure AI Document Intelligence.
+#     """
+
+#     def __init__(self, endpoint: str, credential: str, model: str = "prebuilt-layout") -> None:
+#         """
+#         Instantiates an AzureAIDocumentExtract object.
+
+#         Args:
+#             endpoint (str): The endpoint URL for Azure AI Document Intelligence.
+#             credential (str): The credential (API key) for Azure AI Document Intelligence.
+#             model (str): The model to use for document analysis (default is 'prebuilt-layout').
+#         """
+#         super().__init__(data_type="azure_document")
+#         self.endpoint = "https://sciencegptditest2.cognitiveservices.azure.com/"
+#         self.credential = "193d8ca004f8437084db4cf5f53ebb97"
+#         self.model = model
+
+#     def __call__(self, data: PDFData) -> Text:
+#         """
+#         Extracts text from the given Azure Document Intelligence data.
+
+#         Args:
+#             data (AzureAIDocumentData): The document data to extract text from.
+
+#         Returns:
+#             Text: A Text object containing the extracted text from the document.
+
+#         Raises:
+#             IOError: If there's an error reading the document file.
+#             ValueError: If there's an error extracting text from the document using Azure.
+#         """
+#         # Validate that the provided data is an AzureAIDocumentData object
+#         if not isinstance(data, PDFData):
+#             raise ValueError("Input data must be an AzureAIDocumentData object.")
+
+#         try:
+#             # Instantiate the Azure client
+#             from azure.ai.documentintelligence import DocumentIntelligenceClient
+#             from azure.core.credentials import AzureKeyCredential
+
+#             client = DocumentIntelligenceClient(
+#                 self.endpoint, AzureKeyCredential(self.credential)
+#             )
+
+#             # Open the document and send it to Azure Document Intelligence for processing
+#             with open(data.filepath, "rb") as file:
+#                 poller = client.begin_analyze_document(
+#                     self.model,
+#                     analyze_request=file,
+#                     content_type="application/octet-stream",
+#                     output_content_format="text",
+#                 )
+#                 result = poller.result()
+
+#             # Extract the text content from the result
+#             text_content = result.content
+
+#             # Ensure the text is not empty
+#             if not text_content.strip():
+#                 raise ValueError("Extracted text is empty.")
+
+#             # Return the extracted text as a Text object
+#             return Text(text=text_content.strip(), name=data.name, data_type="PDFData)
+
+#         except IOError as e:
+#             raise IOError(f"Error reading document file: {e}")
+#         except Exception as e:
+#             raise ValueError(f"Error extracting text from document using Azure AI: {e}")

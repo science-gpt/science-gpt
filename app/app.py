@@ -376,6 +376,7 @@ def sidebar():
                             "recursive_character:large_chunks",
                             "recursive_character:small_chunks",
                             "MarkdownChunker",
+                            "MarkdownChunker2",
                         ),
                     )
                     st.session_state.database_config = SimpleNamespace(

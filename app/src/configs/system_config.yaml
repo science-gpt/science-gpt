@@ -18,7 +18,7 @@ extraction:
   pdf_extract_method: "pymupdf4llm"
 
 chunking:
-  method: "MarkdownChunker"
+  method: "MarkdownChunker2"
 
 embedding:
   model: "mxbai-embed-large"
