@@ -549,9 +549,9 @@ def search(search_tab):
             ]
 
             config = Config(
-                width=500,
-                height=500,
-                directed=True,
+                width=700,
+                height=700,
+                directed=False,
                 nodeHighlightBehavior=False,
                 highlightColor="#F7A7A6",  # or "blue"
                 collapsible=False,
