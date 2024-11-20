@@ -15,6 +15,7 @@ streamlit-feedback
 streamlit-survey
 streamlit-float
 streamlit-tags
+streamlit-agraph
 toml
 hydra-core
 omegaconf
