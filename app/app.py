@@ -545,7 +545,7 @@ def search(search_tab):
                 Edge(source=k.id, target=j.id, type="CURVE_SMOOTH")
                 for i, k in enumerate(search_results[0])
                 for h, j in enumerate(search_results[0][i + 1 :])
-                if dist[int(i * (i + 1) / 2) + h] > thresh
+                if dist[int(i * (i + 1) / 2) + h] < thresh
             ]
 
             config = Config(
@@ -561,7 +561,7 @@ def search(search_tab):
 
             return_value = agraph(nodes=nodes, edges=edges, config=config)
 
-        st.session_state.edge_thresh = st.slider("Edge Threshold", 0.0, 1.0, 0.9)
+        st.session_state.edge_thresh = st.slider("Edge Threshold", 0.0, 1.0, 0.1)
 
 
 def sciencegpt():
