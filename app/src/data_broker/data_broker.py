@@ -53,11 +53,11 @@ class DataBroker(metaclass=SingletonMeta):
         self._database_config = database_config
         self._secrets = toml.load("secrets.toml")
         if database_config is not None:
-            self._init_databroker_pipeline()
             self.data_cache = {
                 "base": {},
                 "user": {},
             }
+            self._init_databroker_pipeline()
 
     def get_database_config(self) -> SimpleNamespace:
         """
@@ -152,7 +152,7 @@ class DataBroker(metaclass=SingletonMeta):
             extractors["pdf"] = PyPDF2Extract()
         return extractors
 
-    def _create_vectorstore(self) -> Dict[str, VectorDB]:
+    def _create_vectorstore(self, embedding_dimension: int) -> Dict[str, VectorDB]:
         if self._database_config.vector_store.type == "local-chromadb":
             vectorstore = {
                 "base": ChromaDB(collection_name=self.collection_name["base"]),
@@ -198,7 +198,9 @@ class DataBroker(metaclass=SingletonMeta):
         self.embedder = self._create_embedder()
         self.chunker = self._create_chunker()
         self.extractors = self._create_extractors()
-        self.vectorstore = self._create_vectorstore()
+        self.vectorstore = self._create_vectorstore(
+            embedding_dimension=self.embedder.embedding_dimension
+        )
 
         self._ingest_root_data(collection="base")
         self._ingest_root_data(collection="user")

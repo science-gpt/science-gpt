@@ -322,7 +322,7 @@ class MilvusDB(VectorDB):
         """
         Delete vectors from the database by their IDs.
         """
-        expr = f'id in ["{"\",\"".join(ids)}"]'
+        expr = f"id in {tuple(ids)}"
         self.collection.delete(expr)
 
     def update(self, ids: List[str], embeddings: List[Embedding]) -> None:
