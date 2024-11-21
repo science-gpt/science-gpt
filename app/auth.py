@@ -7,8 +7,14 @@ from yaml.loader import SafeLoader
 
 from app import sciencegpt
 
+DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
+
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+
+    if DEV_MODE:
+        st.session_state["authentication_status"] = True
+        st.session_state["name"] = "Developer"
 
 st.set_page_config(layout="wide")
 st.markdown(
@@ -25,15 +31,19 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-with open("./src/configs/user_config.yaml") as file:
-    config = yaml.load(file, Loader=SafeLoader)
+# Skip all auth in dev mode
+if DEV_MODE:
+    sciencegpt()
+else:
+    with open("./src/configs/user_config.yaml") as file:
+        config = yaml.load(file, Loader=SafeLoader)
 
-authenticator = stauth.Authenticate(
-    config["credentials"],
-    config["cookie"]["name"],
-    config["cookie"]["key"],
-    config["cookie"]["expiry_days"],
-)
+    authenticator = stauth.Authenticate(
+        config["credentials"],
+        config["cookie"]["name"],
+        config["cookie"]["key"],
+        config["cookie"]["expiry_days"],
+    )
 
 
 def signup():

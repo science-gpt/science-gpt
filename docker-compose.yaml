@@ -8,6 +8,8 @@ services:
       - ./app/vectorstore:/usr/src/app/vectorstore
     networks:
       - app-network
+    environment:
+      - DEV_MODE=${DEV_MODE:-false}
     restart: always
 
   nginx:
