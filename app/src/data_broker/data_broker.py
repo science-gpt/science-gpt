@@ -242,21 +242,13 @@ class DataBroker(metaclass=SingletonMeta):
             chunks_ids.extend(self.data_cache[collection][pdf_file])
             self.data_cache[collection][collection_name].pop(pdf_file)
 
-        # this is a bad idea: a DB is pointless if we loop over every entry
-        existing_items = self.vectorstore[collection].collection.get(include=[])
-        existing_ids = list(set(existing_items["ids"]))
+        existing_ids = self.vectorstore[collection].get_all_ids()
 
         del_chunks = []
+        # this is a bad idea: a DB is pointless if we loop over every entry
         for _id in existing_ids:
             if _id not in chunks_ids:
                 del_chunks.append(_id)
-
-        if len(del_chunks) > 0:
-            logging.info(
-                "Count before", self.vectorstore[collection].collection.count()
-            )
-            self.vectorstore[collection].delete(ids=del_chunks)
-            logger.info("Count after", self.vectorstore[collection].collection.count())
 
     def insert(self, data: Data, collection="base") -> List[str]:
         """
@@ -269,24 +261,14 @@ class DataBroker(metaclass=SingletonMeta):
             data (Data): The raw data to be processed and inserted
             collection (str, optional): Which collection to insert into. Defaults to "base".
         """
-        # check if the collection exists, if not throw error
-        try:
-            self.vectorstore[collection].collection = self.vectorstore[
-                collection
-            ].client.get_or_create_collection(name=self.collection_name[collection])
-        except Exception as e:
-            logger.error(f"Failed to get or create collection: {e}")
-            return []
-
         extractor = self.extractors.get(data.data_type)
         text = extractor(data)
         chunks = self.chunker(text)
 
-        # reuse get all vectorstore method
-        existing_items = self.vectorstore[collection].collection.get(include=[])
-        existing_ids = set(existing_items["ids"])
+        existing_ids = self.vectorstore[collection].get_all_ids()
 
         # IGNORE, TEMPORARY: adding small comment to allow pr comment
+        # more looping over every entry in the db?
         new_chunks = []
         for chunk in chunks:
             if chunk.name not in existing_ids:
@@ -308,9 +290,8 @@ class DataBroker(metaclass=SingletonMeta):
         """
         Clears all vectors from the vector store.
         """
-        collection_name = self.collection_name[collection]
-        print("I'm clearing the db:", collection_name)
-        self.vectorstore[collection].client.delete_collection(collection_name)
+        logging.info("Clearing the database")
+        self.vectorstore[collection].clear()
 
     def search(
         self,
