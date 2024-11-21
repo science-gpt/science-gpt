@@ -90,7 +90,7 @@ class DataBroker(metaclass=SingletonMeta):
             )
             try:
                 embedder.test_connection()
-            except RuntimeError as e:
+            except RuntimeError:
                 logger.error(
                     "Failed to connect to the Ollama model. Defaulting to HuggingFace embeddings."
                 )
@@ -267,6 +267,7 @@ class DataBroker(metaclass=SingletonMeta):
 
         Args:
             data (Data): The raw data to be processed and inserted
+            collection (str, optional): Which collection to insert into. Defaults to "base".
         """
         # check if the collection exists, if not throw error
         try:
@@ -324,6 +325,8 @@ class DataBroker(metaclass=SingletonMeta):
         Args:
             queries (List[str]): List of search queries
             top_k (int): The number of results to return for each query
+            collection (str, optional): Which collection to search for. Defaults to "base".
+            keywords (List[str], optional): List of keywords to search for. Defaults to None.
 
         Returns:
             List[List[SearchResult]]: A list of lists of SearchResult objects containing
@@ -341,10 +344,8 @@ class DataBroker(metaclass=SingletonMeta):
             results = self.vectorstore[collection].search(
                 query_vectors, top_k, keywords
             )
-        except:
-            logger.error(
-                "Connect search. probably an issue with the DB not initialized and nothing returned"
-            )
+        except Exception as e:
+            logger.error(f"Error during search attempt: {e}")
             # You could prompt the user to reprocess data or clear and reset the DB here
             print(
                 "Could not search, vector DB probably doesn't exist. We should flag this and tell the user the error"
