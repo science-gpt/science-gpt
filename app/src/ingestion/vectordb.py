@@ -1,7 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Mapping, Optional
 
 import chromadb
 import numpy as np
@@ -21,7 +21,7 @@ from .embedding import Embedding
 class SearchResult:
     id: str  # TODO: add this
     distance: float
-    metadata: Dict[str, Any]
+    metadata: Mapping[str, Any]
     document: str
 
 
@@ -53,6 +53,7 @@ class VectorDB(ABC):
         Args:
             query_vectors (List[np.ndarray]): The query vectors to search for.
             top_k (int): The number of most similar vectors to return for each query.
+            keywords (List[str]): The keywords to use for keyword search.
 
         Returns:
             List[List[SearchResult]]: List of lists of SearchResult objects containing search results.
@@ -78,6 +79,23 @@ class VectorDB(ABC):
         Args:
             ids (List[str]): List of vector IDs to update.
             embeddings (List[Embedding]): List of new Embedding objects.
+        """
+        pass
+
+    @abstractmethod
+    def get_all_ids(self) -> List[str]:
+        """
+        Retrieve all IDs from the database.
+
+        Returns:
+            List[str]: List of all document IDs in the database.
+        """
+        pass
+
+    @abstractmethod
+    def clear(self) -> None:
+        """
+        Clear all records from the collection.
         """
         pass
 
@@ -150,9 +168,9 @@ class ChromaDB(VectorDB):
         for i in range(len(query_vectors)):
             query_results = [
                 SearchResult(
-                    id=id, distance=distance, metadata=metadata, document=document
+                    id=_id, distance=distance, metadata=metadata, document=document
                 )
-                for id, distance, metadata, document in zip(
+                for _id, distance, metadata, document in zip(
                     results["ids"][i],
                     results["distances"][i],
                     results["metadatas"][i],
@@ -184,6 +202,23 @@ class ChromaDB(VectorDB):
         vectors = [embedding.vector.tolist() for embedding in embeddings]
         self.collection.update(ids=ids, embeddings=vectors, documents=documents)
 
+    def get_all_ids(self) -> List[str]:
+        """
+        Retrieve all IDs from the database.
+
+        Returns:
+            List[str]: List of all document IDs in the database.
+        """
+        return self.collection.get()["ids"]
+
+    def clear(self) -> None:
+        """
+        Clear all records from the collection.
+        """
+        all_ids = self.get_all_ids()
+        if all_ids:
+            self.collection.delete(ids=all_ids)
+
 
 class MilvusDB(VectorDB):
     """
@@ -198,10 +233,8 @@ class MilvusDB(VectorDB):
             collection_name (str): The name of the collection to create or use.
             dim (int): Dimension of the vectors to be stored (defaults to 1536 for OpenAI embeddings)
         """
-        # Connect to Milvus server
         connections.connect(host="localhost", port="19530")
 
-        # Define the collection schema if it doesn't exist
         if not utility.has_collection(collection_name):
             id_field = FieldSchema(
                 name="id", dtype=DataType.VARCHAR, max_length=100, is_primary=True
@@ -219,7 +252,6 @@ class MilvusDB(VectorDB):
             )
 
             self.collection = Collection(name=collection_name, schema=schema)
-            # Create an IVF_FLAT index for vector field
             index_params = {
                 "metric_type": "L2",
                 "index_type": "IVF_FLAT",
@@ -248,11 +280,19 @@ class MilvusDB(VectorDB):
         self.collection.flush()
 
     def search(
-        self, query_vectors: List[np.ndarray], top_k: int = 5
+        self,
+        query_vectors: List[np.ndarray],
+        top_k: int = 5,
+        keywords: Optional[
+            List[str]
+        ] = None,  # currently keywords are not support in milvus
     ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database.
         """
+        if keywords:
+            raise NotImplementedError("Keywords are not supported in Milvus")
+
         search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
 
         results = self.collection.search(
@@ -289,16 +329,23 @@ class MilvusDB(VectorDB):
         """
         Update existing vectors in the database.
         """
-        # Milvus doesn't support direct updates, so we delete and reinsert
+        # Milvus doesn't support direct updates, so delete and reinsert
         self.delete(ids)
         self.insert(embeddings)
 
-    def __del__(self):
+    def get_all_ids(self) -> List[str]:
         """
-        Cleanup when the instance is destroyed.
+        Retrieve all IDs from the database.
+
+        Returns:
+            List[str]: List of all document IDs in the database.
         """
-        try:
-            self.collection.release()
-            connections.disconnect()
-        except:
-            pass
+        results = self.collection.query(expr="", output_fields=["id"])
+        return [result["id"] for result in results]
+
+    def clear(self) -> None:
+        """
+        Clear all records from the collection.
+        """
+        self.collection.delete(expr="")
+        self.collection.flush()

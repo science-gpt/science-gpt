@@ -242,7 +242,7 @@ class DataBroker(metaclass=SingletonMeta):
             chunks_ids.extend(self.data_cache[collection][pdf_file])
             self.data_cache[collection][collection_name].pop(pdf_file)
 
-        # replace with a get all vector store method
+        # this is a bad idea: a DB is pointless if we loop over every entry
         existing_items = self.vectorstore[collection].collection.get(include=[])
         existing_ids = list(set(existing_items["ids"]))
 
@@ -291,11 +291,9 @@ class DataBroker(metaclass=SingletonMeta):
             if chunk.name not in existing_ids:
                 new_chunks.append(chunk)
 
-        # Choose embedder based on selected embedding model
         if len(new_chunks):
             embeddings = self.embedder(new_chunks)
             try:
-                # Attempt to insert embeddings into the vector store
                 self.vectorstore[collection].insert(embeddings)
             except Exception as e:
                 logger.error(f"Failed to get or create collection: {e}")
@@ -309,11 +307,8 @@ class DataBroker(metaclass=SingletonMeta):
         """
         Clears all vectors from the vector store.
         """
-        collection_name = self.collection_name[
-            collection
-        ]  # Retrieve the collection name
+        collection_name = self.collection_name[collection]
         print("I'm clearing the db:", collection_name)
-        # more violations of abstraction
         self.vectorstore[collection].client.delete_collection(collection_name)
 
     def search(
@@ -334,7 +329,6 @@ class DataBroker(metaclass=SingletonMeta):
             List[List[SearchResult]]: A list of lists of SearchResult objects containing
                 the search results for each query, sorted by relevance
         """
-        # TODO better logging and error handling
         query_chunks = [
             Chunk(text=query, name=f"Query_{i}", data_type="query")
             for i, query in enumerate(queries)
