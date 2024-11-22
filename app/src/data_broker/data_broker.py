@@ -9,9 +9,11 @@ from ingestion.chunking import (
     Chunker,
     RecursiveCharacterChunker,
     SplitSentencesChunker,
+    MarkdownChunker,
+    MarkdownChunker2,
 )
 from ingestion.embedding import Embedder, HuggingFaceEmbedder, OllamaEmbedder
-from ingestion.extraction import PDFData, PyPDF2Extract, TextExtract
+from ingestion.extraction import PDFData, PyPDF2Extract, TextExtract, PyMuPDFExtract, PyMuPDF4LLMExtract
 from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, SearchResult, VectorDB
 from orchestrator.config import SystemConfig
@@ -111,10 +113,27 @@ class DataBroker(metaclass=SingletonMeta):
                 chunk_size=750,
                 chunk_overlap=250,
             )
-
+        elif database_config.chunking_method == "MarkdownChunker":
+            self.chunker = MarkdownChunker(
+                chunk_size=1000,
+                chunk_overlap=0,
+            )
+        elif database_config.chunking_method == "MarkdownChunker2":
+            self.chunker = MarkdownChunker2(
+                chunk_size=2000,
+                chunk_overlap=0,
+            )
         self.extractors = {}
         if database_config.pdf_extractor.pdf_extract_method == "pypdf2":
             self.extractors["pdf"] = PyPDF2Extract()
+        if database_config.pdf_extractor.pdf_extract_method == "pymupdf":
+            self.extractors["pdf"] = PyMuPDFExtract()
+        if database_config.pdf_extractor.pdf_extract_method == "pymupdf4llm":
+            self.extractors["pdf"] = PyMuPDF4LLMExtract()
+        if database_config.pdf_extractor.pdf_extract_method == "azuredi":
+            self.extractors["pdf"] = AzureAIDocumentExtract()
+
+            
 
         if database_config.vector_store.type == "local-chromadb":
             suffix = "_" + squish(self.embedding_model)

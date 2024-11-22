@@ -302,6 +302,7 @@ def sidebar():
             "Model",
             [
                 "llama3:latest",
+                "llama3.1:70b-instruct-q2_k",
                 "GPT-4.0",
                 "GPT-3.5",
                 "llama3.1:8b",
@@ -374,6 +375,8 @@ def sidebar():
                             "recursive_character",
                             "recursive_character:large_chunks",
                             "recursive_character:small_chunks",
+                            "MarkdownChunker",
+                            "MarkdownChunker2",
                         ),
                     )
                     st.session_state.database_config = SimpleNamespace(
@@ -389,6 +392,7 @@ def sidebar():
                         "Regenerate Database",
                         on_click=(lambda: databasecb(st.session_state.database_config)),
                     )
+#                    st.button("clear db", on_click=data_broker.clear_db(collection="base"))
 
 
 def chat(tab):

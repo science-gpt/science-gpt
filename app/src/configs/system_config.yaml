@@ -15,10 +15,10 @@ model_auth:
   version: 
 
 extraction:
-  pdf_extract_method: "pypdf2"
+  pdf_extract_method: "pymupdf4llm"
 
 chunking:
-  method: "recursive_character"
+  method: "MarkdownChunker2"
 
 embedding:
   model: "mxbai-embed-large"
