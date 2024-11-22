@@ -153,13 +153,22 @@ class DataBroker(metaclass=SingletonMeta):
         return extractors
 
     def _create_vectorstore(self, embedding_dimension: int) -> Dict[str, VectorDB]:
-        if self._database_config.vector_store.type == "local-chromadb":
+        if self._database_config.vector_store.type == "chromadb":
             vectorstore = {
                 "base": ChromaDB(collection_name=self.collection_name["base"]),
                 "user": ChromaDB(collection_name=self.collection_name["user"]),
             }
-        elif self._database_config.vector_store.type == "local-milvus":
-            vectorstore = {}
+        elif self._database_config.vector_store.type == "milvus":
+            vectorstore = {
+                "base": MilvusDB(
+                    collection_name=self.collection_name["base"],
+                    dim=embedding_dimension,
+                ),
+                "user": MilvusDB(
+                    collection_name=self.collection_name["user"],
+                    dim=embedding_dimension,
+                ),
+            }
         else:
             raise ValueError(
                 f"Unsupported chunking method: {self._database_config.chunking_method}"

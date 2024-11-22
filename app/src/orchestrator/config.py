@@ -31,7 +31,7 @@ class Embedding(BaseModel):
 
 
 class VectorDB(BaseModel):
-    type: Literal["local-chromadb", "local-milvus"]
+    type: Literal["chromadb", "milvus"]
 
 
 class RAGParams(BaseModel):

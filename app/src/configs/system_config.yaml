@@ -24,7 +24,7 @@ embedding:
   model: "mxbai-embed-large"
 
 vector_db:
-  type: "local-milvus"
+  type: "milvus"
 
 rag_params:
   top_k_retrieval: 5
