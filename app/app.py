@@ -67,7 +67,7 @@ def init_streamlit():
     st.title("Science-GPT Prototype")
 
     if "userpath" not in st.session_state:
-        st.session_state.username = st.session_state.get("username", "test-user")
+        st.session_state.username = st.session_state.get("username", "test_user")
         st.session_state.userpath = (
             f"{os.getcwd()}/data/" + st.session_state.username + "/"
         )
