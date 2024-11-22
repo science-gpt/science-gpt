@@ -26,7 +26,7 @@ def mock_database_config():
                 chunking_method="split_sentences",
                 pdf_extractor=SimpleNamespace(pdf_extract_method="pypdf2"),
                 vector_store=SimpleNamespace(type="chromadb"),
-                username="test_user",
+                username="py_test_user",
                 userpath=os.getcwd() + "/test_user_data",
             )
         elif vector_store_type == "milvus":
@@ -37,7 +37,7 @@ def mock_database_config():
                 vector_store=SimpleNamespace(
                     type="milvus", host="localhost", port=19530
                 ),
-                username="test_user",
+                username="py_test_user",
                 userpath=os.getcwd() + "/test_user_data",
             )
 
