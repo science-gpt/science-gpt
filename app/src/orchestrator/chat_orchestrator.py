@@ -123,7 +123,10 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         if query.lower().startswith("search:") or use_rag:
             query = query[7:] if query.lower().startswith("search:") else query
             prompt = ContextRetrieval(
-                prompt, self.config, keyword_filter=query_config.keywords
+                prompt,
+                self.config,
+                rewrite_model=self.model,
+                keyword_filter=query_config.keywords,
             )
         # we want to avoid the case of wrapping the prompt in two ContextRetrival decorators.
         # note - if use_rag and useknowledgebase are on at the same time the app will not work.
@@ -131,6 +134,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             prompt = ContextRetrieval(
                 prompt,
                 self.config,
+                rewrite_model=self.model,
                 collection="user",
                 keyword_filter=query_config.keywords,
             )
