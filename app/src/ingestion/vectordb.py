@@ -225,7 +225,13 @@ class MilvusDB(VectorDB):
     Concrete implementation of VectorDB using Milvus.
     """
 
-    def __init__(self, collection_name: str, dim: int = 1536):
+    def __init__(
+        self,
+        collection_name: str,
+        host: str = "standalone",
+        port: str = "19530",
+        dim: int = 1536,
+    ):
         """
         Initialize the MilvusDB instance with the specified collection name.
 
@@ -233,7 +239,7 @@ class MilvusDB(VectorDB):
             collection_name (str): The name of the collection to create or use.
             dim (int): Dimension of the vectors to be stored (defaults to 1536 for OpenAI embeddings)
         """
-        connections.connect(host="standalone", port="19530")
+        connections.connect(host=host, port=port)
 
         if not utility.has_collection(collection_name):
             id_field = FieldSchema(
