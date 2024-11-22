@@ -354,5 +354,5 @@ class MilvusDB(VectorDB):
         """
         Clear all records from the collection.
         """
-        self.collection.delete(expr="")
+        self.collection.delete(expr="id != 'NULL'")
         self.collection.flush()
