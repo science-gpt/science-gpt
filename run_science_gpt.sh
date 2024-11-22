@@ -20,6 +20,8 @@ if [ "$DEV_MODE" = true ] && [ "$BUILD" = true ]; then
     sudo DEV_MODE=true docker compose -f docker-compose-sciencegpt.yaml -f docker-compose-milvus.yaml up --pull always --build
 elif [ "$DEV_MODE" = true ]; then
     DEV_MODE=true docker compose -f docker-compose-sciencegpt.yaml -f docker-compose-milvus.yaml up --pull always
+elif [ "$BUILD" = true ]; then
+    sudo docker compose -f docker-compose-sciencegpt.yaml -f docker-compose-milvus.yaml up --pull always --build
 else
     docker compose -f docker-compose-sciencegpt.yaml -f docker-compose-milvus.yaml up --pull always
 fi
