@@ -25,6 +25,8 @@ embedding:
 
 vector_db:
   type: "milvus"
+  host: "standalone"
+  port: 19530
 
 rag_params:
   top_k_retrieval: 5

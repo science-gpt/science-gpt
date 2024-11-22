@@ -32,6 +32,8 @@ class Embedding(BaseModel):
 
 class VectorDB(BaseModel):
     type: Literal["chromadb", "milvus"]
+    host: Optional[str]
+    port: Optional[int]
 
 
 class RAGParams(BaseModel):
