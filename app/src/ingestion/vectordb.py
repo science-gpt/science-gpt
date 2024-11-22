@@ -233,7 +233,7 @@ class MilvusDB(VectorDB):
             collection_name (str): The name of the collection to create or use.
             dim (int): Dimension of the vectors to be stored (defaults to 1536 for OpenAI embeddings)
         """
-        connections.connect(host="localhost", port="19530")
+        connections.connect(host="standalone", port="19530")
 
         if not utility.has_collection(collection_name):
             id_field = FieldSchema(
