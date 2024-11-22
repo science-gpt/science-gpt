@@ -57,7 +57,7 @@ class DataBroker(metaclass=SingletonMeta):
                 "base": {},
                 "user": {},
             }
-            self._init_databroker_pipeline()
+            self._init_databroker_pipeline(database_config)
 
     def get_database_config(self) -> SimpleNamespace:
         """
@@ -166,11 +166,12 @@ class DataBroker(metaclass=SingletonMeta):
             )
         return vectorstore
 
-    def _init_databroker_pipeline(self) -> None:
+    def _init_databroker_pipeline(self, database_config: SimpleNamespace) -> None:
         """
         Initializes the data broker pipeline.
         """
         logger.info("Initializing data broker pipeline")
+        self._database_config = database_config
         if self._database_config is None:
             raise ValueError("Database configuration is not set")
 
