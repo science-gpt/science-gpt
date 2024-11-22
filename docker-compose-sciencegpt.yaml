@@ -1,5 +1,6 @@
 services:
   science-gpt:
+    container_name: science-gpt-app
     build:
       context: ./
     expose:
@@ -14,6 +15,7 @@ services:
 
   nginx:
     image: nginx:latest
+    container_name: science-gpt-nginx
     ports:
       - "80:80"
     volumes:
