@@ -33,7 +33,6 @@ class Embedding(BaseModel):
 class VectorDB(BaseModel):
     type: Literal["local-chromadb"]
     local_path: str
-    instance_name: str
     search_strategy: Literal["similarity"]
 
 

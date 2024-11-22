@@ -189,7 +189,7 @@ class DataBroker(metaclass=SingletonMeta):
         suffix = f"_{strip(self._database_config.embedding_model)}_{strip(self._database_config.chunking_method)}"
 
         self.collection_name = {
-            "base": self._database_config.vector_store.instance_name + suffix,
+            "base": self._database_config.vector_store.type + suffix,
             "user": self._database_config.username + suffix,
         }
 

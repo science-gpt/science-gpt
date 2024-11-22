@@ -26,7 +26,6 @@ embedding:
 vector_db:
   type: "local-chromadb"
   local_path: "chroma"
-  instance_name: "chromadb-instance"
   search_strategy: "similarity"
 
 rag_params:
