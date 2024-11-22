@@ -346,7 +346,8 @@ class MilvusDB(VectorDB):
         Returns:
             List[str]: List of all document IDs in the database.
         """
-        results = self.collection.query(expr="", output_fields=["id"])
+        # no milvus built-in for "grab everything", so hacking it
+        results = self.collection.query(expr="id != 'NULL'", output_fields=["id"])
         return [result["id"] for result in results]
 
     def clear(self) -> None:

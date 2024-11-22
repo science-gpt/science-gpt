@@ -46,12 +46,16 @@ class DataBroker(metaclass=SingletonMeta):
     chunking, embedding, storage and retrieval of text data.
     """
 
-    def __init__(self, database_config: SimpleNamespace = None) -> None:
+    def __init__(
+        self,
+        database_config: SimpleNamespace = None,
+        secrets_path: str = "secrets.toml",
+    ) -> None:
         """
         Instantiates an object of this class.
         """
         self._database_config = database_config
-        self._secrets = toml.load("secrets.toml")
+        self._secrets = toml.load(secrets_path)
         if database_config is not None:
             self.data_cache = {
                 "base": {},

@@ -6,3 +6,4 @@ venv/*
 *data/*
 vectorstore/
 data/
+test_user_data/
