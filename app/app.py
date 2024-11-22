@@ -284,14 +284,10 @@ def surveycb():
 
 
 def databasecb(database_config):
-    try:
-        if "databroker" not in st.session_state:
-            st.session_state.databroker = DataBroker(st.session_state.database_config)
-        # not a best practice: accessing protected members
-        st.session_state.databroker._database_config = database_config
-        st.session_state.databroker._init_databroker_pipeline()
-    except Exception as e:
-        st.sidebar.error(f"Failed to load embeddings: {e}")
+    if "databroker" not in st.session_state:
+        st.session_state.databroker = DataBroker(st.session_state.database_config)
+    # not a best practice: accessing protected method. but oh well
+    st.session_state.databroker._init_databroker_pipeline(database_config)
     st.sidebar.success(f"Database Generated!")
 
 
