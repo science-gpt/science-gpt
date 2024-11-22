@@ -167,10 +167,14 @@ class DataBroker(metaclass=SingletonMeta):
                 "base": MilvusDB(
                     collection_name=self.collection_name["base"],
                     dim=embedding_dimension,
+                    host=self._database_config.vector_store.host,
+                    port=self._database_config.vector_store.port,
                 ),
                 "user": MilvusDB(
                     collection_name=self.collection_name["user"],
                     dim=embedding_dimension,
+                    host=self._database_config.vector_store.host,
+                    port=self._database_config.vector_store.port,
                 ),
             }
         else:
@@ -298,7 +302,7 @@ class DataBroker(metaclass=SingletonMeta):
                 logger.error(f"Failed to get or create collection: {e}")
                 return []
         else:
-            print("✅ No new documents to add")
+            print("No new documents to add")
 
         return [chunk.name for chunk in chunks]
 
