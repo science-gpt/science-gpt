@@ -14,7 +14,6 @@ from data_broker.data_broker import DataBroker
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from logs.logger import logger
 from orchestrator.chat_orchestrator import ChatOrchestrator
-from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
 from streamlit_feedback import streamlit_feedback
 from streamlit_float import float_css_helper, float_init, float_parent
@@ -288,7 +287,9 @@ def databasecb(database_config):
     try:
         if "databroker" not in st.session_state:
             st.session_state.databroker = DataBroker(st.session_state.database_config)
-        st.session_state.databroker.init_databroker_pipeline(database_config)
+        # not a best practice: accessing protected members
+        st.session_state.databroker._database_config = database_config
+        st.session_state.databroker._init_databroker_pipeline()
     except Exception as e:
         st.sidebar.error(f"Failed to load embeddings: {e}")
     st.sidebar.success(f"Database Generated!")
