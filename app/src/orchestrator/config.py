@@ -31,9 +31,7 @@ class Embedding(BaseModel):
 
 
 class VectorDB(BaseModel):
-    type: Literal["local-chromadb"]
-    local_path: str
-    search_strategy: Literal["similarity"]
+    type: Literal["local-chromadb", "local-milvus"]
 
 
 class RAGParams(BaseModel):

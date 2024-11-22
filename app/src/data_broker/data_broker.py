@@ -14,7 +14,7 @@ from ingestion.chunking import (
 from ingestion.embedding import Embedder, HuggingFaceEmbedder, OllamaEmbedder
 from ingestion.extraction import PDFData, PyPDF2Extract, TextExtract
 from ingestion.raw_data import Data
-from ingestion.vectordb import ChromaDB, SearchResult, VectorDB
+from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB
 
 logger = logging.getLogger(__name__)  # using custom logger causes circular dependency
 

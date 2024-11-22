@@ -24,9 +24,7 @@ embedding:
   model: "mxbai-embed-large"
 
 vector_db:
-  type: "local-chromadb"
-  local_path: "chroma"
-  search_strategy: "similarity"
+  type: "local-milvus"
 
 rag_params:
   top_k_retrieval: 5
