@@ -291,7 +291,7 @@ class MilvusDB(VectorDB):
         top_k: int = 5,
         keywords: Optional[
             List[str]
-        ] = None,  # currently keywords are not support in milvus
+        ] = None,  # currently keywords are not supported in milvus
     ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database.
@@ -311,17 +311,17 @@ class MilvusDB(VectorDB):
 
         all_results = []
         for hits in results:
-            query_results = [
-                SearchResult(
-                    id=str(hit.id),
-                    distance=hit.distance,
-                    metadata={},  # Milvus doesn't have built-in metadata support
-                    document=hit.entity.get("document", ""),
+            query_results = []
+            for hit in hits:
+                query_results.append(
+                    SearchResult(
+                        id=str(hit.id),
+                        distance=hit.distance,
+                        metadata={},  # Milvus doesn't have built-in metadata support
+                        document=hit.get("document"),
+                    )
                 )
-                for hit in hits
-            ]
             all_results.append(query_results)
-
         return all_results
 
     def delete(self, ids: List[str]) -> None:
