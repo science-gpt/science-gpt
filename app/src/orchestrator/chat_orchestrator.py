@@ -1,4 +1,5 @@
 import os
+from types import SimpleNamespace
 
 import toml
 from logs.logger import logger
@@ -94,8 +95,8 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         self,
         model: str,
         query: str,
-        query_config,
-        use_rag=False,
+        query_config: SimpleNamespace,
+        use_rag: bool = False,
     ) -> tuple[str, str, float]:
         """
         Given a user query, the orchestrator detects user intent and leverages

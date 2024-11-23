@@ -202,13 +202,11 @@ def create_answer(prompt):
             keywords=st.session_state.keywords,
         )
 
-        # Now call the triage_query function without the 'local' argument
         llm_prompt, response, cost = st.session_state.orchestrator.triage_query(
             st.session_state.model,
             prompt,
             st.session_state.query_config,
             use_rag=st.session_state.use_rag,
-            chat_history=st.session_state.messages,
         )
 
         logger.info(
