@@ -287,7 +287,6 @@ class DataBroker(metaclass=SingletonMeta):
 
         existing_ids = self.vectorstore[collection].get_all_ids()
 
-        # IGNORE, TEMPORARY: adding small comment to allow pr comment
         # more looping over every entry in the db?
         new_chunks = []
         for chunk in chunks:
