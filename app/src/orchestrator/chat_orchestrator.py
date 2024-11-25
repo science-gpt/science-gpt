@@ -22,7 +22,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         self.model = None
         self.system_prompt = DEFAULT_SYSTEM_PROMPT
 
-    def load_model(self, model: str = "gpt-3.5"):
+    def load_model(self, model: str):
         """
         Load secrets from toml file into config object.
         """
@@ -56,18 +56,15 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         self.config.rag_params.top_k_retrieval = query_config.top_k
         self.config.model_params.top_p = query_config.top_p
 
-    def test_connection(self, local=False):
+    def test_connection(self, model_name: str) -> bool:
         """
         Test connection to the local or remote chat model.
         """
 
-        if local:
-            model = LocalAIModel(self.config)
-            response = model.test_connection()
-        else:
-            response = self.llm.test_connection()
+        if model_name in ["GPT-3.5", "GPT-4.0"]:
+            return OpenAIChatModel(self.config).test_connection()
 
-        return response
+        return LocalAIModel(self.config).test_connection()
 
     def update_system_prompt(self, new_prompt: str):
         self.system_prompt = new_prompt
@@ -77,6 +74,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         model: str,
         query: str,
         query_config,
+        use_rag: bool = True,
     ) -> tuple[str, float]:
         """
         Given a user query, the orchestrator detects user intent and leverages

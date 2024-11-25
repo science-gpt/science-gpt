@@ -4,6 +4,7 @@ import requests
 from langchain_community.callbacks import get_openai_callback
 from langchain_openai import AzureChatOpenAI
 from orchestrator.config import SystemConfig
+from requests.exceptions import ConnectTimeout
 
 
 class ChatModel(ABC):
@@ -23,10 +24,8 @@ class OpenAIChatModel(ChatModel):
             openai_api_key=self.config.model_auth.api_key,
             openai_api_version=self.config.model_auth.version,
             azure_endpoint=self.config.model_auth.url,
-            seed=self.config.model_params.seed,
             max_tokens=self.config.model_params.max_tokens,
             temperature=self.config.model_params.temperature,
-            top_p=self.config.model_params.top_p,
         )
 
     def __call__(self, query: str, override_config=None):
@@ -46,13 +45,14 @@ class OpenAIChatModel(ChatModel):
                 for key, value in old_params.items():
                     setattr(self.model, key, value)
 
-            print(response)
-
             return str(response.content), cb.total_cost
 
     def test_connection(self):
-        # TODO: implement test connection method
-        return True
+        try:
+            response, _ = self.__call__("Test connection")
+            return True
+        except ConnectTimeout:
+            return False
 
 
 class LocalAIModel(ChatModel):
@@ -101,5 +101,8 @@ class LocalAIModel(ChatModel):
             return "Error occurred", 0.0  # You can customize the error handling
 
     def test_connection(self):
-        # TODO: implement test connection method
-        return True
+        try:
+            response, _ = self.__call__("Test connection")
+            return True
+        except ConnectTimeout:
+            return False

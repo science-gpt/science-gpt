@@ -302,31 +302,40 @@ def sidebar():
         st.metric(label="Session Cost", value=f"${st.session_state.cost:.5f}")
 
         st.session_state.model = st.selectbox(
-            "Model",
-            st.session_state.orchestrator.config.supported_models,
+            label="Model",
+            options=st.session_state.orchestrator.config.supported_models,
             index=0,
-            placeholder="Select a model",
         )
+
+        st.session_state.orchestrator.load_model(st.session_state.model)
+
+        # here we verify that the model is online
+        if st.session_state.orchestrator.test_connection(
+            model_name=st.session_state.model
+        ):
+            st.success(f"Connected to {st.session_state.model}")
+        else:
+            st.error(f"{st.session_state.model} is not online.")
 
         with st.sidebar.expander("Retrieval Settings", expanded=False):
             st.session_state.use_rag = st.toggle(
-                "Retrieval Augmented Generation",
+                label="Retrieval Augmented Generation",
                 value=True,
                 help="Retrieve content from the document database for question answering",
             )
 
             if st.session_state.use_rag:
                 st.session_state.useknowledgebase = st.toggle(
-                    "Use Uploaded Documents",
+                    label="Use Uploaded Documents",
                     value=False,
                     help="Retrieve content from doucments uploaded via the Knowledge Base tab. Do not enable this if you have not uploaded any documents.",
                 )
 
                 st.session_state.top_k = st.slider(
-                    "Top K",
-                    0,
-                    20,
-                    5,
+                    label="Top K",
+                    min_value=0,
+                    max_value=20,
+                    value=st.session_state.top_k,
                     help="Number of text chunks to retrieve from the document database",
                 )
 
