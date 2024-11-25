@@ -1,13 +1,11 @@
 import logging
 
 import toml
-
-# todo: singleton meta definition should be moved to another file
-from data_broker.data_broker import SingletonMeta
 from opencensus.ext.azure.log_exporter import AzureLogHandler
 from opencensus.ext.azure.trace_exporter import AzureExporter
 from opencensus.trace.samplers import ProbabilitySampler
 from opencensus.trace.tracer import Tracer
+from orchestrator.utils import SingletonMeta
 
 SURVEY_LEVEL = 25  # Custom log level for survey responses
 AZURE_LOGS_CONNECTION_STRING = (

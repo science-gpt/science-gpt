@@ -3,34 +3,15 @@ import os
 import requests
 import toml
 from logs.logger import logger
-from models.models import LocalAIModel, OpenAIChatModel
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
-from orchestrator.utils import DEFAULT_SYSTEM_PROMPT, load_config
+from orchestrator.utils import DEFAULT_SYSTEM_PROMPT, SingletonMeta, load_config
 from prompt.base_prompt import ConcretePrompt
 from prompt.prompts import ModerationDecorator, OnlyUseContextDecorator
 from prompt.retrieval import ContextRetrieval
 from requests.exceptions import ConnectTimeout
 
-
-class SingletonMeta(type):
-    """
-    The Singleton class can be implemented in different ways in Python. Some
-    possible methods include: base class, decorator, metaclass. We will use the
-    metaclass because it is best suited for this purpose.
-    """
-
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        """
-        Possible changes to the value of the `__init__` argument do not affect
-        the returned instance.
-        """
-        if cls not in cls._instances:
-            instance = super().__call__(*args, **kwargs)
-            cls._instances[cls] = instance
-        return cls._instances[cls]
+from models.models import LocalAIModel, OpenAIChatModel
 
 
 class ChatOrchestrator(metaclass=SingletonMeta):
@@ -125,8 +106,8 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             prompt = ContextRetrieval(
                 prompt,
                 self.config,
-                rewrite_model=self.model,
                 keyword_filter=query_config.keywords,
+                rewrite_model=self.model,
             )
         # we want to avoid the case of wrapping the prompt in two ContextRetrival decorators.
         # note - if use_rag and useknowledgebase are on at the same time the app will not work.
@@ -134,9 +115,9 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             prompt = ContextRetrieval(
                 prompt,
                 self.config,
-                rewrite_model=self.model,
                 collection="user",
                 keyword_filter=query_config.keywords,
+                rewrite_model=self.model,
             )
 
         # look for moderation filter

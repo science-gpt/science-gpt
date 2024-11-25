@@ -15,33 +15,13 @@ from ingestion.extraction import PDFData, PyPDF2Extract, TextExtract
 from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, SearchResult, VectorDB
 from orchestrator.config import SystemConfig
-from orchestrator.utils import load_config
+from orchestrator.utils import SingletonMeta
 
 logger = logging.getLogger(__name__)
 
 
 def squish(s):
     return s.translate(str.maketrans("", "", string.punctuation))
-
-
-class SingletonMeta(type):
-    """
-    The Singleton class can be implemented in different ways in Python. Some
-    possible methods include: base class, decorator, metaclass. We will use the
-    metaclass because it is best suited for this purpose.
-    """
-
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        """
-        Possible changes to the value of the `__init__` argument do not affect
-        the returned instance.
-        """
-        if cls not in cls._instances:
-            instance = super().__call__(*args, **kwargs)
-            cls._instances[cls] = instance
-        return cls._instances[cls]
 
 
 # TODO: error handling throughout this class is absent or inconsistent
@@ -57,12 +37,11 @@ class DataBroker(metaclass=SingletonMeta):
         Instantiates an object of this class.
         """
         if database_config != None:
-            print("---INIT---")
-            self.load_database_config(database_config)
             self.data_cache = {
                 "base": {},
                 "user": {},
             }
+            self.load_database_config(database_config)
 
     def get_embedding_model(self):
         """Returns the currently set embedding model."""
