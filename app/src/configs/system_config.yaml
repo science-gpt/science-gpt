@@ -24,10 +24,9 @@ embedding:
   model: "mxbai-embed-large"
 
 vector_db:
-  type: "local-chromadb"
-  local_path: "chroma"
-  instance_name: "chromadb-instance"
-  search_strategy: "similarity"
+  type: "milvus"
+  host: "standalone"
+  port: 19530
 
 rag_params:
   top_k_retrieval: 5

@@ -1,7 +1,7 @@
 import os
 from typing import Optional
 
-from data_broker.data_broker import DataBroker
+from databroker.databroker import DataBroker
 from langchain_community.vectorstores import Chroma
 from models.models import ChatModel
 from orchestrator.config import SystemConfig
@@ -75,7 +75,7 @@ class ContextRetrieval(PromptDecorator):
         keyword_filter: Optional[list[str]] = None,
     ) -> None:
         self._prompt = prompt
-        self.data_broker = DataBroker()
+        self.databroker = DataBroker()
         self.config: SystemConfig = config
         self.collection = collection
         self.keyword_filter = keyword_filter
@@ -96,7 +96,7 @@ class ContextRetrieval(PromptDecorator):
             top_k = self.config.rag_params.top_k_retrieval
         print("Retrieval!\n", str(top_k))
 
-        results = self.data_broker.search(
+        results = self.databroker.search(
             [retrieval_query],
             top_k=top_k,
             collection=self.collection,
@@ -142,7 +142,7 @@ class FilteredContextRetrieval(PromptDecorator):
         filters: list[str],
     ) -> None:
         self._prompt = prompt
-        self.data_broker = DataBroker()
+        self.databroker = DataBroker()
         self.meta = meta
         self.filters = filters
         self.config: SystemConfig = config

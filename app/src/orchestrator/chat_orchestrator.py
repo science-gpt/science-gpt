@@ -1,6 +1,6 @@
 import os
+from types import SimpleNamespace
 
-import requests
 import toml
 from logs.logger import logger
 from models.models import LocalAIModel, OpenAIChatModel
@@ -95,11 +95,9 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         self,
         model: str,
         query: str,
-        query_config,
-        use_rag=False,
-        chat_history=None,
-        local=True,
-    ) -> tuple[str, float]:
+        query_config: SimpleNamespace,
+        use_rag: bool = False,
+    ) -> tuple[str, str, float]:
         """
         Given a user query, the orchestrator detects user intent and leverages
         appropriate agents to provide a response.

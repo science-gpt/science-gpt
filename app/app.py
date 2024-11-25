@@ -10,11 +10,10 @@ import uuid
 
 import pandas as pd
 import streamlit as st
-from data_broker.data_broker import DataBroker
+from databroker.databroker import DataBroker
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from logs.logger import logger
 from orchestrator.chat_orchestrator import ChatOrchestrator
-from orchestrator.config import SystemConfig
 from orchestrator.utils import load_config
 from streamlit_feedback import streamlit_feedback
 from streamlit_float import float_css_helper, float_init, float_parent
@@ -68,7 +67,7 @@ def init_streamlit():
     st.title("Science-GPT Prototype")
 
     if "userpath" not in st.session_state:
-        st.session_state.username = st.session_state.get("username", "test-user")
+        st.session_state.username = st.session_state.get("username", "test_user")
         st.session_state.userpath = (
             f"{os.getcwd()}/data/" + st.session_state.username + "/"
         )
@@ -203,13 +202,11 @@ def create_answer(prompt):
             keywords=st.session_state.keywords,
         )
 
-        # Now call the triage_query function without the 'local' argument
         llm_prompt, response, cost = st.session_state.orchestrator.triage_query(
             st.session_state.model,
             prompt,
             st.session_state.query_config,
             use_rag=st.session_state.use_rag,
-            chat_history=st.session_state.messages,
         )
 
         logger.info(
@@ -285,12 +282,10 @@ def surveycb():
 
 
 def databasecb(database_config):
-    try:
-        if "databroker" not in st.session_state:
-            st.session_state.databroker = DataBroker(st.session_state.database_config)
-        st.session_state.databroker.load_database_config(database_config)
-    except Exception as e:
-        st.sidebar.error(f"Failed to load embeddings: {e}")
+    if "databroker" not in st.session_state:
+        st.session_state.databroker = DataBroker(st.session_state.database_config)
+    # not a best practice: accessing protected method. but oh well
+    st.session_state.databroker._init_databroker_pipeline(database_config)
     st.sidebar.success(f"Database Generated!")
 
 

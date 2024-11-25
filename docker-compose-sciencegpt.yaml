@@ -1,5 +1,6 @@
 services:
   science-gpt:
+    container_name: science-gpt-app
     build:
       context: ./
     expose:
@@ -8,10 +9,21 @@ services:
       - ./app/vectorstore:/usr/src/app/vectorstore
     networks:
       - app-network
+      - milvus
+    environment:
+      - DEV_MODE=${DEV_MODE:-false}
     restart: always
+    depends_on:
+      standalone:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
 
   nginx:
     image: nginx:latest
+    container_name: science-gpt-nginx
     ports:
       - "80:80"
     volumes:
@@ -25,3 +37,5 @@ services:
 networks:
   app-network:
     driver: bridge
+  milvus:
+    external: true
