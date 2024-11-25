@@ -257,18 +257,12 @@ class DataBroker(metaclass=SingletonMeta):
         existing_files = list(self.data_cache[collection][collection_name].keys())
         remove_files = list(set(existing_files) - set(pdf_files))
 
-        chunks_ids = []
+        del_chunks = []
         for pdf_file in remove_files:
-            chunks_ids.extend(self.data_cache[collection][pdf_file])
+            del_chunks.extend(self.data_cache[collection][pdf_file])
             self.data_cache[collection][collection_name].pop(pdf_file)
 
-        existing_ids = self.vectorstore[collection].get_all_ids()
-
-        del_chunks = []
-        # this is a bad idea: a DB is pointless if we loop over every entry
-        for _id in existing_ids:
-            if _id not in chunks_ids:
-                del_chunks.append(_id)
+        self.vectorstore[collection].delete(ids=del_chunks)
 
     def insert(self, data: Data, collection="base") -> List[str]:
         """
