@@ -77,9 +77,6 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         model: str,
         query: str,
         query_config,
-        use_rag=False,
-        chat_history=None,
-        local=True,
     ) -> tuple[str, float]:
         """
         Given a user query, the orchestrator detects user intent and leverages
@@ -88,17 +85,12 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         Returns the response text content (str) and cost (float)
         """
 
-        print(query_config)
-
         # Set the model config and load the model
         self.set_model_config(query_config)
         self.load_model(model)
         logger.info(self.config.model_dump_json())
 
         prompt = ConcretePrompt(self.system_prompt)
-
-        # Retrieval use case
-        # TODO: This is clunky - ideally we would have a LLM detect the intent for use cases
 
         # involving user input.
         if query.lower().startswith("search:") or use_rag:
@@ -139,7 +131,3 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             return "N/A", "The model you selected is not online.", 0.0
 
         return llm_prompt, response, cost
-
-    def query(self, prompt):
-        response, cb = self.model(prompt)
-        return prompt, response, cb
