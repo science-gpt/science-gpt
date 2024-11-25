@@ -10,7 +10,6 @@ import uuid
 
 import pandas as pd
 import streamlit as st
-from data_broker.data_broker import DataBroker
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from logs.logger import logger
 from orchestrator.chat_orchestrator import ChatOrchestrator
@@ -20,6 +19,8 @@ from streamlit_feedback import streamlit_feedback
 from streamlit_float import float_css_helper, float_init, float_parent
 from streamlit_survey import StreamlitSurvey
 from streamlit_tags import st_tags
+
+from data_broker.data_broker import DataBroker
 
 
 def file_upload_cb():
@@ -300,25 +301,7 @@ def sidebar():
 
         st.session_state.model = st.selectbox(
             "Model",
-            [
-                "llama3:latest",
-                "GPT-4.0",
-                "GPT-3.5",
-                "llama3.1:8b",
-                "phi3.5:3.8b",
-                "mistral-nemo:12b",
-                "gemma2:27b",
-                "openbiollm-llama-3:8b-q6_k",
-                "openbiollm-llama-3:8b_q8_0",
-                "llama3.2:3B-instruct-fp16",
-                "deepseek-v2:16b",
-                "dolphin-llama3:8b",
-                "llava:34b-v1.6-q5_K_M",
-                "mistral-nemo:12b-instruct-2407-q3_K_M",
-                "llama3.2:3b-instruct-q4_K_M",
-                "llama3.1:8b-instruct-q4_K_M",
-                "Mistral-7B-Instruct-v0.3-Q4_K_M:latest",
-            ],
+            st.session_state.orchestrator.config.supported_models,
             index=0,
             placeholder="Select a model",
         )
