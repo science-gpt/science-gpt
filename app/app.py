@@ -299,6 +299,8 @@ def sidebar():
 
     with st.sidebar:
 
+        st.metric(label="Session Cost", value=f"${st.session_state.cost:.5f}")
+
         st.session_state.model = st.selectbox(
             "Model",
             st.session_state.orchestrator.config.supported_models,
@@ -306,72 +308,101 @@ def sidebar():
             placeholder="Select a model",
         )
 
-        st.write(f"Total Cost: ${format(st.session_state.cost, '.5f')}")
+        with st.sidebar.expander("Retrieval Settings", expanded=False):
+            st.session_state.use_rag = st.toggle(
+                "Retrieval Augmented Generation",
+                value=True,
+                help="Retrieve content from the document database for question answering",
+            )
 
-        st.session_state.seed = st.number_input("Seed", value=st.session_state.seed)
-        st.session_state.temperature = st.select_slider(
-            "Temperature",
-            options=[round(0.1 * i, 1) for i in range(0, 11)],
-            value=st.session_state.temperature,
-        )
-        st.session_state.top_p = st.select_slider(
-            "Top P",
-            options=[round(0.1 * i, 1) for i in range(0, 11)],
-            value=st.session_state.top_p,
-        )
+            if st.session_state.use_rag:
+                st.session_state.useknowledgebase = st.toggle(
+                    "Use Uploaded Documents",
+                    value=False,
+                    help="Retrieve content from doucments uploaded via the Knowledge Base tab. Do not enable this if you have not uploaded any documents.",
+                )
 
-        # st.session_state.update_prompt = st.button("Modify System Prompt")
+                st.session_state.top_k = st.slider(
+                    "Top K",
+                    0,
+                    20,
+                    5,
+                    help="Number of text chunks to retrieve from the document database",
+                )
 
-        st.session_state.moderationfilter = st.checkbox("Moderation Filter")
-        st.session_state.onlyusecontext = st.checkbox("Only Use Knowledge Base")
+                # creates a tag section to enter keywords
+                st.session_state.keywords = st_tags(
+                    label="Keyword Filters",
+                    text="Enter keywords and press enter",
+                    value=st.session_state.get("keywords", []),
+                    maxtags=3,  # max number of tags
+                    key="keyword_tags",
+                )
 
-        # creates a tag section to enter keywords
-        st.session_state.keywords = st_tags(
-            label="Keyword Filtered Retrieval",
-            text="Enter keywords and press enter",
-            value=st.session_state.get("keywords", []),
-            suggestions=["Toxicology", "Regulation", "Environment"],
-            maxtags=10,  # max number of tags
-            key="keyword_tags",
-        )
+        with st.sidebar.expander("Database Options", expanded=False):
+            with st.form("advanced", border=False):
 
-        st.session_state.use_rag = st.checkbox("Retrieval Augmented Generation")
-        # Create an expandable section for advanced options
-        if st.session_state.use_rag:
+                # make sure first option matches system config
+                st.session_state.embedding_model = st.selectbox(
+                    "Choose embedding model:",
+                    ("mxbai-embed-large", "nomic-embed-text"),
+                )
+                # make sure first option matches system config
+                st.session_state.chunking_method = st.selectbox(
+                    "Choose chunking method:",
+                    (
+                        "recursive_character",
+                        "recursive_character:large_chunks",
+                        "recursive_character:small_chunks",
+                    ),
+                )
+                st.session_state.database_config = SimpleNamespace(
+                    username=st.session_state.username,
+                    userpath=st.session_state.userpath,
+                    embedding_model=st.session_state.embedding_model,
+                    chunking_method=st.session_state.chunking_method,
+                    # Load default values from config
+                    pdf_extractor=st.session_state.config.extraction,
+                    vector_store=st.session_state.config.vector_db,
+                )
+                submitted = st.form_submit_button(
+                    "Regenerate Database",
+                    on_click=(lambda: databasecb(st.session_state.database_config)),
+                )
 
-            st.session_state.top_k = st.slider("Top K", 0, 20, 5)
-            st.session_state.useknowledgebase = st.checkbox("Use Knowledge Base")
+        with st.sidebar.expander("Prompt Modifiers", expanded=False):
+            st.session_state.moderationfilter = st.checkbox(
+                "Moderation Filter",
+                value=True,
+                help="Filter out offensive, racist, homophobic, sexist, and pornographic content",
+            )
+            st.session_state.onlyusecontext = st.checkbox(
+                "Only Use Knowledge Base",
+                value=True,
+                help="Instruct the model to use only the context provided to it to answer the question",
+            )
 
-            with st.sidebar.expander("Advanced DataBase Options", expanded=False):
-                with st.form("advanced", border=False):
+        with st.sidebar.expander("General Model Settings", expanded=False):
 
-                    # make sure first option matches system config
-                    st.session_state.embedding_model = st.selectbox(
-                        "Choose embedding model:",
-                        ("mxbai-embed-large", "nomic-embed-text"),
-                    )
-                    # make sure first option matches system config
-                    st.session_state.chunking_method = st.selectbox(
-                        "Choose chunking method:",
-                        (
-                            "recursive_character",
-                            "recursive_character:large_chunks",
-                            "recursive_character:small_chunks",
-                        ),
-                    )
-                    st.session_state.database_config = SimpleNamespace(
-                        username=st.session_state.username,
-                        userpath=st.session_state.userpath,
-                        embedding_model=st.session_state.embedding_model,
-                        chunking_method=st.session_state.chunking_method,
-                        # Load default values from config
-                        pdf_extractor=st.session_state.config.extraction,
-                        vector_store=st.session_state.config.vector_db,
-                    )
-                    submitted = st.form_submit_button(
-                        "Regenerate Database",
-                        on_click=(lambda: databasecb(st.session_state.database_config)),
-                    )
+            st.session_state.seed = st.number_input(
+                "Seed",
+                value=st.session_state.seed,
+                help="A value that affects the randomness of the model.",
+            )
+
+            st.session_state.temperature = st.select_slider(
+                "Temperature",
+                options=[round(0.1 * i, 1) for i in range(0, 11)],
+                value=st.session_state.temperature,
+                help="Controls randomness in text generation; lower values make outputs more predictable, while higher values increase creativity. Adjust when you need more or less variability in responses.",
+            )
+
+            st.session_state.top_p = st.select_slider(
+                "Top P",
+                options=[round(0.1 * i, 1) for i in range(0, 11)],
+                value=st.session_state.top_p,
+                help="Limits token selection to the most probable ones, ensuring coherence; lower values restrict diversity, while higher values allow for more variation. Adjust for balanced creativity and relevance.",
+            )
 
 
 def chat(tab):
