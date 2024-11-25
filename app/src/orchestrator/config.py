@@ -41,10 +41,6 @@ class RAGParams(BaseModel):
     top_k_retrieval: int
 
 
-class SupportedModels(BaseModel):
-    supported_models: List[str]
-
-
 class SystemConfig(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
     model_name: str
@@ -55,4 +51,4 @@ class SystemConfig(BaseModel):
     embedding: Embedding
     vector_db: VectorDB
     rag_params: RAGParams
-    supported_models: SupportedModels
+    supported_models: List[str]
