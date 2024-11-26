@@ -253,7 +253,11 @@ class MilvusDB(VectorDB):
                 field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=dim
             )
             schema.add_field(
-                field_name="document", datatype=DataType.VARCHAR, max_length=65535
+                field_name="document",
+                datatype=DataType.VARCHAR,
+                max_length=65535,
+                enable_analyzer=True,
+                enable_match=True,
             )
 
             index_params = self.client.prepare_index_params()
