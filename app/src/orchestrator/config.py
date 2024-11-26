@@ -12,8 +12,10 @@ class ModelAuth(BaseModel):
 
 
 class ModelParams(BaseModel):
+    # model_config is added to suppress warnings
+    model_config = ConfigDict(protected_namespaces=())
     supported_models: List[str]
-    mode_name: str
+    model_name: str
     seed: int
     temperature: float
     top_p: float
@@ -49,6 +51,7 @@ class RAGParams(BaseModel):
 
 
 class SystemConfig(BaseModel):
+    # model_config is added to suppress warnings
     model_config = ConfigDict(protected_namespaces=())
     model_params: ModelParams
     model_auth: ModelAuth

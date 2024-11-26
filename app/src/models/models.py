@@ -60,7 +60,7 @@ class LocalAIModel(ChatModel):
         super().__init__(config)
         self.macbook_endpoint = self.config.model_auth.macbook_endpoint
         self.macbookmodel = {
-            "model": self.config.model_name,
+            "model": self.config.model_params.model_name,
             # "prompt": query,
             "stream": False,
             "options": {

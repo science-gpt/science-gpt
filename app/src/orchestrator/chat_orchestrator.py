@@ -40,7 +40,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             )
             self.model = LocalAIModel(self.config)
 
-        self.config.model_name = model
+        self.config.model_params.model_name = model
 
     def set_model_config(self, query_config):
         self.config.model_params.seed = query_config.seed
@@ -74,10 +74,8 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         """
 
         # Set the model config and load the model
-        if query_config:
-            self.set_model_config(query_config)
-        if model:
-            self.load_model(model)
+        self.set_model_config(query_config)
+        self.load_model(model)
         logger.info(self.config.model_dump_json())
 
         prompt = ConcretePrompt(self.system_prompt)

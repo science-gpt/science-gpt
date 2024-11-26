@@ -207,9 +207,9 @@ def create_answer(prompt):
         )
 
         llm_prompt, response, cost = st.session_state.orchestrator.triage_query(
-            st.session_state.model,
-            prompt,
-            st.session_state.query_config,
+            query=prompt,
+            model=st.session_state.model,
+            query_config=st.session_state.query_config,
             use_rag=st.session_state.use_rag,
         )
 
@@ -337,7 +337,6 @@ def sidebar():
                     help="Number of text chunks to retrieve from the document database",
                 )
 
-                # creates a tag section to enter keywords
                 st.session_state.keywords = st_tags(
                     label="Keyword Filters",
                     text="Enter keywords and press enter",
