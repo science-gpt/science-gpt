@@ -1,14 +1,7 @@
-from typing import List, Literal, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
-
-
-class ModelParams(BaseModel):
-    seed: Optional[int]
-    temperature: Optional[float]
-    max_tokens: Optional[int]
-    top_p: Optional[float]
-    num_ctx: Optional[int]
+from typing_extensions import Literal
 
 
 class ModelAuth(BaseModel):
@@ -18,26 +11,41 @@ class ModelAuth(BaseModel):
     version: Optional[str]
 
 
+class ModelParams(BaseModel):
+    supported_models: List[str]
+    model: str
+    seed: int
+    temperature: float
+    top_p: float
+    max_tokens: int
+    num_ctx: int
+
+
 class Extraction(BaseModel):
-    pdf_extract_method: str
+    supported_extractors: List[str]
+    extraction_method: str
 
 
 class Chunking(BaseModel):
-    method: str
+    supported_chunkers: List[str]
+    chunking_method: str
 
 
 class Embedding(BaseModel):
-    model: str
+    supported_embedders: List[str]
+    embedding_model: str
 
 
 class VectorDB(BaseModel):
-    type: Literal["chromadb", "milvus"]
+    supported_databases: List[str]
+    database: str
     host: Optional[str]
     port: Optional[int]
 
 
 class RAGParams(BaseModel):
     top_k_retrieval: int
+    keywords: Optional[str]
 
 
 class SystemConfig(BaseModel):
@@ -50,4 +58,3 @@ class SystemConfig(BaseModel):
     embedding: Embedding
     vector_db: VectorDB
     rag_params: RAGParams
-    supported_models: List[str]

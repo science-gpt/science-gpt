@@ -133,17 +133,17 @@ class DataBroker(metaclass=SingletonMeta):
             Dict[str, TextExtract]: A dictionary mapping data types to their respective extractors
         """
         extractors = {}
-        if self._database_config.pdf_extractor.pdf_extract_method == "pypdf2":
+        if self._database_config.pdf_extractor.extraction_method == "pypdf2":
             extractors["pdf"] = PyPDF2Extract()
         return extractors
 
     def _create_vectorstore(self, embedding_dimension: int) -> Dict[str, VectorDB]:
-        if self._database_config.vector_store.type == "chromadb":
+        if self._database_config.vector_store.database == "chromadb":
             vectorstore = {
                 "base": ChromaDB(collection_name=self.collection_name["base"]),
                 "user": ChromaDB(collection_name=self.collection_name["user"]),
             }
-        elif self._database_config.vector_store.type == "milvus":
+        elif self._database_config.vector_store.database == "milvus":
             vectorstore = {
                 "base": MilvusDB(
                     collection_name=self.collection_name["base"],
@@ -187,7 +187,7 @@ class DataBroker(metaclass=SingletonMeta):
         suffix = f"_{strip(self._database_config.embedding_model)}_{strip(self._database_config.chunking_method)}"
 
         self.collection_name = {
-            "base": self._database_config.vector_store.type + suffix,
+            "base": self._database_config.vector_store.database + suffix,
             "user": self._database_config.username + suffix,
         }
 

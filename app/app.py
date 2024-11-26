@@ -88,8 +88,12 @@ def init_streamlit():
         st.session_state.temperature = st.session_state.config.model_params.temperature
         st.session_state.top_p = st.session_state.config.model_params.top_p
 
-        st.session_state.embedding_model = st.session_state.config.embedding.model
-        st.session_state.chunking_method = st.session_state.config.chunking.method
+        st.session_state.embedding_model = (
+            st.session_state.config.embedding.embedding_model
+        )
+        st.session_state.chunking_method = (
+            st.session_state.config.chunking.chunking_method
+        )
         st.session_state.top_k = st.session_state.config.rag_params.top_k_retrieval
 
         st.session_state.nprompt = None
@@ -297,8 +301,10 @@ def sidebar():
 
         st.session_state.model = st.selectbox(
             label="Model",
-            options=st.session_state.orchestrator.config.supported_models,
-            index=0,
+            options=st.session_state.orchestrator.config.model_params.supported_models,
+            index=st.session_state.orchestrator.config.model_params.supported_models.index(
+                st.session_state.orchestrator.config.model_params.model
+            ),
         )
 
         st.session_state.orchestrator.load_model(st.session_state.model)
@@ -343,18 +349,19 @@ def sidebar():
         with st.sidebar.expander("Database Options", expanded=False):
             with st.form("advanced", border=False):
 
-                # make sure first option matches system config
                 st.session_state.embedding_model = st.selectbox(
-                    "Choose embedding model:",
-                    ("mxbai-embed-large", "nomic-embed-text"),
+                    label="Choose embedding model:",
+                    options=st.session_state.orchestrator.config.embedding.supported_embedders,
+                    index=st.session_state.orchestrator.config.embedding.supported_embedders.index(
+                        st.session_state.orchestrator.config.embedding.model
+                    ),
                 )
-                # make sure first option matches system config
+
                 st.session_state.chunking_method = st.selectbox(
-                    "Choose chunking method:",
-                    (
-                        "recursive_character",
-                        "recursive_character:large_chunks",
-                        "recursive_character:small_chunks",
+                    label="Choose chunking method:",
+                    options=st.session_state.orchestrator.config.chunking.supported_chunkers,
+                    index=st.session_state.orchestrator.config.chunking.supported_chunkers.index(
+                        st.session_state.orchestrator.config.chunking.chunking_method
                     ),
                 )
                 st.session_state.database_config = SimpleNamespace(
