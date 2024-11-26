@@ -33,7 +33,7 @@ def mock_database_config():
         elif vector_store_type == "milvus":
             return SimpleNamespace(
                 embedding_model="all-mpnet-base-v2",
-                chunking_method="split_sentences",
+                chunking_method="recursive_character",
                 pdf_extractor=SimpleNamespace(pdf_extract_method="pypdf2"),
                 vector_store=SimpleNamespace(
                     type="milvus", host="localhost", port=19530
