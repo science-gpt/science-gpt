@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -23,7 +24,7 @@ def mock_database_config():
         if vector_store_type == "chromadb":
             return SimpleNamespace(
                 embedding_model="all-mpnet-base-v2",
-                chunking_method="split_sentences",
+                chunking_method="recursive_character",
                 pdf_extractor=SimpleNamespace(pdf_extract_method="pypdf2"),
                 vector_store=SimpleNamespace(type="chromadb"),
                 username="py_test_user",
@@ -75,6 +76,7 @@ class TestDataBroker:
         """Test clear functionality"""
         assert databroker_instance.vectorstore["base"].get_all_ids() != []
         databroker_instance.vectorstore["base"].clear()
+        time.sleep(3)  # wait to avoid race conditions
         assert databroker_instance.vectorstore["base"].get_all_ids() == []
 
     def test_search_functionality(self, databroker_instance):

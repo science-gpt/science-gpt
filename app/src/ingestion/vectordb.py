@@ -5,15 +5,7 @@ from typing import Any, List, Mapping, Optional
 
 import chromadb
 import numpy as np
-from pymilvus import (
-    Collection,
-    CollectionSchema,
-    DataType,
-    FieldSchema,
-    MilvusClient,
-    connections,
-    utility,
-)
+from pymilvus import DataType, MilvusClient
 
 from .embedding import Embedding
 
@@ -242,9 +234,8 @@ class MilvusDB(VectorDB):
             port (str): The port of the Milvus server (defaults to "19530")
             dim (int): Dimension of the vectors to be stored (defaults to 1536 for OpenAI embeddings)
         """
-        connections.connect(host=host, port=port)
         self.collection_name = collection_name
-        self.client = MilvusClient()
+        self.client = MilvusClient(uri=f"http://{host}:{port}")
 
         if not self.client.has_collection(collection_name):
             schema = MilvusClient.create_schema(
@@ -266,9 +257,6 @@ class MilvusDB(VectorDB):
             )
 
             index_params = self.client.prepare_index_params()
-
-            index_params.add_index(field_name="id", index_type="STL_SORT")
-
             index_params.add_index(
                 field_name="vector", index_type="AUTOINDEX", metric_type="COSINE"
             )
@@ -276,6 +264,7 @@ class MilvusDB(VectorDB):
             self.client.create_collection(
                 collection_name=collection_name,
                 schema=schema,
+                index_params=index_params,
             )
 
         self.client.load_collection(collection_name)
@@ -304,7 +293,7 @@ class MilvusDB(VectorDB):
         """
         Search for similar vectors in the database with optional keyword filtering.
         """
-        search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
+        search_params = {"metric_type": "COSINE", "params": {"nprobe": 10}}
 
         filter_expr = None
         if keywords:
@@ -340,8 +329,7 @@ class MilvusDB(VectorDB):
         """
         Delete vectors from the database by their IDs.
         """
-        expr = f"id in {ids}"
-        self.client.delete(collection_name=self.collection_name, expr=expr)
+        self.client.delete(collection_name=self.collection_name, filter=f"id in {ids}")
 
     def update(self, ids: List[str], embeddings: List[Embedding]) -> None:
         """
@@ -361,7 +349,7 @@ class MilvusDB(VectorDB):
         # no milvus built-in for "grab everything", so hacking it
         results = self.client.query(
             collection_name=self.collection_name,
-            expr="id != 'NULL'",
+            filter="id != 'NULL'",
             output_fields=["id"],
         )
         return [result["id"] for result in results]
@@ -370,4 +358,4 @@ class MilvusDB(VectorDB):
         """
         Clear all records from the collection.
         """
-        self.client.delete(collection_name=self.collection_name, expr="id != 'NULL'")
+        self.client.delete(collection_name=self.collection_name, filter='id != "NULL"')
