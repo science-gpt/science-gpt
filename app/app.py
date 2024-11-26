@@ -310,11 +310,9 @@ def sidebar():
         st.session_state.orchestrator.load_model(st.session_state.model)
 
         # here we verify that the model is online
-        if st.session_state.orchestrator.test_connection(
+        if not st.session_state.orchestrator.test_connection(
             model_name=st.session_state.model
         ):
-            st.success(f"Connected to {st.session_state.model}")
-        else:
             st.error(f"{st.session_state.model} is not online.")
 
         with st.sidebar.expander("Retrieval Settings", expanded=False):
@@ -328,7 +326,7 @@ def sidebar():
                 st.session_state.useknowledgebase = st.toggle(
                     label="Use Uploaded Documents",
                     value=False,
-                    help="Retrieve content from doucments uploaded via the Knowledge Base tab. Do not enable this if you have not uploaded any documents.",
+                    help="Retrieve content from documents uploaded via the Knowledge Base tab. Do not enable this if you have not uploaded any documents.",
                 )
 
                 st.session_state.top_k = st.slider(
