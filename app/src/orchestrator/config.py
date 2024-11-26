@@ -13,7 +13,7 @@ class ModelAuth(BaseModel):
 
 class ModelParams(BaseModel):
     supported_models: List[str]
-    model: str
+    mode_name: str
     seed: int
     temperature: float
     top_p: float
@@ -50,7 +50,6 @@ class RAGParams(BaseModel):
 
 class SystemConfig(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
-    model_name: str
     model_params: ModelParams
     model_auth: ModelAuth
     extraction: Extraction

@@ -10,16 +10,16 @@ _target_: orchestrator.config.SystemConfig
 
 # Model Config Options
 model_params:
-  supported_models:
-    - "llama3:latest"
-    - "GPT-4.0"
-    - "GPT-3.5"
-  model: "GPT-3.5"
+  model_name: "GPT-3.5"
   seed: 42
   temperature: 0.0
   top_p: 1.0
   max_tokens: 512
   num_ctx: 2500
+  supported_models:
+  - "llama3:latest"
+  - "GPT-4.0"
+  - "GPT-3.5"
         
 model_auth:
   macbook_endpoint:
@@ -29,33 +29,36 @@ model_auth:
 
 # Document Processing Options
 extraction:
+  extraction_method: "pypdf2"
   supported_extractors:
     - "pypdf2"
     - "pymupdf"
     - "pymypdf4llm"
-  extraction_method: "pypdf2"
+  
 
 chunking:
+  chunking_method: "recursive_character"
   supported_chunkers:
     - "recursive_character"
     - "recursive_character:large_chunks"
     - "recursive_character:small_chunks"
-  chunking_method: "recursive_character"
+  
 
 embedding:
+  embedding_model: "mxbai-embed-large"
   supported_embedders:
     - "mxbai-embed-large"
     - "nomic-embed-text"
-  embedding_model: "mxbai-embed-large"
+  
 
 # Database Options
 vector_db:
-  supported_databases:
-    - "chromadb"
-    - "milvus"
   database: "chromadb"
   host: "standalone"
   port: 19530
+  supported_databases:
+  - "chromadb"
+  - "milvus"
 
 # Default RAG Parameters
 rag_params:

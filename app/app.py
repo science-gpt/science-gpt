@@ -151,7 +151,7 @@ def get_pk(i):
 
 
 def send_prompt(prompt):
-    llm_prompt, response, cost = st.session_state.orchestrator.query(
+    llm_prompt, response, cost = st.session_state.orchestrator.direct_query(
         prompt,
     )
     st.session_state.cost += float(cost)
@@ -303,7 +303,7 @@ def sidebar():
             label="Model",
             options=st.session_state.orchestrator.config.model_params.supported_models,
             index=st.session_state.orchestrator.config.model_params.supported_models.index(
-                st.session_state.orchestrator.config.model_params.model
+                st.session_state.orchestrator.config.model_params.model_name
             ),
         )
 
@@ -353,7 +353,7 @@ def sidebar():
                     label="Choose embedding model:",
                     options=st.session_state.orchestrator.config.embedding.supported_embedders,
                     index=st.session_state.orchestrator.config.embedding.supported_embedders.index(
-                        st.session_state.orchestrator.config.embedding.model
+                        st.session_state.orchestrator.config.embedding.embedding_model
                     ),
                 )
 

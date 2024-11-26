@@ -28,26 +28,19 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         """
         secrets = toml.load("secrets.toml")
 
-        # TODO: dynamically select model secrets based on 'model' str input
-        # hardcoded to use gpt3.5 for now
-        if model == "GPT-4.0":
-            self.config.model_auth.version = secrets["gpt40-api"]["api_version"]
-            self.config.model_auth.api_key = secrets["gpt40-api"]["api_key"]
-            self.config.model_auth.url = secrets["gpt40-api"]["azure_endpoint"]
-            self.config.model_name = model
-            self.model = OpenAIChatModel(self.config)
-        elif model == "GPT-3.5":  # Defaults to GPT-3.5
-            self.config.model_auth.version = secrets["gpt35-api"]["api_version"]
-            self.config.model_auth.api_key = secrets["gpt35-api"]["api_key"]
-            self.config.model_auth.url = secrets["gpt35-api"]["azure_endpoint"]
-            self.config.model_name = model
+        if model in ["GPT-3.5", "GPT-4.0"]:
+            model_key = model.lower().replace("-", "").replace(".", "") + "-api"
+            self.config.model_auth.version = secrets[model_key]["api_version"]
+            self.config.model_auth.api_key = secrets[model_key]["api_key"]
+            self.config.model_auth.url = secrets[model_key]["azure_endpoint"]
             self.model = OpenAIChatModel(self.config)
         else:
             self.config.model_auth.macbook_endpoint = (
                 secrets["localmodel"]["macbook_endpoint"] + "/api/generate"
             )
-            self.config.model_name = model
             self.model = LocalAIModel(self.config)
+
+        self.config.model_name = model
 
     def set_model_config(self, query_config):
         self.config.model_params.seed = query_config.seed
@@ -66,13 +59,10 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         return LocalAIModel(self.config).test_connection()
 
-    def update_system_prompt(self, new_prompt: str):
-        self.system_prompt = new_prompt
-
     def triage_query(
         self,
-        model: str,
         query: str,
+        model: str,
         query_config: SimpleNamespace,
         use_rag: bool = False,
     ) -> tuple[str, str, float]:
@@ -84,8 +74,10 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         """
 
         # Set the model config and load the model
-        self.set_model_config(query_config)
-        self.load_model(model)
+        if query_config:
+            self.set_model_config(query_config)
+        if model:
+            self.load_model(model)
         logger.info(self.config.model_dump_json())
 
         prompt = ConcretePrompt(self.system_prompt)
@@ -129,3 +121,11 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             return "N/A", "The model you selected is not online.", 0.0
 
         return llm_prompt, response, cost
+
+    def direct_query(self, prompt):
+        """
+        This is only used during direct prompt modification where the user can test a prompt
+        directly without additional prompt decorators.
+        """
+        response, cb = self.model(prompt)
+        return prompt, response, cb
