@@ -3,6 +3,7 @@ FROM python:3.10-slim
 WORKDIR /usr/src/
 
 COPY ./requirements.txt .
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 WORKDIR /usr/src/data/

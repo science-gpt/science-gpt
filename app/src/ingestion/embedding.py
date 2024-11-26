@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 from langchain_community.embeddings.ollama import OllamaEmbeddings
@@ -35,6 +35,9 @@ class Embedder(ABC):
     Abstract base class for embedding text chunks into vectors.
     """
 
+    def __init__(self):
+        self.embedding_dimension: Optional[int] = None
+
     @abstractmethod
     def __call__(self, chunks: List[Chunk]) -> List[Embedding]:
         """
@@ -62,7 +65,9 @@ class HuggingFaceEmbedder(Embedder):
             model_name (str): The name of the Sentence Transformer model to use.
                               Defaults to "sentence-transformers/all-mpnet-base-v2".
         """
+        super().__init__()
         self.model = HuggingFaceEmbeddings(model_name=model_name)
+        self.embedding_dimension = self.model.client.get_sentence_embedding_dimension()
 
     def __call__(self, chunks: List[Chunk]) -> List[Embedding]:
         """
@@ -100,14 +105,16 @@ class OllamaEmbedder(Embedder):
             model_name (str): The name of the embedding model to use.
                               Defaults to "mxbai-embed-large:latest".
         """
-
-        self.model_name = model_name  # Store the model name
+        super().__init__()
+        self.model_name = model_name
         self.model = OllamaEmbeddings(model=self.model_name, base_url=endpoint)
 
     def test_connection(self):
         """(Carter) I've written this to test the connection to the macbook. We will default to Huggingface embeddings if this fails."""
         try:
-            self.model.embed_query("test")
+            # Get dimension by running a test embedding
+            test_embedding = self.model.embed_query("test")
+            self.embedding_dimension = len(test_embedding)
         except Exception as e:
             raise RuntimeError("Embedding model initialization failed") from e
 
