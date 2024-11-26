@@ -299,10 +299,7 @@ class MilvusDB(VectorDB):
         """
         search_params = {"metric_type": "COSINE", "params": {"nprobe": 10}}
 
-        filter_expr = None
-        if keywords:
-            filter_conditions = [f'document like "%{keyword}%"' for keyword in keywords]
-            filter_expr = " or ".join(filter_conditions)
+        filter_expr = f"TEXT_MATCH(document, {" ".join(keywords)})"
 
         results = self.client.search(
             collection_name=self.collection_name,
