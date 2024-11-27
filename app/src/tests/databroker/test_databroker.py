@@ -82,6 +82,6 @@ class TestDataBroker:
     def test_search_functionality(self, databroker_instance):
         """Tests search functionality"""
         search_results = databroker_instance.search(
-            queries=[""], collection="base", top_k=1
+            queries=["some random text"], collection="base", top_k=1
         )
         assert len(search_results) == 1

@@ -334,16 +334,5 @@ class DataBroker(metaclass=SingletonMeta):
         query_embeddings = self.embedder(query_chunks)
         query_vectors = [embedding.vector for embedding in query_embeddings]
 
-        try:
-            results = self.vectorstore[collection].search(
-                query_vectors, top_k, keywords
-            )
-        except Exception as e:
-            logger.error(f"Error during search attempt: {e}")
-            # You could prompt the user to reprocess data or clear and reset the DB here
-            print(
-                "Could not search, vector DB probably doesn't exist. We should flag this and tell the user the error"
-            )
-            results = []
-
+        results = self.vectorstore[collection].search(query_vectors, top_k, keywords)
         return results
