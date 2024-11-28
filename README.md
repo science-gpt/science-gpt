@@ -16,6 +16,7 @@ streamlit run auth.py
 ```
 ./run_science_gpt.sh
 ```
+If the script fails try running with sudo.
 
 To bypass authentication for dev purposes run
 ```
