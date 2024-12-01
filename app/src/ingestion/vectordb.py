@@ -300,7 +300,7 @@ class MilvusDB(VectorDB):
         search_params = {"metric_type": "COSINE", "params": {"nprobe": 10}}
 
         filter_expr = (
-            f"TEXT_MATCH(document, {' '.join(keywords)})" if keywords else None
+            f"TEXT_MATCH(document, '{' '.join(keywords)}')" if keywords else None
         )
 
         results = self.client.search(
