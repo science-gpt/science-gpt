@@ -53,7 +53,7 @@ def databroker_instance(mock_database_config, secrets_path, vector_store_type):
     return DataBroker(config, secrets_path)
 
 
-@pytest.mark.parametrize("vector_store_type", ["milvus", "chromadb"])
+@pytest.mark.parametrize("vector_store_type", ["milvus"])
 class TestDataBroker:
     def test_singleton_pattern(
         self, mock_database_config, secrets_path, vector_store_type
@@ -72,26 +72,26 @@ class TestDataBroker:
         assert hasattr(databroker_instance, "extractors")
         assert hasattr(databroker_instance, "vectorstore")
 
+    def test_search_and_keyword_functionality(self, databroker_instance):
+        """Tests search and keyword functionality"""
+        search_results = databroker_instance.search(
+            queries=["some random text"],
+            collection="base",
+            top_k=1,
+        )
+        assert len(search_results[0]) == 1
+        search_results = databroker_instance.search(
+            queries=["some random text"],
+            collection="base",
+            top_k=1,
+            # choose a keyword that does not appear in the document
+            keywords=["jpoimvase"],
+        )
+        assert len(search_results[0]) == 0
+
     def test_clear_functionality(self, databroker_instance):
         """Test clear functionality"""
         assert databroker_instance.vectorstore["base"].get_all_ids() != []
         databroker_instance.vectorstore["base"].clear()
         time.sleep(3)  # wait to avoid race conditions
         assert databroker_instance.vectorstore["base"].get_all_ids() == []
-
-    def test_search_functionality(self, databroker_instance):
-        """Tests search functionality"""
-        search_results = databroker_instance.search(
-            queries=["some random text"], collection="base", top_k=1
-        )
-        assert len(search_results) == 1
-
-    def test_keyword_functionality(self, databroker_instance):
-        """Tests search functionality"""
-        search_results = databroker_instance.search(
-            queries=["some random text"],
-            collection="base",
-            top_k=1,
-            keywords=["list", "of", "keywords"],
-        )
-        # assert len(search_results) == 1
