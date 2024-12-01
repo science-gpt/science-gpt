@@ -53,7 +53,7 @@ def databroker_instance(mock_database_config, secrets_path, vector_store_type):
     return DataBroker(config, secrets_path)
 
 
-@pytest.mark.parametrize("vector_store_type", ["milvus"])
+@pytest.mark.parametrize("vector_store_type", ["milvus", "chromadb"])
 class TestDataBroker:
     def test_singleton_pattern(
         self, mock_database_config, secrets_path, vector_store_type
