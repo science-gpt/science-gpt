@@ -21,7 +21,7 @@ chunking:
   method: "recursive_character"
 
 embedding:
-  model: "mxbai-embed-large"
+  model: "all-mpnet-base-v2"
 
 vector_db:
   type: "milvus"
