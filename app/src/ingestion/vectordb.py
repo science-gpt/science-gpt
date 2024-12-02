@@ -261,6 +261,7 @@ class MilvusDB(VectorDB):
             )
 
             index_params = self.client.prepare_index_params()
+            # TODO allow user to change the index parameters
             index_params.add_index(
                 field_name="vector", index_type="AUTOINDEX", metric_type="COSINE"
             )
@@ -297,10 +298,11 @@ class MilvusDB(VectorDB):
         """
         Search for similar vectors in the database with optional keyword filtering.
         """
+        # TODO allow user to set the search params
         search_params = {"metric_type": "COSINE", "params": {"nprobe": 10}}
 
         filter_expr = (
-            f"TEXT_MATCH(document, {' '.join(keywords)})" if keywords else None
+            f"TEXT_MATCH(document, '{' '.join(keywords)}')" if keywords else None
         )
 
         results = self.client.search(
