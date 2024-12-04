@@ -195,6 +195,9 @@ def edit_prompt(prompt, key=0):
 
 
 def create_answer(prompt):
+    """
+    Generates a response from the user query and renders it on the page.
+    """
     if prompt is None:
         return
 
@@ -268,6 +271,9 @@ def survey_callback():
 
 
 def database_callback(database_config):
+    """
+    Regenerates the database when the database settings are changed.
+    """
     if "databroker" not in st.session_state:
         st.session_state.databroker = DataBroker(st.session_state.database_config)
     # not a best practice: accessing protected method. but oh well
@@ -323,7 +329,7 @@ def sidebar():
                     label="Keyword Filters",
                     text="Enter keywords and press enter",
                     value=system_config.rag_params.keywords,
-                    maxtags=3,  # max number of tags
+                    maxtags=3,
                     key="keyword_tags",
                 )
 
@@ -396,6 +402,9 @@ def sidebar():
 
 
 def chat(tab):
+    """
+    Main chat window for users to submit queries.
+    """
     with tab:
         with st.container():
             if prompt := st.chat_input("Write your query here..."):
@@ -421,6 +430,9 @@ def chat(tab):
 
 
 def survey(tab):
+    """
+    Tab for users to answer survey questions.
+    """
     with tab:
         st.text(
             "Please complete this short survey sharing your experiences with the team!"
@@ -447,6 +459,7 @@ def survey(tab):
         )
 
         if responsequality in ["Kind of", "No 👎"]:
+            # Carter: we should just log this directly, rather than ask the user to rewrite their question
             responsequality_1 = st.session_state.survey.text_input(
                 "What was the question that the model failed to answer?",
                 id="responsequality_1",
@@ -472,6 +485,9 @@ def survey(tab):
 
 
 def knowledgebase(tab):
+    """
+    User document upload and management tab.
+    """
     with tab:
         with st.form("my-form", clear_on_submit=True):
             uploaded_files = st.file_uploader(
