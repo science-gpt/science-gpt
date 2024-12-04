@@ -22,7 +22,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         self.model = None
         self.system_prompt = DEFAULT_SYSTEM_PROMPT
 
-    def load_model(self, model: str):
+    def load_model(self, model: str) -> None:
         """
         Load secrets from toml file into config object.
         """
@@ -52,11 +52,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         return LocalAIModel(self.config).test_connection()
 
-    def triage_query(
-        self,
-        query: str,
-        model: str,
-    ) -> tuple[str, str, float]:
+    def triage_query(self, query: str, model: str) -> tuple[str, str, float]:
         """
         Given a user query, the orchestrator detects user intent and leverages
         appropriate agents to provide a response.
@@ -64,11 +60,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         Returns the response text content (str) and cost (float)
         """
 
-        # Set the model config and load the model
-        # self.set_model_config(query_config)
         self.load_model(model)
-        logger.info(self.config.model_dump_json())
-
         prompt = ConcretePrompt(self.system_prompt)
 
         if self.config.rag_params.use_rag:
@@ -77,7 +69,8 @@ class ChatOrchestrator(metaclass=SingletonMeta):
                 self.config,
                 rewrite_model=self.model,
             )
-        # note - if use_rag and useknowledgebase are on at the same time the app will not work.
+
+        # if useknowledgebase is enabled without uploading documents, the app errors out
         if self.config.rag_params.useknowledgebase:
             prompt = ContextRetrieval(
                 prompt,
@@ -97,6 +90,14 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         try:
             handler = LLMCallHandler(self.model, prompt, self.config)
             llm_prompt, response, cost = handler.call_llm(query)
+            logger.info(
+                "Prompt: "
+                + llm_prompt
+                + " Response: "
+                + response
+                + " System Config: "
+                + self.config.model_dump_json()
+            )
 
         # Carter: we will want a better solution here but we need error handling for the time being.
         # This catches errors when the local models are offline

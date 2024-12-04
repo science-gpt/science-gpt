@@ -1,68 +1,27 @@
 import os
 import sys
-import time
-from types import SimpleNamespace
-
-sys.path.insert(0, "./src")
-
-import json
 import uuid
+from types import SimpleNamespace
 
 import pandas as pd
 import streamlit as st
-from databroker.databroker import DataBroker
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-from logs.logger import logger
-from orchestrator.chat_orchestrator import ChatOrchestrator
 from streamlit_feedback import streamlit_feedback
 from streamlit_float import float_css_helper, float_init, float_parent
 from streamlit_survey import StreamlitSurvey
 from streamlit_tags import st_tags
 
-
-def file_upload_cb():
-    models_dir = st.session_state.userpath
-    for file in st.session_state["file_upload"]:
-        bfile = file.read()
-        with open(models_dir + file.name, "wb") as f:
-            f.write(bfile)
-
-    if len(st.session_state["file_upload"]) > 0:
-        databasecb(st.session_state.database_config)
-
-
-def file_edit_cb():
-    files_dir = st.session_state.userpath
-    edited_rows = st.session_state["file_editor"]["edited_rows"]
-    rows_to_delete = []
-
-    for idx, value in edited_rows.items():
-        if value["x"] is True:
-            rows_to_delete.append(idx)
-
-    nfile_table = get_file_table().drop(rows_to_delete, axis=0).reset_index(drop=True)
-
-    files_keep = list(nfile_table["File"].values)
-    files_in_dir = os.listdir(files_dir)
-
-    for file in files_in_dir:
-        if file not in files_keep:
-            os.remove(os.path.join(files_dir, file))
-    databasecb(st.session_state.database_config)
-
-
-def get_file_table():
-    files_dir = st.session_state.userpath
-    files_in_dir = os.listdir(files_dir)
-    file_sizes = [
-        format(os.path.getsize(os.path.join(files_dir, file)) / (1024 * 1024), f".{2}f")
-        for file in files_in_dir
-    ]
-
-    return pd.DataFrame(data=[files_in_dir, file_sizes], index=["File", "Size (MB)"]).T
+sys.path.insert(0, "./src")
+from databroker.databroker import DataBroker
+from logs.logger import logger
+from orchestrator.chat_orchestrator import ChatOrchestrator
 
 
 def init_streamlit():
+    """
+    Initializes the streamlit app and sets up the session state, including
+    the system config, orchestrator, and databroker.
+    """
     st.title("Science-GPT Prototype")
 
     if "userpath" not in st.session_state:
@@ -80,13 +39,6 @@ def init_streamlit():
 
     if "orchestrator" not in st.session_state:
         st.session_state.orchestrator = ChatOrchestrator()
-
-        # st.session_state.nprompt = None
-        # system_config.rag_params.moderationfilter = False
-        # system_config.rag_params.onlyusecontext = False
-        st.session_state.useknowledgebase = False
-        st.session_state.keywords = None
-        st.session_state.query_config = None
 
     # !!!! this is a direct reference to the System Config and changes to this
     # dictionary will directly modify the orchestrator's system config
@@ -119,8 +71,8 @@ def init_streamlit():
     if "automate" not in st.session_state:
         st.session_state.automate = StreamlitSurvey()
 
-    if "fbk" not in st.session_state:
-        st.session_state.fbk = str(uuid.uuid4())
+    if "feedback_key" not in st.session_state:
+        st.session_state.feedback_key = str(uuid.uuid4())
 
     if "pk" not in st.session_state:
         st.session_state.pk = [str(uuid.uuid4())]
@@ -129,7 +81,66 @@ def init_streamlit():
         st.session_state.show_textbox = False
 
 
-def get_pk(i):
+def file_upload_callback() -> None:
+    """
+    Uploads files to the user database via the databroker.
+    """
+    models_dir = st.session_state.userpath
+    for file in st.session_state["file_upload"]:
+        bfile = file.read()
+        with open(models_dir + file.name, "wb") as f:
+            f.write(bfile)
+
+    if len(st.session_state["file_upload"]) > 0:
+        database_callback(st.session_state.database_config)
+
+
+def file_edit_callback():
+    """
+    Deletes files from the user database via the databroker.
+
+    Note that this callback currently has a bug where it automatically deletes
+    a file when the checkbox is clocked. This is not the intended behavior.
+    """
+    files_dir = st.session_state.userpath
+    edited_rows = st.session_state["file_editor"]["edited_rows"]
+    rows_to_delete = []
+
+    for idx, value in edited_rows.items():
+        if value["x"] is True:
+            rows_to_delete.append(idx)
+
+    nfile_table = get_file_table().drop(rows_to_delete, axis=0).reset_index(drop=True)
+
+    files_keep = list(nfile_table["File"].values)
+    files_in_dir = os.listdir(files_dir)
+
+    for file in files_in_dir:
+        if file not in files_keep:
+            os.remove(os.path.join(files_dir, file))
+    database_callback(st.session_state.database_config)
+
+
+def get_file_table() -> pd.DataFrame:
+    """
+    Constructs a dataframe of files and their sizes in the user database
+    """
+    files_dir = st.session_state.userpath
+    files_in_dir = os.listdir(files_dir)
+    file_sizes = [
+        format(os.path.getsize(os.path.join(files_dir, file)) / (1024 * 1024), f".{2}f")
+        for file in files_in_dir
+    ]
+
+    return pd.DataFrame(data=[files_in_dir, file_sizes], index=["File", "Size (MB)"]).T
+
+
+def get_prompt_key(i) -> str:
+    """
+    Retrieves the prompt key at the specified index. If the index is out of range,
+    generates new UUIDs to extend the list of prompt keys.
+
+    """
     if i < len(st.session_state.pk):
         return st.session_state.pk[i]
     st.session_state.pk += [
@@ -139,6 +150,10 @@ def get_pk(i):
 
 
 def send_prompt(prompt):
+    """
+    When the user directly modifies the prompt, this directly prompts the model
+    and updates the chat interface.
+    """
     llm_prompt, response, cost = st.session_state.orchestrator.direct_query(
         prompt,
     )
@@ -161,15 +176,21 @@ def send_prompt(prompt):
 
 
 def edit_prompt(prompt, key=0):
+    """
+    This is the textbox that allows the user to view and modify the prompt
+    """
     with st.popover("See LLM Prompt", use_container_width=True):
         st.subheader("The LLM Prompt")
         nprompt = st.text_area(
-            "Modify the LLM Prompt:", value=prompt, height=300, key="ta" + get_pk(key)
+            "Modify the LLM Prompt:",
+            value=prompt,
+            height=300,
+            key="ta" + get_prompt_key(key),
         )
         st.button(
             "Submit Prompt",
             on_click=(lambda: send_prompt(nprompt)),
-            key="b" + get_pk(key),
+            key="b" + get_prompt_key(key),
         )
 
 
@@ -187,16 +208,10 @@ def create_answer(prompt):
             query=prompt, model=st.session_state.model
         )
 
-        logger.info(
-            "Prompt: " + llm_prompt + " Response: " + response,
-        )
-
         st.session_state.cost += float(cost)
 
-        # Display the extracted response content
         message_placeholder.markdown(response)
 
-    # Append the messages to session state
     st.session_state.messages.append(
         {
             "content": HumanMessage(content=prompt),
@@ -214,41 +229,37 @@ def create_answer(prompt):
     )
     edit_prompt(llm_prompt)
 
+    # rerenders the sidebar so the cost metric updates
+    st.rerun()
+
 
 def display_answer():
     for i, message in enumerate(st.session_state.messages):
         if message["content"].type in ["human", "ai"]:
             with st.chat_message(message["content"].type):
                 st.markdown(message["content"].content)
-        else:
-            edit_prompt(message["content"].content, key=i + 1)
+        edit_prompt(message["content"].content, key=i + 1)
 
-        if "feedback" not in message:
-            continue
-        # If there is no feedback show N/A
         if "feedback" in message:
             st.markdown(f"Feedback: {message['feedback']}")
-        else:
-            st.markdown("Feedback: N/A")
 
 
-def fbcb(response):
-    """Update the history with feedback.
-
-    The question and answer are already saved in history.
-    Now we will add the feedback in that history entry.
+def feedback_callback(response):
     """
-    last_entry = st.session_state.messages[-1]  # get the last entry
-    last_entry.update({"feedback": response})  # update the last entry
-    st.session_state.messages[-1] = last_entry  # replace the last entry
-
+    When feedback is submitted, this callback appends it to the
+    last message in the chat.
+    """
+    st.session_state.messages[-1].update({"feedback": response})
     st.markdown("✔️ Feedback Received!")
 
     # Create a new feedback by changing the key of feedback component.
-    st.session_state.fbk = str(uuid.uuid4())
+    st.session_state.feedback_key = str(uuid.uuid4())
 
 
-def surveycb():
+def survey_callback():
+    """
+    Callback for the survey form. Logs the survey responses.
+    """
     st.session_state.feedback.append(st.session_state.survey)
     logger.survey(
         f"Survey response received: {st.session_state.survey.to_json()}",
@@ -257,7 +268,7 @@ def surveycb():
     st.toast("Your feedback has been recorded.  Thank you!", icon="🎉")
 
 
-def databasecb(database_config):
+def database_callback(database_config):
     if "databroker" not in st.session_state:
         st.session_state.databroker = DataBroker(st.session_state.database_config)
     # not a best practice: accessing protected method. but oh well
@@ -374,13 +385,14 @@ def sidebar():
                     userpath=st.session_state.userpath,
                     embedding_model=system_config.embedding.embedding_model,
                     chunking_method=system_config.chunking.chunking_method,
-                    # Load default values from config
                     pdf_extractor=system_config.extraction,
                     vector_store=system_config.vector_db,
                 )
                 submitted = st.form_submit_button(
                     "Regenerate Database",
-                    on_click=(lambda: databasecb(st.session_state.database_config)),
+                    on_click=(
+                        lambda: database_callback(st.session_state.database_config)
+                    ),
                 )
 
 
@@ -404,8 +416,8 @@ def chat(tab):
                     feedback_type="faces",
                     optional_text_label="How was this response?",
                     align="flex-start",
-                    key=st.session_state.fbk,
-                    on_submit=fbcb,
+                    key=st.session_state.feedback_key,
+                    on_submit=feedback_callback,
                 )
 
 
@@ -457,7 +469,7 @@ def survey(tab):
         )
         visuals = st.session_state.survey.text_area("Other comments and feedback:")
 
-        st.button("Submit", on_click=surveycb)
+        st.button("Submit", on_click=survey_callback)
 
 
 def knowledgebase(tab):
@@ -468,9 +480,7 @@ def knowledgebase(tab):
                 key="file_upload",
                 accept_multiple_files=True,
             )
-            submitted = st.form_submit_button(
-                "Upload", on_click=lambda: file_upload_cb()
-            )
+            submitted = st.form_submit_button("Upload", on_click=file_upload_callback)
 
         columns = get_file_table().columns
         column_config = {
@@ -487,7 +497,7 @@ def knowledgebase(tab):
             nfile_table = st.data_editor(
                 modified_df,
                 key="file_editor",
-                on_change=file_edit_cb,
+                on_change=file_edit_callback,
                 hide_index=True,
                 column_config=column_config,
             )
