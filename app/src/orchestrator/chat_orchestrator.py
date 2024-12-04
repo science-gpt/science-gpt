@@ -42,13 +42,6 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         self.config.model_params.model_name = model
 
-    def set_model_config(self, query_config):
-        self.config.model_params.seed = query_config.seed
-        self.config.model_params.temperature = query_config.temperature
-        # self.config.model_params.max_tokens = query_config.max_tokens
-        self.config.rag_params.top_k_retrieval = query_config.top_k
-        self.config.model_params.top_p = query_config.top_p
-
     def test_connection(self, model_name: str) -> bool:
         """
         Test connection to the local or remote chat model.
@@ -63,8 +56,6 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         self,
         query: str,
         model: str,
-        query_config: SimpleNamespace,
-        use_rag: bool = False,
     ) -> tuple[str, str, float]:
         """
         Given a user query, the orchestrator detects user intent and leverages
@@ -74,38 +65,33 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         """
 
         # Set the model config and load the model
-        self.set_model_config(query_config)
+        # self.set_model_config(query_config)
         self.load_model(model)
         logger.info(self.config.model_dump_json())
 
         prompt = ConcretePrompt(self.system_prompt)
 
-        # involving user input.
-        if query.lower().startswith("search:") or use_rag:
-            query = query[7:] if query.lower().startswith("search:") else query
+        if self.config.rag_params.use_rag:
             prompt = ContextRetrieval(
                 prompt,
                 self.config,
-                keyword_filter=query_config.keywords,
                 rewrite_model=self.model,
             )
-        # we want to avoid the case of wrapping the prompt in two ContextRetrival decorators.
         # note - if use_rag and useknowledgebase are on at the same time the app will not work.
-        if query_config.useknowledgebase:
+        if self.config.rag_params.useknowledgebase:
             prompt = ContextRetrieval(
                 prompt,
                 self.config,
                 collection="user",
-                keyword_filter=query_config.keywords,
                 rewrite_model=self.model,
             )
 
         # look for moderation filter
-        if query_config.moderationfilter:
+        if self.config.rag_params.moderationfilter:
             prompt = ModerationDecorator(prompt)
 
         # look for only use context
-        if query_config.onlyusecontext:
+        if self.config.rag_params.onlyusecontext:
             prompt = OnlyUseContextDecorator(prompt)
 
         try:

@@ -46,8 +46,12 @@ class VectorDB(BaseModel):
 
 
 class RAGParams(BaseModel):
-    top_k_retrieval: int
-    keywords: Optional[str]
+    use_rag: bool
+    top_k: int
+    moderationfilter: bool
+    onlyusecontext: bool
+    useknowledgebase: bool
+    keywords: Optional[list[str]]
 
 
 class SystemConfig(BaseModel):

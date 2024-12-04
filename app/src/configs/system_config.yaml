@@ -57,13 +57,21 @@ vector_db:
   host: "standalone"
   port: 19530
   supported_databases:
-  - "chromadb"
-  - "milvus"
+    - "chromadb"
+    - "milvus"
 
 # Default RAG Parameters
 rag_params:
-  top_k_retrieval: 5
+  use_rag: True
+  useknowledgebase: False 
+  top_k: 5
   keywords:
+  
+  # prompt modifiers
+  moderationfilter: True
+  onlyusecontext: True
+  
+  
 
 
 

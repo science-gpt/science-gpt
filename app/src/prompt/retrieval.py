@@ -3,9 +3,10 @@ from typing import Optional
 
 from databroker.databroker import DataBroker
 from langchain_community.vectorstores import Chroma
-from models.models import ChatModel
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent, PromptDecorator
+
+from models.models import ChatModel
 
 DEFAULT_QUERY_REWRITER: str = """
     You are an expert in simplifying scientific literature search queries for toxicology and pesticide research. 
@@ -72,17 +73,15 @@ class ContextRetrieval(PromptDecorator):
         config: SystemConfig,
         rewrite_model: ChatModel,
         collection="base",
-        keyword_filter: Optional[list[str]] = None,
     ) -> None:
         self._prompt = prompt
         self.databroker = DataBroker()
         self.config: SystemConfig = config
         self.collection = collection
-        self.keyword_filter = keyword_filter
         self.rewrite_model = rewrite_model
         self.cost = self._prompt.cost
 
-    def get_prompt(self, query: str, top_k=None) -> str:
+    def get_prompt(self, query: str) -> str:
 
         # Rewrite
         retrieval_query, cost = self.rewrite_model(
@@ -90,23 +89,17 @@ class ContextRetrieval(PromptDecorator):
             override_config={"temperature": 0.0},
         )
         self.cost += cost
-        print("retrieval_query\n", retrieval_query)
-
-        if top_k == None:
-            top_k = self.config.rag_params.top_k_retrieval
-        print("Retrieval!\n", str(top_k))
+        print("Query was rewritten. The retrieval query is:\n", retrieval_query)
 
         results = self.databroker.search(
             [retrieval_query],
-            top_k=top_k,
+            top_k=self.config.rag_params.top_k,
             collection=self.collection,
-            keywords=self.keyword_filter,
+            keywords=self.config.rag_params.keywords,
         )
 
-        #### If no results found, we should log and we should also tell the user that their RAG search did not return any results for some reason
+        # No results were returned.
         if len(results) == 0 or len(results[0]) == 0:
-            # No results found; handle the case here
-            # logger.warning("No documents found for the query. Returning only the query as the prompt.")
             return "No results found for the query. Please relay that no documents were retrieved for the given query."
 
         print(results)
@@ -117,47 +110,6 @@ class ContextRetrieval(PromptDecorator):
                 for chunk in result
             ]
         )
-        return self._prompt.get_prompt(query).format(
-            decorate=self.PromptTemplate.format(
-                context=context_text, decorate="{decorate}"
-            )
-        )
-
-
-# TODO: I'm broken PLEASE FIX LATER
-class FilteredContextRetrieval(PromptDecorator):
-    _prompt: PromptComponent = None
-    PromptTemplate: str = """
-    {decorate}
-
-    Use the following context to answer the question:
-    {examples}
-    """
-
-    def __init__(
-        self,
-        prompt: PromptComponent,
-        config: SystemConfig,
-        meta: str,
-        filters: list[str],
-    ) -> None:
-        self._prompt = prompt
-        self.databroker = DataBroker()
-        self.meta = meta
-        self.filters = filters
-        self.config: SystemConfig = config
-
-    def get_prompt(self, query: str, top_k=None) -> str:
-        if top_k == None:
-            top_k = self.config.rag_params.top_k_retrieval
-        k = max(2, top_k // len(self.filters))
-        context_text = ""
-        for f in self.filters:
-            # Add filtering to search!
-            results = self.search(query, filter={self.meta: f}, k=k)
-            f_text = "\n\n---\n\n".join([doc.page_content for doc, _score in results])
-            context_text += f_text
-
         return self._prompt.get_prompt(query).format(
             decorate=self.PromptTemplate.format(
                 context=context_text, decorate="{decorate}"

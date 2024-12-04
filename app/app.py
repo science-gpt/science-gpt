@@ -14,7 +14,6 @@ from databroker.databroker import DataBroker
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from logs.logger import logger
 from orchestrator.chat_orchestrator import ChatOrchestrator
-from orchestrator.utils import load_config
 from streamlit_feedback import streamlit_feedback
 from streamlit_float import float_css_helper, float_init, float_parent
 from streamlit_survey import StreamlitSurvey
@@ -68,6 +67,9 @@ def init_streamlit():
 
     if "userpath" not in st.session_state:
         st.session_state.username = st.session_state.get("username", "test_user")
+
+        logger.set_user(st.session_state.get("username", "unknown"))
+
         st.session_state.userpath = (
             f"{os.getcwd()}/data/" + st.session_state.username + "/"
         )
@@ -76,41 +78,30 @@ def init_streamlit():
 
         st.session_state.file_table = get_file_table()
 
-    if "config" not in st.session_state:
-
-        logger.set_user(st.session_state.get("name", "unknown"))
-
-        st.session_state.config = load_config(
-            config_name="system_config", config_dir=f"{os.getcwd()}/src/configs"
-        )
-        st.session_state.query_config = None
-        st.session_state.seed = st.session_state.config.model_params.seed
-        st.session_state.temperature = st.session_state.config.model_params.temperature
-        st.session_state.top_p = st.session_state.config.model_params.top_p
-
-        st.session_state.embedding_model = (
-            st.session_state.config.embedding.embedding_model
-        )
-        st.session_state.chunking_method = (
-            st.session_state.config.chunking.chunking_method
-        )
-        st.session_state.top_k = st.session_state.config.rag_params.top_k_retrieval
-
-        st.session_state.nprompt = None
-        st.session_state.moderationfilter = False
-        st.session_state.onlyusecontext = False
-        st.session_state.useknowledgebase = False
-        st.session_state.keywords = None
-
+    if "orchestrator" not in st.session_state:
         st.session_state.orchestrator = ChatOrchestrator()
 
+        # st.session_state.nprompt = None
+        # system_config.rag_params.moderationfilter = False
+        # system_config.rag_params.onlyusecontext = False
+        st.session_state.useknowledgebase = False
+        st.session_state.keywords = None
+        st.session_state.query_config = None
+
+    # !!!! this is a direct reference to the System Config and changes to this
+    # dictionary will directly modify the orchestrator's system config
+    # please update the config directly when updating system parameters !!!!
+    system_config = st.session_state.orchestrator.config
+    globals()["system_config"] = system_config
+
+    if "databroker" not in st.session_state:
         st.session_state.database_config = SimpleNamespace(
             username=st.session_state.username,
             userpath=st.session_state.userpath,
-            embedding_model=st.session_state.embedding_model,
-            chunking_method=st.session_state.chunking_method,
-            pdf_extractor=st.session_state.config.extraction,
-            vector_store=st.session_state.config.vector_db,
+            embedding_model=system_config.embedding.embedding_model,
+            chunking_method=system_config.chunking.chunking_method,
+            pdf_extractor=system_config.extraction,
+            vector_store=system_config.vector_db,
         )
         st.session_state.databroker = DataBroker(st.session_state.database_config)
 
@@ -136,9 +127,6 @@ def init_streamlit():
 
     if "show_textbox" not in st.session_state:
         st.session_state.show_textbox = False
-
-    if "selected_embedding_model" not in st.session_state:
-        st.session_state.selected_embedding_model = None
 
 
 def get_pk(i):
@@ -195,29 +183,14 @@ def create_answer(prompt):
     with st.chat_message("AI"):
         message_placeholder = st.empty()
 
-        st.session_state.query_config = SimpleNamespace(
-            seed=st.session_state.seed,
-            temperature=st.session_state.temperature,
-            top_k=st.session_state.top_k,
-            top_p=st.session_state.top_p,
-            moderationfilter=st.session_state.moderationfilter,
-            onlyusecontext=st.session_state.onlyusecontext,
-            useknowledgebase=st.session_state.useknowledgebase,
-            keywords=st.session_state.keywords,
-        )
-
         llm_prompt, response, cost = st.session_state.orchestrator.triage_query(
-            query=prompt,
-            model=st.session_state.model,
-            query_config=st.session_state.query_config,
-            use_rag=st.session_state.use_rag,
+            query=prompt, model=st.session_state.model
         )
 
         logger.info(
             "Prompt: " + llm_prompt + " Response: " + response,
         )
 
-        print(cost)
         st.session_state.cost += float(cost)
 
         # Display the extracted response content
@@ -270,7 +243,6 @@ def fbcb(response):
     st.session_state.messages[-1] = last_entry  # replace the last entry
 
     st.markdown("✔️ Feedback Received!")
-    # st.markdown(f"Feedback: {response}")
 
     # Create a new feedback by changing the key of feedback component.
     st.session_state.fbk = str(uuid.uuid4())
@@ -301,9 +273,9 @@ def sidebar():
 
         st.session_state.model = st.selectbox(
             label="Model",
-            options=st.session_state.orchestrator.config.model_params.supported_models,
-            index=st.session_state.orchestrator.config.model_params.supported_models.index(
-                st.session_state.orchestrator.config.model_params.model_name
+            options=system_config.model_params.supported_models,
+            index=system_config.model_params.supported_models.index(
+                system_config.model_params.model_name
             ),
         )
 
@@ -316,100 +288,100 @@ def sidebar():
             st.error(f"{st.session_state.model} is not online.")
 
         with st.sidebar.expander("Retrieval Settings", expanded=False):
-            st.session_state.use_rag = st.toggle(
+            system_config.rag_params.use_rag = st.toggle(
                 label="Retrieval Augmented Generation",
-                value=True,
+                value=system_config.rag_params.use_rag,
                 help="Retrieve content from the document database for question answering",
             )
 
-            if st.session_state.use_rag:
-                st.session_state.useknowledgebase = st.toggle(
+            if system_config.rag_params.use_rag:
+                system_config.rag_params.useknowledgebase = st.toggle(
                     label="Use Uploaded Documents",
                     value=False,
                     help="Retrieve content from documents uploaded via the Knowledge Base tab. Do not enable this if you have not uploaded any documents.",
                 )
 
-                st.session_state.top_k = st.slider(
+                system_config.rag_params.top_k = st.slider(
                     label="Top K",
                     min_value=0,
                     max_value=20,
-                    value=st.session_state.top_k,
+                    value=system_config.rag_params.top_k,
                     help="Number of text chunks to retrieve from the document database",
                 )
 
-                st.session_state.keywords = st_tags(
+                system_config.rag_params.keywords = st_tags(
                     label="Keyword Filters",
                     text="Enter keywords and press enter",
-                    value=st.session_state.get("keywords", []),
+                    value=system_config.rag_params.keywords,
                     maxtags=3,  # max number of tags
                     key="keyword_tags",
                 )
 
-        with st.sidebar.expander("Database Options", expanded=False):
-            with st.form("advanced", border=False):
-
-                st.session_state.embedding_model = st.selectbox(
-                    label="Choose embedding model:",
-                    options=st.session_state.orchestrator.config.embedding.supported_embedders,
-                    index=st.session_state.orchestrator.config.embedding.supported_embedders.index(
-                        st.session_state.orchestrator.config.embedding.embedding_model
-                    ),
-                )
-
-                st.session_state.chunking_method = st.selectbox(
-                    label="Choose chunking method:",
-                    options=st.session_state.orchestrator.config.chunking.supported_chunkers,
-                    index=st.session_state.orchestrator.config.chunking.supported_chunkers.index(
-                        st.session_state.orchestrator.config.chunking.chunking_method
-                    ),
-                )
-                st.session_state.database_config = SimpleNamespace(
-                    username=st.session_state.username,
-                    userpath=st.session_state.userpath,
-                    embedding_model=st.session_state.embedding_model,
-                    chunking_method=st.session_state.chunking_method,
-                    # Load default values from config
-                    pdf_extractor=st.session_state.config.extraction,
-                    vector_store=st.session_state.config.vector_db,
-                )
-                submitted = st.form_submit_button(
-                    "Regenerate Database",
-                    on_click=(lambda: databasecb(st.session_state.database_config)),
-                )
-
         with st.sidebar.expander("Prompt Modifiers", expanded=False):
-            st.session_state.moderationfilter = st.checkbox(
+            system_config.rag_params.moderationfilter = st.checkbox(
                 "Moderation Filter",
-                value=True,
+                value=system_config.rag_params.moderationfilter,
                 help="Filter out offensive, racist, homophobic, sexist, and pornographic content",
             )
-            st.session_state.onlyusecontext = st.checkbox(
+            system_config.rag_params.onlyusecontext = st.checkbox(
                 "Only Use Knowledge Base",
-                value=True,
+                value=system_config.rag_params.onlyusecontext,
                 help="Instruct the model to use only the context provided to it to answer the question",
             )
 
         with st.sidebar.expander("General Model Settings", expanded=False):
 
-            st.session_state.seed = st.number_input(
+            system_config.model_params.seed = st.number_input(
                 "Seed",
-                value=st.session_state.seed,
+                value=system_config.model_params.seed,
                 help="A value that affects the randomness of the model.",
             )
 
-            st.session_state.temperature = st.select_slider(
+            system_config.model_params.temperature = st.select_slider(
                 "Temperature",
                 options=[round(0.1 * i, 1) for i in range(0, 11)],
-                value=st.session_state.temperature,
+                value=system_config.model_params.temperature,
                 help="Controls randomness in text generation; lower values make outputs more predictable, while higher values increase creativity. Adjust when you need more or less variability in responses.",
             )
 
-            st.session_state.top_p = st.select_slider(
+            system_config.model_params.top_p = st.select_slider(
                 "Top P",
                 options=[round(0.1 * i, 1) for i in range(0, 11)],
-                value=st.session_state.top_p,
+                value=system_config.model_params.top_p,
                 help="Limits token selection to the most probable ones, ensuring coherence; lower values restrict diversity, while higher values allow for more variation. Adjust for balanced creativity and relevance.",
             )
+
+        with st.sidebar.expander("Database Options", expanded=False):
+            with st.form("advanced", border=False):
+
+                system_config.embedding.embedding_model = st.selectbox(
+                    label="Choose embedding model:",
+                    options=system_config.embedding.supported_embedders,
+                    index=system_config.embedding.supported_embedders.index(
+                        system_config.embedding.embedding_model
+                    ),
+                )
+
+                system_config.chunking.chunking_method = st.selectbox(
+                    label="Choose chunking method:",
+                    options=system_config.chunking.supported_chunkers,
+                    index=system_config.chunking.supported_chunkers.index(
+                        system_config.chunking.chunking_method
+                    ),
+                )
+                st.session_state.database_config = SimpleNamespace(
+                    username=st.session_state.username,
+                    userpath=st.session_state.userpath,
+                    embedding_model=system_config.embedding.embedding_model,
+                    chunking_method=system_config.chunking.chunking_method,
+                    # Load default values from config
+                    pdf_extractor=system_config.extraction,
+                    vector_store=system_config.vector_db,
+                )
+                submitted = st.form_submit_button(
+                    "Regenerate Database",
+                    on_click=(lambda: databasecb(st.session_state.database_config)),
+                )
 
 
 def chat(tab):
