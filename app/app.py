@@ -229,16 +229,15 @@ def create_answer(prompt):
     )
     edit_prompt(llm_prompt)
 
-    # rerenders the sidebar so the cost metric updates
-    st.rerun()
 
-
-def display_answer():
+def display_chat_history():
+    """
+    Renders previous interactions on the page.
+    """
     for i, message in enumerate(st.session_state.messages):
         if message["content"].type in ["human", "ai"]:
             with st.chat_message(message["content"].type):
                 st.markdown(message["content"].content)
-        edit_prompt(message["content"].content, key=i + 1)
 
         if "feedback" in message:
             st.markdown(f"Feedback: {message['feedback']}")
@@ -409,7 +408,7 @@ def chat(tab):
 
         if st.session_state.question_state:
             with st.container(height=500, border=False):
-                display_answer()
+                display_chat_history()
                 create_answer(prompt)
 
                 streamlit_feedback(
