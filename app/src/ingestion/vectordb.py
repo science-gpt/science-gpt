@@ -5,14 +5,7 @@ from typing import Any, List, Mapping, Optional
 
 import chromadb
 import numpy as np
-from pymilvus import (
-    Collection,
-    CollectionSchema,
-    DataType,
-    FieldSchema,
-    connections,
-    utility,
-)
+from pymilvus import DataType, MilvusClient
 
 from .embedding import Embedding
 
@@ -237,37 +230,49 @@ class MilvusDB(VectorDB):
 
         Args:
             collection_name (str): The name of the collection to create or use.
+            host (str): The host of the Milvus server (defaults to "standalone")
+            port (str): The port of the Milvus server (defaults to "19530")
             dim (int): Dimension of the vectors to be stored (defaults to 1536 for OpenAI embeddings)
         """
-        connections.connect(host=host, port=port)
+        self.collection_name = collection_name
+        self.client = MilvusClient(uri=f"http://{host}:{port}")
 
-        if not utility.has_collection(collection_name):
-            id_field = FieldSchema(
-                name="id", dtype=DataType.VARCHAR, max_length=100, is_primary=True
-            )
-            vector_field = FieldSchema(
-                name="vector", dtype=DataType.FLOAT_VECTOR, dim=dim
-            )
-            document_field = FieldSchema(
-                name="document", dtype=DataType.VARCHAR, max_length=65535
+        if not self.client.has_collection(collection_name):
+            schema = MilvusClient.create_schema(
+                auto_id=False,
+                enable_dynamic_field=True,
             )
 
-            schema = CollectionSchema(
-                fields=[id_field, vector_field, document_field],
-                description=f"Collection for {collection_name}",
+            schema.add_field(
+                field_name="id",
+                datatype=DataType.VARCHAR,
+                max_length=100,
+                is_primary=True,
+            )
+            schema.add_field(
+                field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=dim
+            )
+            schema.add_field(
+                field_name="document",
+                datatype=DataType.VARCHAR,
+                max_length=65535,
+                enable_analyzer=True,
+                enable_match=True,
             )
 
-            self.collection = Collection(name=collection_name, schema=schema)
-            index_params = {
-                "metric_type": "L2",
-                "index_type": "IVF_FLAT",
-                "params": {"nlist": 1024},
-            }
-            self.collection.create_index(field_name="vector", index_params=index_params)
-        else:
-            self.collection = Collection(collection_name)
+            index_params = self.client.prepare_index_params()
+            # TODO allow user to change the index parameters
+            index_params.add_index(
+                field_name="vector", index_type="AUTOINDEX", metric_type="COSINE"
+            )
 
-        self.collection.load()
+            self.client.create_collection(
+                collection_name=collection_name,
+                schema=schema,
+                index_params=index_params,
+            )
+
+        self.client.load_collection(collection_name)
 
     def insert(self, embeddings: List[Embedding]) -> None:
         """
@@ -282,30 +287,31 @@ class MilvusDB(VectorDB):
             for embedding in embeddings
         ]
 
-        self.collection.insert(entities)
-        self.collection.flush()
+        self.client.insert(collection_name=self.collection_name, data=entities)
 
     def search(
         self,
         query_vectors: List[np.ndarray],
         top_k: int = 5,
-        keywords: Optional[
-            List[str]
-        ] = None,  # currently keywords are not supported in milvus
+        keywords: Optional[List[str]] = None,
     ) -> List[List[SearchResult]]:
         """
-        Search for similar vectors in the database.
+        Search for similar vectors in the database with optional keyword filtering.
         """
-        if keywords:
-            raise NotImplementedError("Keywords are not supported in Milvus")
+        # TODO allow user to set the search params
+        search_params = {"metric_type": "COSINE", "params": {"nprobe": 10}}
 
-        search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
+        filter_expr = (
+            f"TEXT_MATCH(document, '{' '.join(keywords)}')" if keywords else None
+        )
 
-        results = self.collection.search(
+        results = self.client.search(
+            collection_name=self.collection_name,
             data=[v.tolist() for v in query_vectors],
             anns_field="vector",
-            param=search_params,
+            search_params=search_params,
             limit=top_k,
+            filter=filter_expr,
             output_fields=["document"],
         )
 
@@ -315,10 +321,10 @@ class MilvusDB(VectorDB):
             for hit in hits:
                 query_results.append(
                     SearchResult(
-                        id=str(hit.id),
-                        distance=hit.distance,
-                        metadata={},  # Milvus doesn't have built-in metadata support
-                        document=hit.get("document"),
+                        id=str(hit.get("id")),
+                        distance=hit.get("distance"),
+                        metadata={},
+                        document=hit.get("entity", {}).get("document"),
                     )
                 )
             all_results.append(query_results)
@@ -328,8 +334,7 @@ class MilvusDB(VectorDB):
         """
         Delete vectors from the database by their IDs.
         """
-        expr = f"id in {ids}"
-        self.collection.delete(expr)
+        self.client.delete(collection_name=self.collection_name, filter=f"id in {ids}")
 
     def update(self, ids: List[str], embeddings: List[Embedding]) -> None:
         """
@@ -347,12 +352,15 @@ class MilvusDB(VectorDB):
             List[str]: List of all document IDs in the database.
         """
         # no milvus built-in for "grab everything", so hacking it
-        results = self.collection.query(expr="id != 'NULL'", output_fields=["id"])
+        results = self.client.query(
+            collection_name=self.collection_name,
+            filter="id != 'NULL'",
+            output_fields=["id"],
+        )
         return [result["id"] for result in results]
 
     def clear(self) -> None:
         """
         Clear all records from the collection.
         """
-        self.collection.delete(expr="id != 'NULL'")
-        self.collection.flush()
+        self.client.delete(collection_name=self.collection_name, filter='id != "NULL"')

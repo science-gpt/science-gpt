@@ -13,18 +13,25 @@ streamlit run auth.py
 ```
 
 ## Running the full app via docker compose
+This is necessary to run with Milvus.
 ```
 ./run_science_gpt.sh
 ```
+If the script fails try running with sudo.
 
 To bypass authentication for dev purposes run
 ```
 ./run_science_gpt.sh --dev
 ```
 
-And to rebuild the images run
+To rebuild the images run
 ```
 ./run_science_gpt.sh --build
 ```
 
-The --build and --dev flags can be used together.
+To update dependencies run
+```
+./run_science_gpt.sh --update-deps
+```
+
+The --dev, --build, and --update-deps flags can be used together.
