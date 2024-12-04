@@ -57,28 +57,15 @@ def init_streamlit():
         )
         st.session_state.databroker = DataBroker(st.session_state.database_config)
 
-    if "question_state" not in st.session_state:
-        st.session_state.question_state = False
-
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-        st.session_state.cost = 0.0
-
-    if "survey" not in st.session_state:
-        st.session_state.survey = StreamlitSurvey()
-        st.session_state.feedback = []
-
-    if "automate" not in st.session_state:
-        st.session_state.automate = StreamlitSurvey()
-
-    if "feedback_key" not in st.session_state:
-        st.session_state.feedback_key = str(uuid.uuid4())
-
-    if "pk" not in st.session_state:
-        st.session_state.pk = [str(uuid.uuid4())]
-
-    if "show_textbox" not in st.session_state:
-        st.session_state.show_textbox = False
+    st.session_state.setdefault("question_state", False)
+    st.session_state.setdefault("messages", [])
+    st.session_state.setdefault("cost", 0.0)
+    st.session_state.setdefault("survey", StreamlitSurvey())
+    st.session_state.setdefault("feedback", [])
+    st.session_state.setdefault("automate", StreamlitSurvey())
+    st.session_state.setdefault("feedback_key", str(uuid.uuid4()))
+    st.session_state.setdefault("pk", [str(uuid.uuid4())])
+    st.session_state.setdefault("show_textbox", False)
 
 
 def file_upload_callback() -> None:
@@ -111,7 +98,6 @@ def file_edit_callback():
             rows_to_delete.append(idx)
 
     nfile_table = get_file_table().drop(rows_to_delete, axis=0).reset_index(drop=True)
-
     files_keep = list(nfile_table["File"].values)
     files_in_dir = os.listdir(files_dir)
 
@@ -128,7 +114,7 @@ def get_file_table() -> pd.DataFrame:
     files_dir = st.session_state.userpath
     files_in_dir = os.listdir(files_dir)
     file_sizes = [
-        format(os.path.getsize(os.path.join(files_dir, file)) / (1024 * 1024), f".{2}f")
+        format(os.path.getsize(os.path.join(files_dir, file)) / (1024 * 1024), ".2f")
         for file in files_in_dir
     ]
 
@@ -158,20 +144,12 @@ def send_prompt(prompt):
         prompt,
     )
     st.session_state.cost += float(cost)
-    st.session_state.messages.append(
-        {
-            "content": HumanMessage(content=prompt),
-        }
-    )
-    st.session_state.messages.append(
-        {
-            "content": AIMessage(content=response),
-        }
-    )
-    st.session_state.messages.append(
-        {
-            "content": ToolMessage(content=llm_prompt, tool_call_id=response),
-        }
+    st.session_state.messages.extend(
+        [
+            {"content": HumanMessage(content=prompt)},
+            {"content": AIMessage(content=response)},
+            {"content": ToolMessage(content=llm_prompt, tool_call_id=response)},
+        ]
     )
 
 
@@ -212,24 +190,16 @@ def create_answer(prompt):
         )
 
         st.session_state.cost += float(cost)
-
         message_placeholder.markdown(response)
 
-    st.session_state.messages.append(
-        {
-            "content": HumanMessage(content=prompt),
-        }
+    st.session_state.messages.extend(
+        [
+            {"content": HumanMessage(content=prompt)},
+            {"content": AIMessage(content=response)},
+            {"content": ToolMessage(content=llm_prompt, tool_call_id=response)},
+        ]
     )
-    st.session_state.messages.append(
-        {
-            "content": AIMessage(content=response),
-        }
-    )
-    st.session_state.messages.append(
-        {
-            "content": ToolMessage(content=llm_prompt, tool_call_id=response),
-        }
-    )
+
     edit_prompt(llm_prompt)
 
 
@@ -237,7 +207,7 @@ def display_chat_history():
     """
     Renders previous interactions on the page.
     """
-    for i, message in enumerate(st.session_state.messages):
+    for message in st.session_state.messages:
         if message["content"].type in ["human", "ai"]:
             with st.chat_message(message["content"].type):
                 st.markdown(message["content"].content)
@@ -253,8 +223,6 @@ def feedback_callback(response):
     """
     st.session_state.messages[-1].update({"feedback": response})
     st.markdown("✔️ Feedback Received!")
-
-    # Create a new feedback by changing the key of feedback component.
     st.session_state.feedback_key = str(uuid.uuid4())
 
 
@@ -263,10 +231,7 @@ def survey_callback():
     Callback for the survey form. Logs the survey responses.
     """
     st.session_state.feedback.append(st.session_state.survey)
-    logger.survey(
-        f"Survey response received: {st.session_state.survey.to_json()}",
-        xtra={"user": st.session_state["name"]},
-    )
+    logger.survey(f"Survey response received: {st.session_state.survey.to_json()}")
     st.toast("Your feedback has been recorded.  Thank you!", icon="🎉")
 
 
@@ -282,9 +247,7 @@ def database_callback(database_config):
 
 
 def sidebar():
-
     with st.sidebar:
-
         st.metric(label="Session Cost", value=f"${st.session_state.cost:.5f}")
 
         st.session_state.model = st.selectbox(
@@ -393,7 +356,8 @@ def sidebar():
                     pdf_extractor=system_config.extraction,
                     vector_store=system_config.vector_db,
                 )
-                submitted = st.form_submit_button(
+
+                st.form_submit_button(
                     "Regenerate Database",
                     on_click=(
                         lambda: database_callback(st.session_state.database_config)
@@ -409,10 +373,7 @@ def chat(tab):
         with st.container():
             if prompt := st.chat_input("Write your query here..."):
                 st.session_state.question_state = True
-            button_b_pos = "3rem"
-            button_css = float_css_helper(
-                width="2.2rem", bottom=button_b_pos, transition=0
-            )
+            button_css = float_css_helper(width="2.2rem", bottom="3rem", transition=0)
             float_parent(css=button_css)
 
         if st.session_state.question_state:
