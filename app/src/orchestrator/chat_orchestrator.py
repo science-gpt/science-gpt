@@ -1,5 +1,4 @@
 import os
-from types import SimpleNamespace
 
 import toml
 from logs.logger import logger
@@ -70,7 +69,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
                 rewrite_model=self.model,
             )
 
-        # if useknowledgebase is enabled without uploading documents, the app errors out
+        # WARNING: if useknowledgebase is enabled without uploading documents, the app errors out
         if self.config.rag_params.useknowledgebase:
             prompt = ContextRetrieval(
                 prompt,
@@ -79,11 +78,9 @@ class ChatOrchestrator(metaclass=SingletonMeta):
                 rewrite_model=self.model,
             )
 
-        # look for moderation filter
         if self.config.rag_params.moderationfilter:
             prompt = ModerationDecorator(prompt)
 
-        # look for only use context
         if self.config.rag_params.onlyusecontext:
             prompt = OnlyUseContextDecorator(prompt)
 

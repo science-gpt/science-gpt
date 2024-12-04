@@ -17,7 +17,10 @@ from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB
 from orchestrator.utils import SingletonMeta
 
-logger = logging.getLogger(__name__)  # using custom logger causes circular dependency
+# Carter: I've left the logger as python's default for now because
+# there are many log statements in the databroker that we might not want to
+# write to azure. We can change this later when we're ready.
+logger = logging.getLogger(__name__)
 
 
 class DataBroker(metaclass=SingletonMeta):

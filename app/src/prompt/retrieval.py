@@ -1,8 +1,4 @@
-import os
-from typing import Optional
-
 from databroker.databroker import DataBroker
-from langchain_community.vectorstores import Chroma
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent, PromptDecorator
 
