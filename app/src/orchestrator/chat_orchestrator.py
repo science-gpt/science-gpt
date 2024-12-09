@@ -35,7 +35,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             self.model = OpenAIChatModel(self.config)
         else:
             self.config.model_auth.macbook_endpoint = (
-                secrets["localmodel"]["macbook_endpoint"] + "/api/generate"
+                secrets["localmodel"]["macbook_endpoint"] + "/api/generate/"
             )
             self.model = LocalAIModel(self.config)
 
