@@ -45,8 +45,9 @@ chunking:
   
 
 embedding:
-  embedding_model: "mxbai-embed-large"
+  embedding_model: "all-mpnet-base-v2"
   supported_embedders:
+    - "all-mpnet-base-v2"
     - "mxbai-embed-large"
     - "nomic-embed-text"
   
