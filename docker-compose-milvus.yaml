@@ -15,6 +15,7 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    restart: always
 
   minio:
     container_name: milvus-minio
@@ -33,6 +34,7 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    restart: always
 
   standalone:
     container_name: milvus-standalone
@@ -44,6 +46,7 @@ services:
       ETCD_ENDPOINTS: etcd:2379
       MINIO_ADDRESS: minio:9000
     volumes:
+      - ./milvus.yaml:/milvus/configs/milvus.yaml
       - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/milvus:/var/lib/milvus
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
@@ -57,6 +60,7 @@ services:
     depends_on:
       - "etcd"
       - "minio"
+    restart: always
 
 networks:
   default:
