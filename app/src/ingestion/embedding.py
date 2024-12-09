@@ -108,14 +108,13 @@ class OllamaEmbedder(Embedder):
         super().__init__()
         self.model_name = model_name
         self.model = OllamaEmbeddings(model=self.model_name, base_url=endpoint)
-        # Get dimension by running a test embedding
-        test_embedding = self.model.embed_query("test")
-        self.embedding_dimension = len(test_embedding)
 
     def test_connection(self):
         """(Carter) I've written this to test the connection to the macbook. We will default to Huggingface embeddings if this fails."""
         try:
-            self.model.embed_query("test")
+            # Get dimension by running a test embedding
+            test_embedding = self.model.embed_query("test")
+            self.embedding_dimension = len(test_embedding)
         except Exception as e:
             raise RuntimeError("Embedding model initialization failed") from e
 

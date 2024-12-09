@@ -1,32 +1,78 @@
-_target_: orchestrator.config.SystemConfig
-model_name: gpt-3.5
+# Guide to the System Config!
+#
+# This config is responsible for initializing the app with default parameters.
+# At runtime, it becomes a dynamic object that is updated in real time to reflect the internal state of the app.
+#
+# The config also maintains the list of supported extraction methods, chunking strategies, embedding models, databases, RAG techniques, and chat models. 
+# When a new feature is added to the app, the corresponding parameter should be added to the system config.
 
+_target_: orchestrator.config.SystemConfig
+
+# Model Config Options
 model_params:
+  model_name: "GPT-3.5"
   seed: 42
   temperature: 0.0
-  top_p: 0.2
+  top_p: 1.0
   max_tokens: 512
   num_ctx: 2500
-
+  supported_models:
+  - "llama3:latest"
+  - "GPT-4.0"
+  - "GPT-3.5"
+        
 model_auth:
   macbook_endpoint:
   url: 
   api_key: 
   version: 
 
+# Document Processing Options
 extraction:
-  pdf_extract_method: "pypdf2"
+  extraction_method: "pypdf2"
+  supported_extractors:
+    - "pypdf2"
+    - "pymupdf"
+    - "pymypdf4llm"
+  
 
 chunking:
-  method: "recursive_character"
+  chunking_method: "recursive_character"
+  supported_chunkers:
+    - "recursive_character"
+    - "recursive_character:large_chunks"
+    - "recursive_character:small_chunks"
+  
 
 embedding:
-  model: "mxbai-embed-large"
+  embedding_model: "all-mpnet-base-v2"
+  supported_embedders:
+    - "all-mpnet-base-v2"
+    - "mxbai-embed-large"
+    - "nomic-embed-text"
+  
 
+# Database Options
 vector_db:
-  type: "milvus"
+  database: "chromadb"
   host: "standalone"
   port: 19530
+  supported_databases:
+    - "chromadb"
+    - "milvus"
 
+# Default RAG Parameters
 rag_params:
-  top_k_retrieval: 5
+  use_rag: True
+  useknowledgebase: False 
+  top_k: 5
+  keywords:
+  
+  # prompt modifiers
+  moderationfilter: True
+  onlyusecontext: True
+  
+  
+
+
+
