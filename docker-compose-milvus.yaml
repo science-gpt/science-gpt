@@ -15,7 +15,7 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
-    restart: always
+    restart: unless-stopped
 
   minio:
     container_name: milvus-minio
@@ -34,7 +34,7 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
-    restart: always
+    restart: unless-stopped
 
   standalone:
     container_name: milvus-standalone
@@ -60,7 +60,7 @@ services:
     depends_on:
       - "etcd"
       - "minio"
-    restart: always
+    restart: unless-stopped
 
 networks:
   default:
