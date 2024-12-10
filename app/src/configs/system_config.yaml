@@ -20,6 +20,40 @@ model_params:
   - "llama3:latest"
   - "GPT-4.0"
   - "GPT-3.5"
+  - "llama3.3:70b-instruct-q2_K"
+  - "nemotron-mini:4b-instruct-q4_K_M"
+  - "nemotron:70b-instruct-q3_K_M"
+  - "nemotron:70b-instruct-q2_K"
+  - "nemotron-mini:4b-instruct-fp16"
+  - "llama3.1:70b-instruct-q2_k"
+  - "llama3.2-vision:11b-instruct-q4_K_M"
+  - "qwen2.5:32b"
+  - "llama3.1:8b"
+  - "nemotron-mini:4b-instruct-q8_0"
+  - "openbiollm-llama-3:70b_q4_k_m"
+  - "llava-med-v1.6:latest"
+  - "rohithbojja/llava-med-v1.6:latest"
+  - "minicpm-v:8b-2.6-q4_K_M"
+  - "taozhiyuai/openbiollm-llama-3:70b_q4_k_m"
+  - "openbiollm-llama-3:8b_q8_0"
+  - "openbiollm-llama-3:8b-q6_k"
+  - "taozhiyuai/openbiollm-llama-3:8b-q6_k"
+  - "taozhiyuai/openbiollm-llama-3:8b_q8_0"
+  - "dolphin-llama3:8b"
+  - "llama3.2:3b-instruct-fp16"
+  - "llava:34b-v1.6-q5_K_M"
+  - "mistral-nemo:12b-instruct-2407-q3_K_M"
+  - "llama3.2:3b-instruct-q4_K_M"
+  - "deepseek-v2:16b"
+  - "llama3.1:405b-instruct-q2_K"
+  - "llama3.1:8b-instruct-q4_K_M"
+  - "Mistral-7B-Instruct-v0.3-Q4_K_M:latest"
+  - "llama3.1:70b"
+  - "phi3.5:3.8b"
+  - "mistral-large:123b"
+  - "mistral-nemo:12b"
+  - "gemma2:27b"
+  - "llama3:70b"
         
 model_auth:
   macbook_endpoint:
@@ -69,8 +103,8 @@ rag_params:
   keywords:
   
   # prompt modifiers
-  moderationfilter: True
-  onlyusecontext: True
+  moderationfilter: False
+  onlyusecontext: False
   
   
 
