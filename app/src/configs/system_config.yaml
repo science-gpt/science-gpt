@@ -1,32 +1,112 @@
-_target_: orchestrator.config.SystemConfig
-model_name: gpt-3.5
+# Guide to the System Config!
+#
+# This config is responsible for initializing the app with default parameters.
+# At runtime, it becomes a dynamic object that is updated in real time to reflect the internal state of the app.
+#
+# The config also maintains the list of supported extraction methods, chunking strategies, embedding models, databases, RAG techniques, and chat models. 
+# When a new feature is added to the app, the corresponding parameter should be added to the system config.
 
+_target_: orchestrator.config.SystemConfig
+
+# Model Config Options
 model_params:
+  model_name: "GPT-3.5"
   seed: 42
   temperature: 0.0
-  top_p: 0.2
+  top_p: 1.0
   max_tokens: 512
   num_ctx: 2500
-
+  supported_models:
+  - "llama3:latest"
+  - "GPT-4.0"
+  - "GPT-3.5"
+  - "llama3.3:70b-instruct-q2_K"
+  - "nemotron-mini:4b-instruct-q4_K_M"
+  - "nemotron:70b-instruct-q3_K_M"
+  - "nemotron:70b-instruct-q2_K"
+  - "nemotron-mini:4b-instruct-fp16"
+  - "llama3.1:70b-instruct-q2_k"
+  - "llama3.2-vision:11b-instruct-q4_K_M"
+  - "qwen2.5:32b"
+  - "llama3.1:8b"
+  - "nemotron-mini:4b-instruct-q8_0"
+  - "openbiollm-llama-3:70b_q4_k_m"
+  - "llava-med-v1.6:latest"
+  - "rohithbojja/llava-med-v1.6:latest"
+  - "minicpm-v:8b-2.6-q4_K_M"
+  - "taozhiyuai/openbiollm-llama-3:70b_q4_k_m"
+  - "openbiollm-llama-3:8b_q8_0"
+  - "openbiollm-llama-3:8b-q6_k"
+  - "taozhiyuai/openbiollm-llama-3:8b-q6_k"
+  - "taozhiyuai/openbiollm-llama-3:8b_q8_0"
+  - "dolphin-llama3:8b"
+  - "llama3.2:3b-instruct-fp16"
+  - "llava:34b-v1.6-q5_K_M"
+  - "mistral-nemo:12b-instruct-2407-q3_K_M"
+  - "llama3.2:3b-instruct-q4_K_M"
+  - "deepseek-v2:16b"
+  - "llama3.1:405b-instruct-q2_K"
+  - "llama3.1:8b-instruct-q4_K_M"
+  - "Mistral-7B-Instruct-v0.3-Q4_K_M:latest"
+  - "llama3.1:70b"
+  - "phi3.5:3.8b"
+  - "mistral-large:123b"
+  - "mistral-nemo:12b"
+  - "gemma2:27b"
+  - "llama3:70b"
+        
 model_auth:
   macbook_endpoint:
   url: 
   api_key: 
   version: 
 
+# Document Processing Options
 extraction:
-  pdf_extract_method: "pypdf2"
+  extraction_method: "pypdf2"
+  supported_extractors:
+    - "pypdf2"
+    - "pymupdf"
+    - "pymypdf4llm"
+  
 
 chunking:
-  method: "recursive_character"
+  chunking_method: "recursive_character"
+  supported_chunkers:
+    - "recursive_character"
+    - "recursive_character:large_chunks"
+    - "recursive_character:small_chunks"
+  
 
 embedding:
-  model: "mxbai-embed-large"
+  embedding_model: "all-mpnet-base-v2"
+  supported_embedders:
+    - "all-mpnet-base-v2"
+    - "mxbai-embed-large"
+    - "nomic-embed-text"
+  
 
+# Database Options
 vector_db:
-  type: "milvus"
+  database: "chromadb"
   host: "standalone"
   port: 19530
+  supported_databases:
+    - "chromadb"
+    - "milvus"
 
+# Default RAG Parameters
 rag_params:
-  top_k_retrieval: 5
+  use_rag: True
+  useknowledgebase: False 
+  top_k: 5
+  keywords:
+  
+  # prompt modifiers
+  moderationfilter: False
+  onlyusecontext: False
+  
+  
+
+
+

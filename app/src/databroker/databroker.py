@@ -15,28 +15,12 @@ from ingestion.embedding import Embedder, HuggingFaceEmbedder, OllamaEmbedder
 from ingestion.extraction import PDFData, PyPDF2Extract, TextExtract
 from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB
+from orchestrator.utils import SingletonMeta
 
-logger = logging.getLogger(__name__)  # using custom logger causes circular dependency
-
-
-class SingletonMeta(type):
-    """
-    The Singleton class can be implemented in different ways in Python. Some
-    possible methods include: base class, decorator, metaclass. We will use the
-    metaclass because it is best suited for this purpose.
-    """
-
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        """
-        Possible changes to the value of the `__init__` argument do not affect
-        the returned instance.
-        """
-        if cls not in cls._instances:
-            instance = super().__call__(*args, **kwargs)
-            cls._instances[cls] = instance
-        return cls._instances[cls]
+# Carter: I've left the logger as python's default for now because
+# there are many log statements in the databroker that we might not want to
+# write to azure. We can change this later when we're ready.
+logger = logging.getLogger(__name__)
 
 
 class DataBroker(metaclass=SingletonMeta):
@@ -152,17 +136,17 @@ class DataBroker(metaclass=SingletonMeta):
             Dict[str, TextExtract]: A dictionary mapping data types to their respective extractors
         """
         extractors = {}
-        if self._database_config.pdf_extractor.pdf_extract_method == "pypdf2":
+        if self._database_config.pdf_extractor.extraction_method == "pypdf2":
             extractors["pdf"] = PyPDF2Extract()
         return extractors
 
     def _create_vectorstore(self, embedding_dimension: int) -> Dict[str, VectorDB]:
-        if self._database_config.vector_store.type == "chromadb":
+        if self._database_config.vector_store.database == "chromadb":
             vectorstore = {
                 "base": ChromaDB(collection_name=self.collection_name["base"]),
                 "user": ChromaDB(collection_name=self.collection_name["user"]),
             }
-        elif self._database_config.vector_store.type == "milvus":
+        elif self._database_config.vector_store.database == "milvus":
             vectorstore = {
                 "base": MilvusDB(
                     collection_name=self.collection_name["base"],
@@ -206,7 +190,7 @@ class DataBroker(metaclass=SingletonMeta):
         suffix = f"_{strip(self._database_config.embedding_model)}_{strip(self._database_config.chunking_method)}"
 
         self.collection_name = {
-            "base": self._database_config.vector_store.type + suffix,
+            "base": self._database_config.vector_store.database + suffix,
             "user": self._database_config.username + suffix,
         }
 
@@ -262,7 +246,8 @@ class DataBroker(metaclass=SingletonMeta):
             del_chunks.extend(self.data_cache[collection][pdf_file])
             self.data_cache[collection][collection_name].pop(pdf_file)
 
-        self.vectorstore[collection].delete(ids=del_chunks)
+        if del_chunks:
+            self.vectorstore[collection].delete(ids=del_chunks)
 
     def insert(self, data: Data, collection="base") -> List[str]:
         """
