@@ -14,7 +14,7 @@ services:
       - milvus
     environment:
       - DEV_MODE=${DEV_MODE:-false}
-    restart: always
+    restart: unless-stopped
     depends_on:
       standalone:
         condition: service_healthy
@@ -34,7 +34,7 @@ services:
       - science-gpt
     networks:
       - app-network
-    restart: always
+    restart: unless-stopped
 
 networks:
   app-network:
