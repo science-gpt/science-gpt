@@ -11,7 +11,7 @@ from ingestion.chunking import (
     RecursiveCharacterChunker,
     SplitSentencesChunker,
 )
-from ingestion.embedding import Embedder, HuggingFaceEmbedder, OllamaEmbedder
+from ingestion.embedding import Embedder, HuggingFaceEmbedder, OllamaEmbedder, AzureOpenAIEmbedder
 from ingestion.extraction import PDFData, PyPDF2Extract, TextExtract
 from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB
@@ -69,9 +69,29 @@ class DataBroker(metaclass=SingletonMeta):
         """
         OLLAMA_MODELS = ["mxbai-embed-large", "nomic-embed-text"]
         HFACE_MODELS = ["all-mpnet-base-v2"]
+        AZUREOPENAI_MODELS = ["text-embedding-3-large", "text-embedding-ada-002"]
 
         embedding_model = self._database_config.embedding_model
-        if embedding_model in OLLAMA_MODELS:
+
+        if embedding_model in AZUREOPENAI_MODELS:
+            azure_endpoint = self._secrets["azureembeddingmodel"]["text_embedding_endpoint"]
+            api_key = self._secrets["azureembeddingmodel"]["embedding_api_key"]
+            api_version = self._secrets["azureembeddingmodel"]["embedding_api_version"]
+
+            # Create the Azure OpenAI embedder using the loaded endpoint, API key, and model name
+            embedder = AzureOpenAIEmbedder(
+                model_name=embedding_model,
+                endpoint=azure_endpoint,
+                api_key=api_key,
+            )
+            try:
+                embedder.test_connection()  # Optionally test the connection if needed
+            except RuntimeError:
+                logger.error("Failed to connect to Azure OpenAI embedding model.")
+                raise ValueError(f"Failed to initialize Azure OpenAI embedder for model {embedding_model}")
+        
+
+        elif embedding_model in OLLAMA_MODELS:
             macbook_endpoint = self._secrets["localmodel"]["macbook_endpoint"]
             embedder = OllamaEmbedder(
                 model_name=embedding_model, endpoint=macbook_endpoint

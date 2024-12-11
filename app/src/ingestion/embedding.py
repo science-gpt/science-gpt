@@ -10,6 +10,7 @@ from tqdm import tqdm
 from .chunking import Chunk
 from .raw_data import Data
 
+from langchain_openai import AzureOpenAIEmbeddings
 
 @dataclass
 class Embedding(Data):
@@ -131,6 +132,64 @@ class OllamaEmbedder(Embedder):
 
         embeddings = []
         for chunk in tqdm(chunks):
+            vector = self.model.embed_query(chunk.text)
+            embedding = Embedding(
+                name=chunk.name,
+                data_type=chunk.data_type,
+                vector=np.array(vector),
+                text=chunk.text,
+            )
+            embeddings.append(embedding)
+        return embeddings
+
+class AzureOpenAIEmbedder(Embedder):
+    """
+    An embedder that uses Azure OpenAI's models to generate embeddings.
+    """
+
+    def __init__(self, model_name: str, endpoint: str, api_key: str):
+        """
+        Initialize the Azure OpenAI Embedder.
+
+        Args:
+            model_name (str): The name of the Azure OpenAI model deployment to use.
+            endpoint (str): The Azure OpenAI endpoint URL.
+            api_key (str): The API key for accessing the Azure OpenAI service.
+        """
+        super().__init__()
+        self.model_name = model_name
+        self.model = AzureOpenAIEmbeddings(
+            model=model_name,
+            azure_endpoint=endpoint,
+            api_key=api_key,
+        )
+
+        # Test the connection and determine the embedding dimension
+        self.test_connection()
+
+    def test_connection(self):
+        """
+        Test the connection to Azure OpenAI and determine the embedding dimension.
+        """
+        try:
+            test_embedding = self.model.embed_query("test")
+            self.embedding_dimension = len(test_embedding)
+        except Exception as e:
+            print(f"Error during embedding model initialization: {str(e)}")
+            raise RuntimeError("Azure OpenAI embedding model initialization failed") from e
+
+    def __call__(self, chunks: List[Embedding]) -> List[Embedding]:
+        """
+        Embed a list of text chunks into vectors using the Azure OpenAI embedding model.
+
+        Args:
+            chunks (List[Embedding]): List of text chunks to be embedded.
+
+        Returns:
+            List[Embedding]: A list of Embedding objects containing the embedded vectors and metadata.
+        """
+        embeddings = []
+        for chunk in tqdm(chunks, desc="Embedding Chunks"):
             vector = self.model.embed_query(chunk.text)
             embedding = Embedding(
                 name=chunk.name,
