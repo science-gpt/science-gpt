@@ -1,36 +1,16 @@
 import os
-from types import SimpleNamespace
 
 import toml
 from logs.logger import logger
-from models.models import LocalAIModel, OpenAIChatModel
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
-from orchestrator.utils import DEFAULT_SYSTEM_PROMPT, load_config
+from orchestrator.utils import DEFAULT_SYSTEM_PROMPT, SingletonMeta, load_config
 from prompt.base_prompt import ConcretePrompt
 from prompt.prompts import ModerationDecorator, OnlyUseContextDecorator
 from prompt.retrieval import ContextRetrieval
 from requests.exceptions import ConnectTimeout
 
-
-class SingletonMeta(type):
-    """
-    The Singleton class can be implemented in different ways in Python. Some
-    possible methods include: base class, decorator, metaclass. We will use the
-    metaclass because it is best suited for this purpose.
-    """
-
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        """
-        Possible changes to the value of the `__init__` argument do not affect
-        the returned instance.
-        """
-        if cls not in cls._instances:
-            instance = super().__call__(*args, **kwargs)
-            cls._instances[cls] = instance
-        return cls._instances[cls]
+from models.models import LocalAIModel, OpenAIChatModel
 
 
 class ChatOrchestrator(metaclass=SingletonMeta):
@@ -41,63 +21,37 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         self.model = None
         self.system_prompt = DEFAULT_SYSTEM_PROMPT
 
-    def load_model(self, model: str = "gpt-3.5"):
+    def load_model(self, model: str) -> None:
         """
         Load secrets from toml file into config object.
         """
         secrets = toml.load("secrets.toml")
 
-        # TODO: dynamically select model secrets based on 'model' str input
-        # hardcoded to use gpt3.5 for now
-        if model == "GPT-4.0":
-            self.config.model_auth.version = secrets["gpt40-api"]["api_version"]
-            self.config.model_auth.api_key = secrets["gpt40-api"]["api_key"]
-            self.config.model_auth.url = secrets["gpt40-api"]["azure_endpoint"]
-            self.config.model_name = model
-            self.model = OpenAIChatModel(self.config)
-        elif model == "GPT-3.5":  # Defaults to GPT-3.5
-            self.config.model_auth.version = secrets["gpt35-api"]["api_version"]
-            self.config.model_auth.api_key = secrets["gpt35-api"]["api_key"]
-            self.config.model_auth.url = secrets["gpt35-api"]["azure_endpoint"]
-            self.config.model_name = model
+        if model in ["GPT-3.5", "GPT-4.0"]:
+            model_key = model.lower().replace("-", "").replace(".", "") + "-api"
+            self.config.model_auth.version = secrets[model_key]["api_version"]
+            self.config.model_auth.api_key = secrets[model_key]["api_key"]
+            self.config.model_auth.url = secrets[model_key]["azure_endpoint"]
             self.model = OpenAIChatModel(self.config)
         else:
             self.config.model_auth.macbook_endpoint = (
-                secrets["localmodel"]["macbook_endpoint"] + "/api/generate"
+                secrets["localmodel"]["macbook_endpoint"] + "/api/generate/"
             )
-            self.config.model_name = model
             self.model = LocalAIModel(self.config)
 
-    def set_model_config(self, query_config):
-        self.config.model_params.seed = query_config.seed
-        self.config.model_params.temperature = query_config.temperature
-        # self.config.model_params.max_tokens = query_config.max_tokens
-        self.config.rag_params.top_k_retrieval = query_config.top_k
-        self.config.model_params.top_p = query_config.top_p
+        self.config.model_params.model_name = model
 
-    def test_connection(self, local=False):
+    def test_connection(self, model_name: str) -> bool:
         """
         Test connection to the local or remote chat model.
         """
 
-        if local:
-            model = LocalAIModel(self.config)
-            response = model.test_connection()
-        else:
-            response = self.llm.test_connection()
+        if model_name in ["GPT-3.5", "GPT-4.0"]:
+            return OpenAIChatModel(self.config).test_connection()
 
-        return response
+        return LocalAIModel(self.config).test_connection()
 
-    def update_system_prompt(self, new_prompt: str):
-        self.system_prompt = new_prompt
-
-    def triage_query(
-        self,
-        model: str,
-        query: str,
-        query_config: SimpleNamespace,
-        use_rag: bool = False,
-    ) -> tuple[str, str, float]:
+    def triage_query(self, query: str, model: str) -> tuple[str, str, float]:
         """
         Given a user query, the orchestrator detects user intent and leverages
         appropriate agents to provide a response.
@@ -105,49 +59,42 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         Returns the response text content (str) and cost (float)
         """
 
-        print(query_config)
-
-        # Set the model config and load the model
-        self.set_model_config(query_config)
         self.load_model(model)
-        logger.info(self.config.model_dump_json())
-
         prompt = ConcretePrompt(self.system_prompt)
 
-        # Retrieval use case
-        # TODO: This is clunky - ideally we would have a LLM detect the intent for use cases
-
-        # involving user input.
-        if query.lower().startswith("search:") or use_rag:
-            query = query[7:] if query.lower().startswith("search:") else query
+        if self.config.rag_params.use_rag:
             prompt = ContextRetrieval(
                 prompt,
                 self.config,
                 rewrite_model=self.model,
-                keyword_filter=query_config.keywords,
             )
-        # we want to avoid the case of wrapping the prompt in two ContextRetrival decorators.
-        # note - if use_rag and useknowledgebase are on at the same time the app will not work.
-        if query_config.useknowledgebase:
+
+        # WARNING: if useknowledgebase is enabled without uploading documents, the app errors out
+        if self.config.rag_params.useknowledgebase:
             prompt = ContextRetrieval(
                 prompt,
                 self.config,
-                rewrite_model=self.model,
                 collection="user",
-                keyword_filter=query_config.keywords,
+                rewrite_model=self.model,
             )
 
-        # look for moderation filter
-        if query_config.moderationfilter:
+        if self.config.rag_params.moderationfilter:
             prompt = ModerationDecorator(prompt)
 
-        # look for only use context
-        if query_config.onlyusecontext:
+        if self.config.rag_params.onlyusecontext:
             prompt = OnlyUseContextDecorator(prompt)
 
         try:
             handler = LLMCallHandler(self.model, prompt, self.config)
             llm_prompt, response, cost = handler.call_llm(query)
+            logger.info(
+                "Prompt: "
+                + llm_prompt
+                + " Response: "
+                + response
+                + " System Config: "
+                + self.config.model_dump_json()
+            )
 
         # Carter: we will want a better solution here but we need error handling for the time being.
         # This catches errors when the local models are offline
@@ -157,6 +104,10 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         return llm_prompt, response, cost
 
-    def query(self, prompt):
+    def direct_query(self, prompt):
+        """
+        This is only used during direct prompt modification where the user can test a prompt
+        directly without additional prompt decorators.
+        """
         response, cb = self.model(prompt)
         return prompt, response, cb
