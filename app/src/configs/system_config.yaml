@@ -66,13 +66,14 @@ extraction:
   extraction_method: "pypdf2"
   supported_extractors:
     - "pypdf2"
-    - "pymupdf"
-    - "pymypdf4llm"
+    - "docling"
   
 
 chunking:
   chunking_method: "recursive_character"
   supported_chunkers:
+    - "docling_hierarchical"
+    - "split_sentences"
     - "recursive_character"
     - "recursive_character:large_chunks"
     - "recursive_character:small_chunks"
@@ -88,7 +89,7 @@ embedding:
 
 # Database Options
 vector_db:
-  database: "chromadb"
+  database: "milvus"
   host: "standalone"
   port: 19530
   supported_databases:
