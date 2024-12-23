@@ -10,6 +10,7 @@ from streamlit_feedback import streamlit_feedback
 from streamlit_float import float_css_helper, float_init, float_parent
 from streamlit_survey import StreamlitSurvey
 from streamlit_tags import st_tags
+from streamlit_card import card
 
 sys.path.insert(0, "./src")
 from databroker.databroker import DataBroker
@@ -157,8 +158,25 @@ def edit_prompt(prompt, key=0):
     """
     This is the textbox that allows the user to view and modify the prompt
     """
+
+    #separate prompt from chunks 
+    context, chunks = prompt.split("<context></context>:\n    <context>")
+
+    chunks = [chunks.split("\n\n---\n\n")]
+
+
+    logger.info("Chunks: ", chunks, "done")
+
+    #create a card for the base prompt
+
+    #create a card for each chunk
+
+
+
     with st.popover("See LLM Prompt", use_container_width=True):
         st.subheader("The LLM Prompt")
+        card("Base Prompt", context)
+        card("Chunks", chunks)
         nprompt = st.text_area(
             "Modify the LLM Prompt:",
             value=prompt,
