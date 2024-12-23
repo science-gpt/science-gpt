@@ -1,9 +1,16 @@
 import pathlib
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Literal
 
 import PyPDF2
-from docling.document_converter import ConversionResult, DocumentConverter
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
+from docling.document_converter import (
+    ConversionResult,
+    DocumentConverter,
+    PdfFormatOption,
+)
 
 from .raw_data import RAW_DATA_TYPES, Data
 
@@ -151,12 +158,41 @@ class DoclingPDFExtract(ContentExtractor):
     Concrete implementation of ContentExtractor for PDF data sources using Docling.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        do_table_structure: bool = False,
+        table_former_mode: Literal["fast", "accurate"] = "accurate",
+    ) -> None:
         """
         Instantiates a DoclingPDFExtract object.
+
+        Args:
+            do_table_structure (bool): Whether to extract table structure from PDFs.
+            table_former_mode ("fast" | "accurate"): Mode for table extraction.
+                                                   "fast" is quicker but less precise,
+                                                   "accurate" is slower but more precise.
         """
         super().__init__(data_type="pdf")
-        self.converter = DocumentConverter()
+
+        if table_former_mode not in ["fast", "accurate"]:
+            raise ValueError(
+                f"Invalid table former mode: {table_former_mode}. Must be 'fast' or 'accurate'."
+            )
+
+        mode = (
+            TableFormerMode.ACCURATE
+            if table_former_mode == "accurate"
+            else TableFormerMode.FAST
+        )
+
+        pipeline_options = PdfPipelineOptions(do_table_structure=do_table_structure)
+        pipeline_options.table_structure_options.mode = mode
+
+        format_options = {
+            InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
+        }
+
+        self.converter = DocumentConverter(format_options=format_options)
 
     def __call__(self, data: PDFData) -> DoclingDocument:
         """
