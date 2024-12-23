@@ -1,7 +1,6 @@
+from models.models import ChatModel
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent
-
-from models.models import ChatModel
 
 
 class LLMCallHandler:
