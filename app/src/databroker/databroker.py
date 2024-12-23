@@ -13,7 +13,7 @@ from ingestion.chunking import (
     SplitSentencesChunker,
 )
 from ingestion.embedding import Embedder, HuggingFaceEmbedder, OllamaEmbedder
-from ingestion.extraction import DoclingExtract, PDFData, PyPDF2Extract, TextExtract
+from ingestion.extraction import DoclingPDFExtract, PDFData, PyPDF2Extract, TextExtract
 from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB
 from orchestrator.utils import SingletonMeta
@@ -142,7 +142,7 @@ class DataBroker(metaclass=SingletonMeta):
         if self._database_config.pdf_extractor.extraction_method == "pypdf2":
             extractors["pdf"] = PyPDF2Extract()
         elif self._database_config.pdf_extractor.extraction_method == "docling":
-            extractors["pdf"] = DoclingExtract()
+            extractors["pdf"] = DoclingPDFExtract()
         return extractors
 
     def _create_vectorstore(self, embedding_dimension: int) -> Dict[str, VectorDB]:
