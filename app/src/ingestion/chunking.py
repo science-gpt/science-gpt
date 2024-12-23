@@ -127,30 +127,3 @@ class DoclingHierarchicalChunker(Chunker):
             for i, chunk in tqdm(enumerate(chunks_iter))
         ]
         return chunks
-
-
-"""
-# how hybdrid chunker could be implemented.
-class DoclingHybridChunker(Chunker):
-    def __init__(self):
-        self.chunker = HybridChunker()
-    
-    def __call__(self, content: DoclingDocument) -> List[Chunk]:
-        if not isinstance(content, DoclingDocument):
-            raise TypeError(
-                f"DoclingHybridChunker requires DoclingDocument input, but got {type(content)}. "
-                "Use DoclingExtract or a different chunker."
-            )
-        chunks_iter = self.chunker.chunk(content.conv_result.document)
-        chunks = [
-            Chunk(
-                text=chunk.text,
-                name=f"{content.name} - Chunk {i+1}",
-                data_type=content.data_type,
-            )
-            for i, chunk in tqdm(enumerate(chunks_iter))
-        ]
-        return chunks
-"""
-# TODO: provide a way to configure the docling extraction and chunking methods
-# TODO: update the config files
