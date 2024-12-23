@@ -8,11 +8,12 @@ import toml
 from ingestion.chunking import (
     Chunk,
     Chunker,
+    DoclingHierarchicalChunker,
     RecursiveCharacterChunker,
     SplitSentencesChunker,
 )
 from ingestion.embedding import Embedder, HuggingFaceEmbedder, OllamaEmbedder
-from ingestion.extraction import PDFData, PyPDF2Extract, TextExtract
+from ingestion.extraction import DoclingExtract, PDFData, PyPDF2Extract, TextExtract
 from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB
 from orchestrator.utils import SingletonMeta
@@ -100,7 +101,9 @@ class DataBroker(metaclass=SingletonMeta):
         Raises:
             ValueError: If the configured chunking method is not supported
         """
-        if self._database_config.chunking_method == "split_sentences":
+        if self._database_config.chunking_method == "docling_hierarchical":
+            chunker = DoclingHierarchicalChunker()
+        elif self._database_config.chunking_method == "split_sentences":
             chunker = SplitSentencesChunker()
         elif self._database_config.chunking_method == "recursive_character":
             chunker = RecursiveCharacterChunker(
@@ -138,6 +141,8 @@ class DataBroker(metaclass=SingletonMeta):
         extractors = {}
         if self._database_config.pdf_extractor.extraction_method == "pypdf2":
             extractors["pdf"] = PyPDF2Extract()
+        elif self._database_config.pdf_extractor.extraction_method == "docling":
+            extractors["pdf"] = DoclingExtract()
         return extractors
 
     def _create_vectorstore(self, embedding_dimension: int) -> Dict[str, VectorDB]:
@@ -167,6 +172,38 @@ class DataBroker(metaclass=SingletonMeta):
             )
         return vectorstore
 
+    def _validate_extractor_chunker_compatibility(self):
+        """
+        Validates that the configured extractor and chunker are compatible.
+        Raises:
+            ValueError: If the combination is not supported
+        """
+        extraction_method = self._database_config.pdf_extractor.extraction_method
+        chunking_method = self._database_config.chunking_method
+
+        if (
+            chunking_method in ["docling_hierarchical", "docling_hybrid"]
+            and extraction_method != "docling"
+        ):
+            raise ValueError(
+                """
+                Docling chunking requires Docling extraction.
+                Please set the extraction method to 'docling,' or use a non-docling chunker.
+                """
+            )
+
+        if extraction_method == "docling" and chunking_method not in [
+            "docling_hierarchical",
+            "docling_hybrid",
+        ]:
+            logger.warning(
+                """
+                Using DoclingExtract with a basic chunker. 
+                This will lose document structure information.
+                Consider using DoclingChunker to preserve document structure.
+                """
+            )
+
     def _init_databroker_pipeline(self, database_config: SimpleNamespace) -> None:
         """
         Initializes the data broker pipeline.
@@ -175,6 +212,8 @@ class DataBroker(metaclass=SingletonMeta):
         self._database_config = database_config
         if self._database_config is None:
             raise ValueError("Database configuration is not set")
+
+        self._validate_extractor_chunker_compatibility()
 
         self.data_roots = {
             "base": f"{os.getcwd()}/data/",
@@ -261,8 +300,9 @@ class DataBroker(metaclass=SingletonMeta):
             collection (str, optional): Which collection to insert into. Defaults to "base".
         """
         extractor = self.extractors.get(data.data_type)
-        text = extractor(data)
-        chunks = self.chunker(text)
+        extracted_content = extractor(data)
+
+        chunks = self.chunker(extracted_content)
 
         existing_ids = self.vectorstore[collection].get_all_ids()
 
