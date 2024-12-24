@@ -109,9 +109,21 @@ class DoclingHierarchicalChunker(Chunker):
     """
 
     def __init__(self):
+        """
+        Initialize the DoclingHierarchicalChunker.
+        """
         self.chunker = HierarchicalChunker()
 
     def __call__(self, content: DoclingDocument) -> List[Chunk]:
+        """
+        Split the given content into chunks, where each chunk is a sentence.
+
+        Args:
+            content (ExtractedContent): The content to be split into chunks.
+
+        Returns:
+            List[Chunk]: A list of Chunk objects.
+        """
         if not isinstance(content, DoclingDocument):
             raise TypeError(
                 f"DoclingChunker requires DoclingDocument input, but got {type(content)}. "
