@@ -13,7 +13,12 @@ from ingestion.chunking import (
     SplitSentencesChunker,
 )
 from ingestion.embedding import Embedder, HuggingFaceEmbedder, OllamaEmbedder
-from ingestion.extraction import DoclingPDFExtract, PDFData, PyPDF2Extract, TextExtract
+from ingestion.extraction import (
+    ContentExtractor,
+    DoclingPDFExtract,
+    PDFData,
+    PyPDF2Extract,
+)
 from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB
 from orchestrator.utils import SingletonMeta
@@ -130,13 +135,13 @@ class DataBroker(metaclass=SingletonMeta):
             )
         return chunker
 
-    def _create_extractors(self) -> Dict[str, TextExtract]:
+    def _create_extractors(self) -> Dict[str, ContentExtractor]:
         """
         Creates a dictionary of extractors for different data types.
         Each of the supported data types receives its own extractor.
         Extractors are set using the config.
         Returns:
-            Dict[str, TextExtract]: A dictionary mapping data types to their respective extractors
+            Dict[str, ContentExtractor]: A dictionary mapping data types to their respective extractors
         """
         extractors = {}
         if self._database_config.pdf_extractor.extraction_method == "pypdf2":
