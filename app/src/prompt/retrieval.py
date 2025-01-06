@@ -1,8 +1,7 @@
 from databroker.databroker import DataBroker
+from models.models import ChatModel
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent, PromptDecorator
-
-from models.models import ChatModel
 
 DEFAULT_QUERY_REWRITER: str = """
     You are an expert in simplifying scientific literature search queries for toxicology and pesticide research. 
