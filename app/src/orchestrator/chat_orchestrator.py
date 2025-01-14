@@ -1,4 +1,5 @@
 import os
+from typing import List, Optional
 
 import toml
 from logs.logger import logger
@@ -58,6 +59,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         Returns the response text content (str) and cost (float)
         """
 
+        chunks = None
         self.load_model(model)
         prompt = ConcretePrompt(self.system_prompt)
 
@@ -77,11 +79,15 @@ class ChatOrchestrator(metaclass=SingletonMeta):
                 rewrite_model=self.model,
             )
 
+            chunks = prompt.get_chunks()
+
         if self.config.rag_params.moderationfilter:
             prompt = ModerationDecorator(prompt)
 
         if self.config.rag_params.onlyusecontext:
             prompt = OnlyUseContextDecorator(prompt)
+            chunks = prompt.get_chunks()
+            logger.info(chunks)
 
         try:
             handler = LLMCallHandler(self.model, prompt, self.config)

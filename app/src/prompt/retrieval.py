@@ -1,3 +1,5 @@
+from typing import List, Optional
+
 from databroker.databroker import DataBroker
 from models.models import ChatModel
 from orchestrator.config import SystemConfig
@@ -75,6 +77,7 @@ class ContextRetrieval(PromptDecorator):
         self.collection = collection
         self.rewrite_model = rewrite_model
         self.cost = self._prompt.cost
+        self.chunks = Optional[List[str]]
 
     def get_prompt(self, query: str) -> str:
 
@@ -98,15 +101,19 @@ class ContextRetrieval(PromptDecorator):
             return "No results found for the query. Please relay that no documents were retrieved for the given query."
 
         print(results)
-        context_text = "\n\n---\n\n".join(
-            [
-                f"Context Source: {chunk.id}\nDocument: {chunk.document}"
-                for result in results
-                for chunk in result
-            ]
-        )
+
+        self.chunks = [
+            f"Context Source: {chunk.id}\nDocument: {chunk.document}"
+            for result in results
+            for chunk in result
+        ]
+        context_text = "\n\n---\n\n".join(self.chunks)
+
         return self._prompt.get_prompt(query).format(
             decorate=self.PromptTemplate.format(
                 context=context_text, decorate="{decorate}"
             )
         )
+
+    def get_chunks(self):
+        return self.chunks
