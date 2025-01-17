@@ -12,6 +12,8 @@ from streamlit_float import float_css_helper, float_init, float_parent
 from streamlit_survey import StreamlitSurvey
 from streamlit_tags import st_tags
 
+# from annotated_text import annotated_text
+
 sys.path.insert(0, "./src")
 from databroker.databroker import DataBroker
 from logs.logger import logger
@@ -159,25 +161,22 @@ def edit_prompt(prompt, key=0):
     This is the textbox that allows the user to view and modify the prompt
     """
 
-    # separate prompt from chunks
-    context, chunks = prompt.split("<context></context>:\n    <context>")
-
-    chunks = [chunks.split("\n\n---\n\n")]
-
-    logger.info("Chunks: ", chunks, "done")
-
     # TODO create a card for the base prompt +  create a card for each chunk
 
     with st.popover("See LLM Prompt", use_container_width=True):
         st.subheader("The LLM Prompt")
-        card("Base Prompt", context)
-        card("Chunks", chunks)
         nprompt = st.text_area(
             "Modify the LLM Prompt:",
             value=prompt,
             height=300,
             key="ta" + get_prompt_key(key),
         )
+
+        # if chunks:
+        #     st.subheader("Context Chunks")
+        #     for chunk in chunks:
+        #         st.write(chunk)
+
         st.button(
             "Submit Prompt",
             on_click=(lambda: send_prompt(nprompt)),
@@ -189,7 +188,7 @@ def create_answer(prompt):
     """
     Generates a response from the user query and renders it on the page.
     """
-    if prompt is None:
+    if not prompt:
         return
 
     with st.chat_message("User"):

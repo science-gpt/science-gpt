@@ -77,7 +77,7 @@ class ContextRetrieval(PromptDecorator):
         self.collection = collection
         self.rewrite_model = rewrite_model
         self.cost = self._prompt.cost
-        self.chunks = Optional[List[str]]
+        self.chunks = []
 
     def get_prompt(self, query: str) -> str:
 
@@ -100,13 +100,14 @@ class ContextRetrieval(PromptDecorator):
         if len(results) == 0 or len(results[0]) == 0:
             return "No results found for the query. Please relay that no documents were retrieved for the given query."
 
-        print(results)
+        # print(results)
 
         self.chunks = [
             f"Context Source: {chunk.id}\nDocument: {chunk.document}"
             for result in results
             for chunk in result
         ]
+
         context_text = "\n\n---\n\n".join(self.chunks)
 
         return self._prompt.get_prompt(query).format(
@@ -115,5 +116,5 @@ class ContextRetrieval(PromptDecorator):
             )
         )
 
-    def get_chunks(self):
+    def get_chunks(self) -> List[str]:
         return self.chunks

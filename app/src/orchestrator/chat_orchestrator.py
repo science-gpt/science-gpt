@@ -51,7 +51,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         return LocalAIModel(self.config).test_connection()
 
-    def triage_query(self, query: str, model: str) -> tuple[str, str, float]:
+    def triage_query(self, query: str, model: str) -> tuple[str, str, float, list[str]]:
         """
         Given a user query, the orchestrator detects user intent and leverages
         appropriate agents to provide a response.
@@ -59,7 +59,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         Returns the response text content (str) and cost (float)
         """
 
-        chunks = None
+        chunks = []
         self.load_model(model)
         prompt = ConcretePrompt(self.system_prompt)
 
@@ -70,6 +70,8 @@ class ChatOrchestrator(metaclass=SingletonMeta):
                 rewrite_model=self.model,
             )
 
+            # print(f"here you go chunk orchestrator - use_rag{chunks}")
+
         # WARNING: if useknowledgebase is enabled without uploading documents, the app errors out
         if self.config.rag_params.useknowledgebase:
             prompt = ContextRetrieval(
@@ -79,27 +81,24 @@ class ChatOrchestrator(metaclass=SingletonMeta):
                 rewrite_model=self.model,
             )
 
-            chunks = prompt.get_chunks()
-
         if self.config.rag_params.moderationfilter:
             prompt = ModerationDecorator(prompt)
 
         if self.config.rag_params.onlyusecontext:
             prompt = OnlyUseContextDecorator(prompt)
-            chunks = prompt.get_chunks()
-            logger.info(chunks)
 
         try:
             handler = LLMCallHandler(self.model, prompt, self.config)
             llm_prompt, response, cost = handler.call_llm(query)
-            logger.info(
-                "Prompt: "
-                + llm_prompt
-                + " Response: "
-                + response
-                + " System Config: "
-                + self.config.model_dump_json()
-            )
+            chunks = prompt.get_chunks()
+            # logger.info(
+            #     "Prompt: "
+            #     + llm_prompt
+            #     + " Response: "
+            #     + response
+            #     + " System Config: "
+            #     + self.config.model_dump_json()
+            # )
 
         # Carter: we will want a better solution here but we need error handling for the time being.
         # This catches errors when the local models are offline
