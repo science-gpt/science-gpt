@@ -156,7 +156,7 @@ def send_prompt(prompt):
     )
 
 
-def edit_prompt(prompt, key=0):
+def edit_prompt(prompt, chunks, key=0):
     """
     This is the textbox that allows the user to view and modify the prompt
     """
@@ -172,10 +172,10 @@ def edit_prompt(prompt, key=0):
             key="ta" + get_prompt_key(key),
         )
 
-        # if chunks:
-        #     st.subheader("Context Chunks")
-        #     for chunk in chunks:
-        #         st.write(chunk)
+        if chunks:
+            st.subheader("Context Chunks")
+            for chunk in chunks:
+                st.write(chunk)
 
         st.button(
             "Submit Prompt",
@@ -197,7 +197,7 @@ def create_answer(prompt):
     with st.chat_message("AI"):
         message_placeholder = st.empty()
 
-        llm_prompt, response, cost = st.session_state.orchestrator.triage_query(
+        llm_prompt, response, cost, chunks = st.session_state.orchestrator.triage_query(
             query=prompt, model=st.session_state.model
         )
 
@@ -212,7 +212,7 @@ def create_answer(prompt):
         ]
     )
 
-    edit_prompt(llm_prompt)
+    edit_prompt(llm_prompt, chunks)
 
 
 def display_chat_history():

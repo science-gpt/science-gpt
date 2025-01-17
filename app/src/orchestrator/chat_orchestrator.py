@@ -91,14 +91,14 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             handler = LLMCallHandler(self.model, prompt, self.config)
             llm_prompt, response, cost = handler.call_llm(query)
             chunks = prompt.get_chunks()
-            # logger.info(
-            #     "Prompt: "
-            #     + llm_prompt
-            #     + " Response: "
-            #     + response
-            #     + " System Config: "
-            #     + self.config.model_dump_json()
-            # )
+            logger.info(
+                "Prompt: "
+                + llm_prompt
+                + " Response: "
+                + response
+                + " System Config: "
+                + self.config.model_dump_json()
+            )
 
         # Carter: we will want a better solution here but we need error handling for the time being.
         # This catches errors when the local models are offline
@@ -106,7 +106,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             logger.error("Unable to connect to local model.")
             return "N/A", "The model you selected is not online.", 0.0
 
-        return llm_prompt, response, cost
+        return llm_prompt, response, cost, chunks
 
     def direct_query(self, prompt):
         """
