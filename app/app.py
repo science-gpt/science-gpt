@@ -5,14 +5,13 @@ from types import SimpleNamespace
 
 import pandas as pd
 import streamlit as st
+from annotated_text import annotated_text
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from streamlit_card import card
 from streamlit_feedback import streamlit_feedback
 from streamlit_float import float_css_helper, float_init, float_parent
 from streamlit_survey import StreamlitSurvey
 from streamlit_tags import st_tags
-
-# from annotated_text import annotated_text
 
 sys.path.insert(0, "./src")
 from databroker.databroker import DataBroker
@@ -173,6 +172,14 @@ def edit_prompt(prompt, chunks, key=0):
         )
 
         if chunks:
+            formatted_chunks = []
+            for i in range(len(chunks)):
+                formatted_chunks.append(
+                    f"Chunk {i + 1}: {chunks[i].split('Context Source:')[0]}"
+                )
+            annotated_text(formatted_chunks)
+            annotated_text((f"      TOTAL CHUNKS:  {len(chunks)}", f"{len(chunks)}"))
+
             st.subheader("Context Chunks")
             for chunk in chunks:
                 st.write(chunk)

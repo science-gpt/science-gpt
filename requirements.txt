@@ -16,6 +16,7 @@ streamlit-survey
 streamlit-float
 streamlit-tags
 streamlit-card
+st-annotated-text
 toml
 hydra-core
 omegaconf
