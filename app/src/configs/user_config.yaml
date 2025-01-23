@@ -4,6 +4,14 @@ cookie:
   name: random_cookie_name
 credentials:
   usernames:
+    ak47:
+      email: areel.khan@hc-sc.gc.ca
+      first_name: areel
+      last_name: khan
+      logged_in: false
+      password: $2b$12$4MAlvX4YrpSbeY5aRTS3GOB8pHrUa5Foez/SfjKlH1nadTEUaqtsW
+      password_hint: 'no'
+      roles: null
     bhux:
       email: bing.hu@phac-aspc.gc.ca
       first_name: Bing
@@ -43,4 +51,3 @@ pre-authorized:
   - chantal.medina@hc-sc.gc.ca
   - malik.talhat@hc-sc.gc.ca
   - carter.demars@hc-sc.gc.ca
-  - areel.khan@hc-sc.gc.ca
