@@ -1,11 +1,14 @@
 import os
+import re
 import sys
 import uuid
 from types import SimpleNamespace
 
 import pandas as pd
 import streamlit as st
+from annotated_text import annotated_text
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from streamlit_card import card
 from streamlit_feedback import streamlit_feedback
 from streamlit_float import float_css_helper, float_init, float_parent
 from streamlit_survey import StreamlitSurvey
@@ -153,10 +156,13 @@ def send_prompt(prompt):
     )
 
 
-def edit_prompt(prompt, key=0):
+def edit_prompt(prompt, chunks, key=0):
     """
     This is the textbox that allows the user to view and modify the prompt
     """
+
+    # TODO create a card for the base prompt +  create a card for each chunk
+
     with st.popover("See LLM Prompt", use_container_width=True):
         st.subheader("The LLM Prompt")
         nprompt = st.text_area(
@@ -165,6 +171,32 @@ def edit_prompt(prompt, key=0):
             height=300,
             key="ta" + get_prompt_key(key),
         )
+
+        if chunks:
+            pattern = r"Context Source:\s*(?P<context_source>.*?)\s*-\s*Chunk\s*(?P<chunk_number>\d+)\s*Document:\s*(?P<document>.+)"
+
+            ## annotated chunk isn't working as expected so I am using markdown to highlight the chunks
+            # formatted_chunks = []
+            # for i in range(len(chunks)):
+            #     formatted_chunks.append(
+            #        (f"{chunks[i]}", str(i+1))
+            #     )
+            # annotated_text(formatted_chunks)
+            # annotated_text((f"      TOTAL CHUNKS:  {len(chunks)}", f"{len(chunks)}"))
+
+            st.subheader("Context Chunks")
+            for chunk in chunks:
+                st.divider()
+                match = re.match(pattern, chunk, re.DOTALL)
+                context_source = match.group("context_source")
+                chunk_number = match.group("chunk_number")
+                document = match.group("document")
+
+                st.markdown(f"### Context Source: {context_source}")
+                st.markdown(f"#### Chunk {chunk_number}")
+                st.markdown(f":blue-background[{document}]")
+                st.divider()
+
         st.button(
             "Submit Prompt",
             on_click=(lambda: send_prompt(nprompt)),
@@ -176,7 +208,7 @@ def create_answer(prompt):
     """
     Generates a response from the user query and renders it on the page.
     """
-    if prompt is None:
+    if not prompt:
         return
 
     with st.chat_message("User"):
@@ -185,7 +217,7 @@ def create_answer(prompt):
     with st.chat_message("AI"):
         message_placeholder = st.empty()
 
-        llm_prompt, response, cost = st.session_state.orchestrator.triage_query(
+        llm_prompt, response, cost, chunks = st.session_state.orchestrator.triage_query(
             query=prompt, model=st.session_state.model
         )
 
@@ -200,7 +232,7 @@ def create_answer(prompt):
         ]
     )
 
-    edit_prompt(llm_prompt)
+    edit_prompt(llm_prompt, chunks)
 
 
 def display_chat_history():

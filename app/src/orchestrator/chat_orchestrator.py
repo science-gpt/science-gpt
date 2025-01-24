@@ -1,4 +1,5 @@
 import os
+from typing import List, Optional
 
 import toml
 from logs.logger import logger
@@ -50,7 +51,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         return LocalAIModel(self.config).test_connection()
 
-    def triage_query(self, query: str, model: str) -> tuple[str, str, float]:
+    def triage_query(self, query: str, model: str) -> tuple[str, str, float, list[str]]:
         """
         Given a user query, the orchestrator detects user intent and leverages
         appropriate agents to provide a response.
@@ -58,6 +59,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         Returns the response text content (str) and cost (float)
         """
 
+        chunks = []
         self.load_model(model)
         prompt = ConcretePrompt(self.system_prompt)
 
@@ -67,6 +69,8 @@ class ChatOrchestrator(metaclass=SingletonMeta):
                 self.config,
                 rewrite_model=self.model,
             )
+
+            # print(f"here you go chunk orchestrator - use_rag{chunks}")
 
         # WARNING: if useknowledgebase is enabled without uploading documents, the app errors out
         if self.config.rag_params.useknowledgebase:
@@ -86,6 +90,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         try:
             handler = LLMCallHandler(self.model, prompt, self.config)
             llm_prompt, response, cost = handler.call_llm(query)
+            chunks = prompt.get_chunks()
             logger.info(
                 "Prompt: "
                 + llm_prompt
@@ -101,7 +106,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             logger.error("Unable to connect to local model.")
             return "N/A", "The model you selected is not online.", 0.0
 
-        return llm_prompt, response, cost
+        return llm_prompt, response, cost, chunks
 
     def direct_query(self, prompt):
         """
