@@ -156,7 +156,7 @@ def send_prompt(prompt):
     )
 
 
-def edit_prompt(prompt, chunks, key=0):
+def edit_prompt(prompt, chunks, rewrite_prompt, key=0):
     """
     This is the textbox that allows the user to view and modify the prompt
     """
@@ -164,13 +164,10 @@ def edit_prompt(prompt, chunks, key=0):
     # TODO create a card for the base prompt +  create a card for each chunk
 
     with st.popover("See LLM Prompt", use_container_width=True):
-        st.subheader("The LLM Prompt")
-        nprompt = st.text_area(
-            "Modify the LLM Prompt:",
-            value=prompt,
-            height=300,
-            key="ta" + get_prompt_key(key),
-        )
+
+        if rewrite_prompt:
+            st.subheader("Prompt Information")
+            st.text_area("Your query was rewritten to", rewrite_prompt)
 
         if chunks:
             pattern = r"Context Source:\s*(?P<context_source>.*?)\s*-\s*Chunk\s*(?P<chunk_number>\d+)\s*Document:\s*(?P<document>.+)"
@@ -184,18 +181,26 @@ def edit_prompt(prompt, chunks, key=0):
             # annotated_text(formatted_chunks)
             # annotated_text((f"      TOTAL CHUNKS:  {len(chunks)}", f"{len(chunks)}"))
 
-            st.subheader("Context Chunks")
+            st.subheader("Chunks")
             for chunk in chunks:
-                st.divider()
                 match = re.match(pattern, chunk, re.DOTALL)
                 context_source = match.group("context_source")
                 chunk_number = match.group("chunk_number")
                 document = match.group("document")
 
-                st.markdown(f"### Context Source: {context_source}")
-                st.markdown(f"#### Chunk {chunk_number}")
+                st.markdown(f"##### Context Source: {context_source}")
+                st.markdown(f"##### Chunk {chunk_number}")
                 st.markdown(f":blue-background[{document}]")
                 st.divider()
+
+        with st.expander("View LLM Prompt", expanded=False):
+            st.subheader("The LLM Prompt")
+            nprompt = st.text_area(
+                "Modify the LLM Prompt:",
+                value=prompt,
+                height=300,
+                key="ta" + get_prompt_key(key),
+            )
 
         st.button(
             "Submit Prompt",
@@ -217,8 +222,10 @@ def create_answer(prompt):
     with st.chat_message("AI"):
         message_placeholder = st.empty()
 
-        llm_prompt, response, cost, chunks = st.session_state.orchestrator.triage_query(
-            query=prompt, model=st.session_state.model
+        llm_prompt, response, cost, chunks, rewrite_prompt = (
+            st.session_state.orchestrator.triage_query(
+                query=prompt, model=st.session_state.model
+            )
         )
 
         st.session_state.cost += float(cost)
@@ -232,7 +239,7 @@ def create_answer(prompt):
         ]
     )
 
-    edit_prompt(llm_prompt, chunks)
+    edit_prompt(llm_prompt, chunks, rewrite_prompt)
 
 
 def display_chat_history():
