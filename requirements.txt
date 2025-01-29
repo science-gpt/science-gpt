@@ -26,3 +26,4 @@ ChromaDB
 pymilvus
 numpy
 pytest
+docling
