@@ -47,4 +47,5 @@ networks:
   app-network:
     driver: bridge
   milvus:
-    external: true
+    external:
+      name: milvus

@@ -402,6 +402,15 @@ def sidebar():
                         lambda: database_callback(st.session_state.database_config)
                     ),
                 )
+            selected_file = st.selectbox(
+                "Show files from the data folder:",
+                options=(
+                    os.listdir("/usr/src/app/data")
+                    if os.path.exists("/usr/src/app/data")
+                    else ["No files available"]
+                ),
+                help="This dropdown lists all files in the data folder. Selecting an item does nothing.",
+            )
 
 
 def chat(tab):

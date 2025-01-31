@@ -8,6 +8,7 @@ import toml
 from ingestion.chunking import (
     Chunk,
     Chunker,
+    DoclingHybridChunker,
     DoclingHierarchicalChunker,
     RecursiveCharacterChunker,
     SplitSentencesChunker,
@@ -73,14 +74,14 @@ class DataBroker(metaclass=SingletonMeta):
         Raises:
             ValueError: If the configured embedding method is not supported
         """
-        OLLAMA_MODELS = ["mxbai-embed-large", "nomic-embed-text"]
-        HFACE_MODELS = ["all-mpnet-base-v2"]
+        OLLAMA_MODELS = ["mxbai-embed-large", "nomic-embed-text", "bge-m3:567m"]
+        HFACE_MODELS = ["BAAI/bge-m3"]
 
         embedding_model = self._database_config.embedding_model
         if embedding_model in OLLAMA_MODELS:
             macbook_endpoint = self._secrets["localmodel"]["macbook_endpoint"]
             embedder = OllamaEmbedder(
-                model_name=embedding_model, endpoint=macbook_endpoint
+                model_name=embedding_model, endpoint=macbook_endpoint + "/api/embed"
             )
             try:
                 embedder.test_connection()
@@ -88,7 +89,7 @@ class DataBroker(metaclass=SingletonMeta):
                 logger.error(
                     "Failed to connect to the Ollama model. Defaulting to HuggingFace embeddings."
                 )
-                embedder = HuggingFaceEmbedder(model_name="all-mpnet-base-v2")
+                embedder = HuggingFaceEmbedder(model_name="BAAI/bge-m3")
         elif embedding_model in HFACE_MODELS:
             embedder = HuggingFaceEmbedder(model_name=embedding_model)
         else:
@@ -106,7 +107,9 @@ class DataBroker(metaclass=SingletonMeta):
         Raises:
             ValueError: If the configured chunking method is not supported
         """
-        if self._database_config.chunking_method == "docling_hierarchical":
+        if self._database_config.chunking_method == "docling_hybrid":
+            chunker = DoclingHybridChunker()
+        elif self._database_config.chunking_method == "docling_hierarchical":
             chunker = DoclingHierarchicalChunker()
         elif self._database_config.chunking_method == "split_sentences":
             chunker = SplitSentencesChunker()
