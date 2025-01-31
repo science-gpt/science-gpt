@@ -17,6 +17,9 @@ streamlit-float
 streamlit-tags
 streamlit-card
 st-annotated-text
+torch
+torchvision
+torchaudio
 toml
 hydra-core
 omegaconf

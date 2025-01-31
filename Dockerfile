@@ -1,19 +1,19 @@
 # Define a default base image for the NVIDIA CUDA runtime
 ARG IMAGE_NAME=nvidia/cuda
-ARG IMAGE_TAG=12.6.3-runtime-ubuntu24.04
+ARG IMAGE_TAG=12.4.1-cudnn-devel-ubuntu22.04
 
 # Use the ARG values in the FROM directive
 FROM ${IMAGE_NAME}:${IMAGE_TAG} as base
 
 # Set environment variables for cuDNN
-ENV NV_CUDNN_VERSION=9.5.1.17-1
-ENV NV_CUDNN_PACKAGE_NAME=libcudnn9-cuda-12
-ENV NV_CUDNN_PACKAGE=${NV_CUDNN_PACKAGE_NAME}=${NV_CUDNN_VERSION}
+# ENV NV_CUDNN_VERSION=9.5.1.17-1
+# ENV NV_CUDNN_PACKAGE_NAME=libcudnn9-cuda-12
+# ENV NV_CUDNN_PACKAGE=${NV_CUDNN_PACKAGE_NAME}=${NV_CUDNN_VERSION}
 
 # Install cuDNN and Python dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ${NV_CUDNN_PACKAGE} python3 python3-pip python3-venv \
-    && apt-mark hold ${NV_CUDNN_PACKAGE_NAME} \
+    python3 python3-pip python3-venv \
+    # && apt-mark hold ${NV_CUDNN_PACKAGE_NAME} \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory for your application
@@ -23,9 +23,9 @@ WORKDIR /usr/src/
 COPY ./requirements.txt .
 ARG UPDATE_DEPS=false
 RUN if [ "$UPDATE_DEPS" = "true" ]; then \
-        pip install --upgrade -r requirements.txt --break-system-packages; \
+        pip install --upgrade -r requirements.txt; \
     else \
-        pip install -r requirements.txt --break-system-packages; \
+        pip install -r requirements.txt; \
     fi
 
 # Copy the data and application files
