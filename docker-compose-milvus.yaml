@@ -63,6 +63,11 @@ services:
       - "etcd"
       - "minio"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   default:
