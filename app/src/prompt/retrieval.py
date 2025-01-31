@@ -78,6 +78,7 @@ class ContextRetrieval(PromptDecorator):
         self.rewrite_model = rewrite_model
         self.cost = self._prompt.cost
         self.chunks = []
+        self.rewrite_query = ""
 
     def get_prompt(self, query: str) -> str:
 
@@ -86,6 +87,7 @@ class ContextRetrieval(PromptDecorator):
             DEFAULT_QUERY_REWRITER.format(question=query),
             override_config={"temperature": 0.0},
         )
+        self.rewrite_query = retrieval_query
         self.cost += cost
         print("Query was rewritten. The retrieval query is:\n", retrieval_query)
 
@@ -118,3 +120,6 @@ class ContextRetrieval(PromptDecorator):
 
     def get_chunks(self) -> List[str]:
         return self.chunks
+
+    def get_rewrite_query(self) -> Optional[str]:
+        return self.rewrite_query
