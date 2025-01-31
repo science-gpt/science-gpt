@@ -368,7 +368,6 @@ def sidebar():
                 value=system_config.model_params.top_p,
                 help="Limits token selection to the most probable ones, ensuring coherence; lower values restrict diversity, while higher values allow for more variation. Adjust for balanced creativity and relevance.",
             )
-            
 
         with st.sidebar.expander("Database Options", expanded=False):
             with st.form("advanced", border=False):
@@ -405,10 +404,13 @@ def sidebar():
                 )
             selected_file = st.selectbox(
                 "Show files from the data folder:",
-                options=os.listdir("/usr/src/app/data") if os.path.exists("/usr/src/app/data") else ["No files available"],
+                options=(
+                    os.listdir("/usr/src/app/data")
+                    if os.path.exists("/usr/src/app/data")
+                    else ["No files available"]
+                ),
                 help="This dropdown lists all files in the data folder. Selecting an item does nothing.",
-            )                
-
+            )
 
 
 def chat(tab):

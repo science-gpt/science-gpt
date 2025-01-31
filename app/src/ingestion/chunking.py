@@ -143,9 +143,10 @@ class DoclingHierarchicalChunker(Chunker):
         ]
         return chunks
 
+
 class DoclingHybridChunker(Chunker):
     """
-    A Hybrid Chunker implementation that processes Docling documents into chunks, 
+    A Hybrid Chunker implementation that processes Docling documents into chunks,
     including headings, captions, and metadata.
     """
 
@@ -154,7 +155,9 @@ class DoclingHybridChunker(Chunker):
         Initialize the HybridDoclingChunker.
         """
         self.tokenizer = AutoTokenizer.from_pretrained("BAAI/bge-m3")
-        self.chunker = HybridChunker(tokenizer=self.tokenizer, max_tokens=8192, merge_peers=True)
+        self.chunker = HybridChunker(
+            tokenizer=self.tokenizer, max_tokens=8192, merge_peers=True
+        )
 
     def __call__(self, content: DoclingDocument) -> List[Chunk]:
         """
@@ -173,12 +176,14 @@ class DoclingHybridChunker(Chunker):
             )
 
         # Use the conv_result.document structure for chunking (same as HierarchicalChunker)
-        document = content.conv_result.document  # This matches the HierarchicalChunker's approach
-        
+        document = (
+            content.conv_result.document
+        )  # This matches the HierarchicalChunker's approach
+
         # Now, chunk the document
         chunk_iter = self.chunker.chunk(document)
         chunks = []
-        
+
         # Generate chunk data with headings, captions, and metadata
         for i, chunk in tqdm(enumerate(chunk_iter)):
             chunk_text = chunk.text
@@ -189,12 +194,16 @@ class DoclingHybridChunker(Chunker):
             # Concatenate headings and captions into the text (add them at the start or end)
             combined_text = chunk_text
             if headings:
-                combined_text = f"Headings: {headings}\n" + combined_text  # Add headings at the top
+                combined_text = (
+                    f"Headings: {headings}\n" + combined_text
+                )  # Add headings at the top
             if captions:
-                combined_text = f"Captions: {captions}\n" + combined_text  # Add captions after headings
+                combined_text = (
+                    f"Captions: {captions}\n" + combined_text
+                )  # Add captions after headings
             # if metadata:
             #     combined_text += f"\nMetadata: {json.dumps(metadata)}"  # Add metadata at the end
-            
+
             # Prepare chunk data
             chunk_data = {
                 "text": combined_text,
@@ -203,7 +212,7 @@ class DoclingHybridChunker(Chunker):
                 # "metadata": metadata,
                 "document_name": content.name,
             }
-            
+
             # Create the chunk with the combined text
             chunks.append(
                 Chunk(

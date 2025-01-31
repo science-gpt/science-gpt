@@ -81,7 +81,7 @@ class DataBroker(metaclass=SingletonMeta):
         if embedding_model in OLLAMA_MODELS:
             macbook_endpoint = self._secrets["localmodel"]["macbook_endpoint"]
             embedder = OllamaEmbedder(
-                model_name=embedding_model, endpoint=macbook_endpoint+"/api/embed"
+                model_name=embedding_model, endpoint=macbook_endpoint + "/api/embed"
             )
             try:
                 embedder.test_connection()
