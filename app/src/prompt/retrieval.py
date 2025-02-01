@@ -1,9 +1,10 @@
 from typing import List, Optional
 
 from databroker.databroker import DataBroker
-from models.models import ChatModel
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent, PromptDecorator
+
+from models.models import ChatModel
 
 DEFAULT_QUERY_REWRITER: str = """
     You are an expert in simplifying scientific literature search queries for toxicology and pesticide research. 
@@ -47,6 +48,8 @@ class TestRetrieval(PromptDecorator):
     def __init__(self, prompt: PromptComponent) -> None:
         self._prompt = prompt
         self.cost = self._prompt.cost
+        self.chunks = self._prompt.chunks
+        self.rewrite_query = self._prompt.rewrite_query
 
     def get_prompt(self, query: str) -> str:
         return self._prompt.get_prompt(query).format(
@@ -77,8 +80,8 @@ class ContextRetrieval(PromptDecorator):
         self.collection = collection
         self.rewrite_model = rewrite_model
         self.cost = self._prompt.cost
-        self.chunks = []
-        self.rewrite_query = ""
+        self.chunks = self._prompt.chunks
+        self.rewrite_query = self._prompt.rewrite_query
 
     def get_prompt(self, query: str) -> str:
 
@@ -117,9 +120,3 @@ class ContextRetrieval(PromptDecorator):
                 context=context_text, decorate="{decorate}"
             )
         )
-
-    def get_chunks(self) -> List[str]:
-        return self.chunks
-
-    def get_rewrite_query(self) -> Optional[str]:
-        return self.rewrite_query
