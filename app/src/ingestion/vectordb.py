@@ -335,8 +335,6 @@ class MilvusDB(VectorDB):
         if filenames:
             filter_list.append(f"TEXT_MATCH(filename, '{' '.join(filenames)}')")
 
-        print(filenames)
-        print(filter_list)
         filter_expr = " AND ".join(filter_list) if len(filter_list) > 0 else None
 
         print("-------------------------")
