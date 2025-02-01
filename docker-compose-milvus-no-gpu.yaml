@@ -52,13 +52,6 @@ services:
     ports:
       - "19530:19530"
       - "9091:9091"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              capabilities: ["gpu"]
-              device_ids: ["0"]
     depends_on:
       - "etcd"
       - "minio"

@@ -24,12 +24,19 @@ do
     esac
 done
 
+DCScienceGPT="docker-compose-sciencegpt.yaml"
+DCMilvus="docker-compose-milvus.yaml"
+if [ "$NO_GPU" = true ]; then
+    DCScienceGPT="docker-compose-sciencegpt-no-gpu.yaml"
+    DCMilvus="docker-compose-milvus-no-gpu.yaml"
+fi
+
 if [ "$DEV_MODE" = true ] && [ "$BUILD" = true ]; then
-    GPU=$NO_GPU DEV_MODE=true UPDATE_DEPS=$UPDATE_DEPS docker compose -f docker-compose-sciencegpt.yaml -f docker-compose-milvus.yaml up --pull always --build
+    GPU=$NO_GPU DEV_MODE=true UPDATE_DEPS=$UPDATE_DEPS docker compose -f $DCScienceGPT -f $DCMilvus up --pull always --build
 elif [ "$DEV_MODE" = true ]; then
-    GPU=$NO_GPU DEV_MODE=true docker compose -f docker-compose-sciencegpt.yaml -f docker-compose-milvus.yaml up --pull always
+    GPU=$NO_GPU DEV_MODE=true docker compose -f $DCScienceGPT -f $DCMilvus up --pull always
 elif [ "$BUILD" = true ]; then
-    GPU=$NO_GPU UPDATE_DEPS=$UPDATE_DEPS docker compose -f docker-compose-sciencegpt.yaml -f docker-compose-milvus.yaml up --pull always --build
+    GPU=$NO_GPU UPDATE_DEPS=$UPDATE_DEPS docker compose -f $DCScienceGPT -f $DCMilvus up --pull always --build
 else
-    GPU=$NO_GPU docker compose -f docker-compose-sciencegpt.yaml -f docker-compose-milvus.yaml up --pull always
+    GPU=$NO_GPU docker compose -f $DCScienceGPT -f $DCMilvus up --pull always
 fi
