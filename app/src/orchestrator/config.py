@@ -52,6 +52,7 @@ class RAGParams(BaseModel):
     onlyusecontext: bool
     useknowledgebase: bool
     keywords: Optional[list[str]]
+    filenames: Optional[list[str]]
 
 
 class SystemConfig(BaseModel):

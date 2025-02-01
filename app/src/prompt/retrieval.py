@@ -99,6 +99,7 @@ class ContextRetrieval(PromptDecorator):
             top_k=self.config.rag_params.top_k,
             collection=self.collection,
             keywords=self.config.rag_params.keywords,
+            filenames=self.config.rag_params.filenames,
         )
 
         # No results were returned.

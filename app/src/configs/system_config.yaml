@@ -72,7 +72,7 @@ extraction:
   
 
 chunking:
-  chunking_method: "docling_hybrid"
+  chunking_method: "recursive_character"
   supported_chunkers:
     - "docling_hybrid"
     - "docling_hierarchical"
@@ -106,6 +106,7 @@ rag_params:
   useknowledgebase: False 
   top_k: 5
   keywords:
+  filenames:
   
   # prompt modifiers
   moderationfilter: False

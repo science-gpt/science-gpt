@@ -52,6 +52,7 @@ services:
     ports:
       - "19530:19530"
       - "9091:9091"
+    {{ if eq $GPU true }}
     deploy:
       resources:
         reservations:
@@ -59,6 +60,7 @@ services:
             - driver: nvidia
               capabilities: ["gpu"]
               device_ids: ["0"]
+    {{ end }}
     depends_on:
       - "etcd"
       - "minio"

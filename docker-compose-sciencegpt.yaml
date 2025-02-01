@@ -22,6 +22,7 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+    {{ if eq $GPU true }}
     deploy:
       resources:
         reservations:
@@ -29,7 +30,7 @@ services:
             - driver: nvidia
               capabilities: ["gpu"]
               device_ids: ["0"] # Change "0" to the desired GPU ID if needed
-
+    {{ end }}
   nginx:
     image: nginx:latest
     container_name: science-gpt-nginx
