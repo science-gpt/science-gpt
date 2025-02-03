@@ -70,7 +70,7 @@ Before proceeding, make sure Docker is installed on your computer and running. Y
 
 ### Update Configuration
 
-If you run this app **locally**, navigate to `app/src/configs/user_config.yaml`. On line 93, ensure the `vector_db` settings are correct:
+If you run this app **locally**, navigate to `app/src/configs/system_config.yaml`. On line 93, ensure the `vector_db` settings are correct:
 
 ```yaml
 vector_db:

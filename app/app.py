@@ -4,10 +4,12 @@ import sys
 import uuid
 from types import SimpleNamespace
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 from annotated_text import annotated_text
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from streamlit_agraph import Config, Edge, Node, agraph
 from streamlit_card import card
 from streamlit_feedback import streamlit_feedback
 from streamlit_float import float_css_helper, float_init, float_parent
@@ -331,8 +333,16 @@ def sidebar():
                     label="Keyword Filters",
                     text="Enter keywords and press enter",
                     value=system_config.rag_params.keywords,
-                    maxtags=3,
-                    key="keyword_tags",
+                    maxtags=15,
+                    key="keyword_tags_chat",
+                )
+
+                system_config.rag_params.filenames = st_tags(
+                    label="File Filtered Retrieval",
+                    text="Enter filenames and press enter",
+                    value=system_config.rag_params.filenames,
+                    maxtags=15,  # max number of tags
+                    key="filename_tags_chat",
                 )
 
         with st.sidebar.expander("Prompt Modifiers", expanded=False):
@@ -527,11 +537,89 @@ def knowledgebase(tab):
             )
 
 
+def search(search_tab):
+    with search_tab:
+        query = st.text_input("Search Query", "")
+        st.session_state.filenames = st_tags(
+            label="File Filtered Retrieval",
+            text="Enter filenames and press enter",
+            value=st.session_state.get("filenames", []),
+            suggestions=["Acephate.pdf", "Atrazine.pdf", "Paraquat.pdf"],
+            maxtags=15,  # max number of tags
+            key="filename_tags",
+        )
+        # creates a tag section to enter keywords
+        st.session_state.keywords = st_tags(
+            label="Keyword Filtered Retrieval",
+            text="Enter keywords and press enter",
+            value=st.session_state.get("keywords", []),
+            suggestions=["Toxicology", "Regulation", "Environment"],
+            maxtags=10,  # max number of tags
+            key="keyword_tags",
+        )
+
+        if len(query) > 0:
+            search_results = st.session_state.databroker.search(
+                [query],
+                system_config.rag_params.top_k + 10,
+                collection="base",
+                keywords=st.session_state.keywords,
+                filenames=st.session_state.filenames,
+            )
+
+            if len(search_results[0]) == 0:
+                st.header("No Results")
+                return
+
+            nodes = [
+                Node(
+                    id=r.id,
+                    title=r.document,
+                    label=r.id,
+                    # link= Use this to open up a PDF view?
+                    color=(
+                        "#ff80ed" if i < system_config.rag_params.top_k else "#065535"
+                    ),
+                )
+                for i, r in enumerate(search_results[0])
+            ]
+            dist = [
+                np.linalg.norm(np.array(j.embedding) - np.array(k.embedding))
+                for i, k in enumerate(search_results[0])
+                for j in search_results[0][i + 1 :]
+            ]
+            thresh = min(dist) + st.session_state.edge_thresh * (max(dist) - min(dist))
+            edges = [
+                Edge(source=k.id, target=j.id, type="CURVE_SMOOTH")
+                for i, k in enumerate(search_results[0])
+                for h, j in enumerate(search_results[0][i + 1 :])
+                if dist[int(i * (i + 1) / 2) + h] < thresh
+            ]
+
+            config = Config(
+                width=700,
+                height=700,
+                directed=False,
+                nodeHighlightBehavior=False,
+                highlightColor="#F7A7A6",  # or "blue"
+                collapsible=False,
+                node={"labelProperty": "label"},
+                # **kwargs e.g. node_size=1000 or node_color="blue"
+            )
+
+            return_value = agraph(nodes=nodes, edges=edges, config=config)
+
+        st.session_state.edge_thresh = st.slider("Edge Threshold", 0.0, 1.0, 0.5)
+
+
 def sciencegpt():
     float_init(theme=True, include_unstable_primary=False)
     init_streamlit()
     sidebar()
-    chat_tab, knowledge_base, survey_tab = st.tabs(["Chat", "Knowledge Base", "Survey"])
+    chat_tab, retrieval_tab, knowledge_base, survey_tab = st.tabs(
+        ["Chat", "Retrieval", "Knowledge Base", "Survey"]
+    )
+    search(retrieval_tab)
     chat(chat_tab)
     knowledgebase(knowledge_base)
     survey(survey_tab)

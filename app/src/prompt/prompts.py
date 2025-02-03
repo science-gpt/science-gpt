@@ -33,6 +33,8 @@ class DefinitionsDecorator(PromptDecorator):
         self._prompt = prompt
         self.definitions = definitions
         self.cost = self._prompt.cost
+        self.chunks = self._prompt.chunks
+        self.rewrite_query = self._prompt.rewrite_query
 
     def get_prompt(self, query: str) -> str:
         return self._prompt.get_prompt(query).format(
@@ -57,6 +59,8 @@ class OnlyUseContextDecorator(PromptDecorator):
     ) -> None:
         self._prompt = prompt
         self.cost = self._prompt.cost
+        self.chunks = self._prompt.chunks
+        self.rewrite_query = self._prompt.rewrite_query
 
     def get_prompt(self, query: str) -> str:
         return self._prompt.get_prompt(query).format(decorate=self.PromptTemplate)
@@ -66,8 +70,7 @@ class ModerationDecorator(PromptDecorator):
     _prompt: PromptComponent = None
     PromptTemplate: str = """
     {decorate}
-    Please refuse to answer any query containing offensive, racist, homophobic, sexist, and pornographic 
-    content. Do no answer with offensive, racist, homophophic, sexist, or pornographic answers. 
+    Please refuse to answer any query containing offensive content. 
     """
 
     def __init__(
@@ -76,6 +79,8 @@ class ModerationDecorator(PromptDecorator):
     ) -> None:
         self._prompt = prompt
         self.cost = self._prompt.cost
+        self.chunks = self._prompt.chunks
+        self.rewrite_query = self._prompt.rewrite_query
 
     def get_prompt(self, query: str) -> str:
         return self._prompt.get_prompt(query).format(decorate=self.PromptTemplate)
@@ -94,6 +99,8 @@ class ExamplesDecorator(PromptDecorator):
         self.question = question
         self.examples = examples
         self.cost = self._prompt.cost
+        self.chunks = self._prompt.chunks
+        self.rewrite_query = self._prompt.rewrite_query
 
     def get_prompt(self, query: str) -> str:
         return self._prompt.get_prompt(query).format(
