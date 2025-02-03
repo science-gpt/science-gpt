@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from databroker.databroker import DataBroker
+from logs.logger import logger
 from models.models import ChatModel
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent, PromptDecorator
@@ -88,6 +89,10 @@ class ContextRetrieval(PromptDecorator):
         )
         self.cost += cost
         print("Query was rewritten. The retrieval query is:\n", retrieval_query)
+        logger.info(
+            "Retrieval query",
+            extra={"retrieval_query": retrieval_query, "original_query": query},
+        )
 
         results = self.databroker.search(
             [retrieval_query],
