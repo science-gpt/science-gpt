@@ -70,8 +70,6 @@ class ChatOrchestrator(metaclass=SingletonMeta):
                 rewrite_model=self.model,
             )
 
-            # print(f"here you go chunk orchestrator - use_rag{chunks}")
-
         # WARNING: if useknowledgebase is enabled without uploading documents, the app errors out
         if self.config.rag_params.useknowledgebase:
             prompt = ContextRetrieval(
@@ -97,7 +95,14 @@ class ChatOrchestrator(metaclass=SingletonMeta):
                 + " Response: "
                 + response
                 + " System Config: "
-                + self.config.model_dump_json()
+                + self.config.model_dump_json(
+                    exclude={  # hides all the options. only shows you what you're using
+                        "extraction": {"supported_extractors"},
+                        "vector_db": {"supported_databases"},
+                        "chunking": {"supported_chunkers"},
+                        "embedding": {"supported_embedders"},
+                    }
+                )
             )
 
         # Carter: we will want a better solution here but we need error handling for the time being.
