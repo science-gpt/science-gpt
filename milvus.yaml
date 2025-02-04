@@ -35,7 +35,7 @@ etcd:
   # It is recommended not to change this parameter if there is no specific reason.
   kvSubPath: kv
   log:
-    level: info # Only supports debug, info, warn, error, panic, or fatal. Default 'info'.
+    level: warn # Only supports debug, info, warn, error, panic, or fatal. Default 'info'.
     # path is one of:
     #  - "default" as os.Stderr,
     #  - "stderr" as os.Stderr,

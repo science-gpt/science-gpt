@@ -72,7 +72,7 @@ extraction:
   
 
 chunking:
-  chunking_method: "recursive_character"
+  chunking_method: "docling_hybrid"
   supported_chunkers:
     - "docling_hybrid"
     - "docling_hierarchical"
