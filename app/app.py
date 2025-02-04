@@ -339,11 +339,15 @@ def sidebar():
 
                 system_config.rag_params.filenames = st.multiselect(
                     "Select files for filtering:",
-                    options=[
-                        os.path.splitext(f)[0]
-                        for f in os.listdir("/usr/src/app/data")
-                        if f.endswith(".pdf")
-                    ] if os.path.exists("/usr/src/app/data") else [],
+                    options=(
+                        [
+                            os.path.splitext(f)[0]
+                            for f in os.listdir("/usr/src/app/data")
+                            if f.endswith(".pdf")
+                        ]
+                        if os.path.exists("/usr/src/app/data")
+                        else []
+                    ),
                     default=system_config.rag_params.filenames,
                     help="Choose one or more files from the list to filter results.",
                     key="sidebar_filenames",
@@ -554,11 +558,15 @@ def search(search_tab):
         # )
         st.session_state.filenames = st.multiselect(
             "Select files for filtering:",
-            options=[
-                os.path.splitext(f)[0]
-                for f in os.listdir("/usr/src/app/data")
-                if f.endswith(".pdf")
-            ] if os.path.exists("/usr/src/app/data") else [],
+            options=(
+                [
+                    os.path.splitext(f)[0]
+                    for f in os.listdir("/usr/src/app/data")
+                    if f.endswith(".pdf")
+                ]
+                if os.path.exists("/usr/src/app/data")
+                else []
+            ),
             default=st.session_state.get("filenames", []),
             help="Choose one or more files from the list to filter results.",
             key="searchtab_filenames",
