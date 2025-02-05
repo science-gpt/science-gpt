@@ -337,12 +337,20 @@ def sidebar():
                     key="keyword_tags_chat",
                 )
 
-                system_config.rag_params.filenames = st_tags(
-                    label="File Filtered Retrieval",
-                    text="Enter filenames and press enter",
-                    value=system_config.rag_params.filenames,
-                    maxtags=15,  # max number of tags
-                    key="filename_tags_chat",
+                system_config.rag_params.filenames = st.multiselect(
+                    "Select files for filtering:",
+                    options=(
+                        [
+                            os.path.splitext(f)[0]
+                            for f in os.listdir("/usr/src/app/data")
+                            if f.endswith(".pdf")
+                        ]
+                        if os.path.exists("/usr/src/app/data")
+                        else []
+                    ),
+                    default=system_config.rag_params.filenames,
+                    help="Choose one or more files from the list to filter results.",
+                    key="sidebar_filenames",
                 )
 
         with st.sidebar.expander("Prompt Modifiers", expanded=False):
@@ -540,15 +548,29 @@ def knowledgebase(tab):
 def search(search_tab):
     with search_tab:
         query = st.text_input("Search Query", "")
-        st.session_state.filenames = st_tags(
-            label="File Filtered Retrieval",
-            text="Enter filenames and press enter",
-            value=st.session_state.get("filenames", []),
-            suggestions=["Acephate.pdf", "Atrazine.pdf", "Paraquat.pdf"],
-            maxtags=15,  # max number of tags
-            key="filename_tags",
+        # st.session_state.filenames = st_tags(
+        #     label="File Filtered Retrieval",
+        #     text="Enter filenames and press enter",
+        #     value=st.session_state.get("filenames", []),
+        #     suggestions=["Acephate.pdf", "Atrazine.pdf", "Paraquat.pdf"],
+        #     maxtags=15,  # max number of tags
+        #     key="filename_tags",
+        # )
+        st.session_state.filenames = st.multiselect(
+            "Select files for filtering:",
+            options=(
+                [
+                    os.path.splitext(f)[0]
+                    for f in os.listdir("/usr/src/app/data")
+                    if f.endswith(".pdf")
+                ]
+                if os.path.exists("/usr/src/app/data")
+                else []
+            ),
+            default=st.session_state.get("filenames", []),
+            help="Choose one or more files from the list to filter results.",
+            key="searchtab_filenames",
         )
-        # creates a tag section to enter keywords
         st.session_state.keywords = st_tags(
             label="Keyword Filtered Retrieval",
             text="Enter keywords and press enter",

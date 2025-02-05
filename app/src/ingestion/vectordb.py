@@ -326,7 +326,7 @@ class MilvusDB(VectorDB):
         Search for similar vectors in the database with optional keyword filtering.
         """
         # TODO allow user to set the search params
-        search_params = {"metric_type": "COSINE", "params": {"nprobe": 10}}
+        search_params = {"metric_type": "COSINE", "params": {"nprobe": 512}}
 
         filter_list = []
         if keywords:
