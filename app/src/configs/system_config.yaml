@@ -10,13 +10,15 @@ _target_: orchestrator.config.SystemConfig
 
 # Model Config Options
 model_params:
-  model_name: "GPT-3.5"
+  model_name: "GPT-4.0"
   seed: 42
   temperature: 0.0
   top_p: 1.0
   max_tokens: 512
   num_ctx: 2500
   supported_models:
+  - "deepseek-r1:32b"
+  - "deepseek-r1:70b"
   - "llama3:latest"
   - "GPT-4.0"
   - "GPT-3.5"
@@ -63,15 +65,16 @@ model_auth:
 
 # Document Processing Options
 extraction:
-  extraction_method: "pypdf2"
+  extraction_method: "docling"
   supported_extractors:
     - "pypdf2"
     - "docling"
   
 
 chunking:
-  chunking_method: "recursive_character"
+  chunking_method: "docling_hybrid"
   supported_chunkers:
+    - "docling_hybrid"
     - "docling_hierarchical"
     - "split_sentences"
     - "recursive_character"
@@ -80,9 +83,10 @@ chunking:
   
 
 embedding:
-  embedding_model: "all-mpnet-base-v2"
+  embedding_model: "bge-m3:567m"
   supported_embedders:
-    - "all-mpnet-base-v2"
+    - "bge-m3:567m"
+    - "BAAI/bge-m3"
     - "mxbai-embed-large"
     - "nomic-embed-text"
   
@@ -102,6 +106,7 @@ rag_params:
   useknowledgebase: False 
   top_k: 5
   keywords:
+  filenames:
   
   # prompt modifiers
   moderationfilter: False

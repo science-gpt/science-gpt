@@ -70,7 +70,7 @@ Before proceeding, make sure Docker is installed on your computer and running. Y
 
 ### Update Configuration
 
-Navigate to `app/src/configs/user_config.yaml`. On line 93, ensure the `vector_db` settings are correct:
+If you run this app **locally**, navigate to `app/src/configs/system_config.yaml`. On line 93, ensure the `vector_db` settings are correct:
 
 ```yaml
 vector_db:
@@ -83,6 +83,13 @@ vector_db:
 ```
 
 Verify that the `host` setting is set to `"localhost"`.
+
+### Warning
+
+**`system_config.yaml` is mandatory‼️**
+
+The app **requires** the `system_config.yaml` file to run. It should be located under `app/src/configs/`. This file is responsible for initializing the app with default parameters, such as supported AI models, chunking methods, and vector database settings. Without this file, users will not be able to access the app.
+
 
 ### Running the App
 

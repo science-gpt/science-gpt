@@ -4,10 +4,12 @@ import sys
 import uuid
 from types import SimpleNamespace
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 from annotated_text import annotated_text
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from streamlit_agraph import Config, Edge, Node, agraph
 from streamlit_card import card
 from streamlit_feedback import streamlit_feedback
 from streamlit_float import float_css_helper, float_init, float_parent
@@ -156,7 +158,7 @@ def send_prompt(prompt):
     )
 
 
-def edit_prompt(prompt, chunks, key=0):
+def edit_prompt(prompt, chunks, rewrite_prompt, key=0):
     """
     This is the textbox that allows the user to view and modify the prompt
     """
@@ -164,13 +166,10 @@ def edit_prompt(prompt, chunks, key=0):
     # TODO create a card for the base prompt +  create a card for each chunk
 
     with st.popover("See LLM Prompt", use_container_width=True):
-        st.subheader("The LLM Prompt")
-        nprompt = st.text_area(
-            "Modify the LLM Prompt:",
-            value=prompt,
-            height=300,
-            key="ta" + get_prompt_key(key),
-        )
+
+        if rewrite_prompt:
+            st.subheader("Prompt Information")
+            st.text_area("Your query was rewritten to", rewrite_prompt)
 
         if chunks:
             pattern = r"Context Source:\s*(?P<context_source>.*?)\s*-\s*Chunk\s*(?P<chunk_number>\d+)\s*Document:\s*(?P<document>.+)"
@@ -184,18 +183,26 @@ def edit_prompt(prompt, chunks, key=0):
             # annotated_text(formatted_chunks)
             # annotated_text((f"      TOTAL CHUNKS:  {len(chunks)}", f"{len(chunks)}"))
 
-            st.subheader("Context Chunks")
+            st.subheader("Chunks")
             for chunk in chunks:
-                st.divider()
                 match = re.match(pattern, chunk, re.DOTALL)
                 context_source = match.group("context_source")
                 chunk_number = match.group("chunk_number")
                 document = match.group("document")
 
-                st.markdown(f"### Context Source: {context_source}")
-                st.markdown(f"#### Chunk {chunk_number}")
+                st.markdown(f"##### Context Source: {context_source}")
+                st.markdown(f"##### Chunk {chunk_number}")
                 st.markdown(f":blue-background[{document}]")
                 st.divider()
+
+        with st.expander("View LLM Prompt", expanded=False):
+            st.subheader("The LLM Prompt")
+            nprompt = st.text_area(
+                "Modify the LLM Prompt:",
+                value=prompt,
+                height=300,
+                key="ta" + get_prompt_key(key),
+            )
 
         st.button(
             "Submit Prompt",
@@ -217,8 +224,10 @@ def create_answer(prompt):
     with st.chat_message("AI"):
         message_placeholder = st.empty()
 
-        llm_prompt, response, cost, chunks = st.session_state.orchestrator.triage_query(
-            query=prompt, model=st.session_state.model
+        llm_prompt, response, cost, chunks, rewrite_prompt = (
+            st.session_state.orchestrator.triage_query(
+                query=prompt, model=st.session_state.model
+            )
         )
 
         st.session_state.cost += float(cost)
@@ -232,7 +241,7 @@ def create_answer(prompt):
         ]
     )
 
-    edit_prompt(llm_prompt, chunks)
+    edit_prompt(llm_prompt, chunks, rewrite_prompt)
 
 
 def display_chat_history():
@@ -324,8 +333,24 @@ def sidebar():
                     label="Keyword Filters",
                     text="Enter keywords and press enter",
                     value=system_config.rag_params.keywords,
-                    maxtags=3,
-                    key="keyword_tags",
+                    maxtags=15,
+                    key="keyword_tags_chat",
+                )
+
+                system_config.rag_params.filenames = st.multiselect(
+                    "Select files for filtering:",
+                    options=(
+                        [
+                            os.path.splitext(f)[0]
+                            for f in os.listdir("/usr/src/app/data")
+                            if f.endswith(".pdf")
+                        ]
+                        if os.path.exists("/usr/src/app/data")
+                        else []
+                    ),
+                    default=system_config.rag_params.filenames,
+                    help="Choose one or more files from the list to filter results.",
+                    key="sidebar_filenames",
                 )
 
         with st.sidebar.expander("Prompt Modifiers", expanded=False):
@@ -395,6 +420,15 @@ def sidebar():
                         lambda: database_callback(st.session_state.database_config)
                     ),
                 )
+            selected_file = st.selectbox(
+                "Show files from the data folder:",
+                options=(
+                    os.listdir("/usr/src/app/data")
+                    if os.path.exists("/usr/src/app/data")
+                    else ["No files available"]
+                ),
+                help="This dropdown lists all files in the data folder. Selecting an item does nothing.",
+            )
 
 
 def chat(tab):
@@ -511,11 +545,103 @@ def knowledgebase(tab):
             )
 
 
+def search(search_tab):
+    with search_tab:
+        query = st.text_input("Search Query", "")
+        # st.session_state.filenames = st_tags(
+        #     label="File Filtered Retrieval",
+        #     text="Enter filenames and press enter",
+        #     value=st.session_state.get("filenames", []),
+        #     suggestions=["Acephate.pdf", "Atrazine.pdf", "Paraquat.pdf"],
+        #     maxtags=15,  # max number of tags
+        #     key="filename_tags",
+        # )
+        st.session_state.filenames = st.multiselect(
+            "Select files for filtering:",
+            options=(
+                [
+                    os.path.splitext(f)[0]
+                    for f in os.listdir("/usr/src/app/data")
+                    if f.endswith(".pdf")
+                ]
+                if os.path.exists("/usr/src/app/data")
+                else []
+            ),
+            default=st.session_state.get("filenames", []),
+            help="Choose one or more files from the list to filter results.",
+            key="searchtab_filenames",
+        )
+        st.session_state.keywords = st_tags(
+            label="Keyword Filtered Retrieval",
+            text="Enter keywords and press enter",
+            value=st.session_state.get("keywords", []),
+            suggestions=["Toxicology", "Regulation", "Environment"],
+            maxtags=10,  # max number of tags
+            key="keyword_tags",
+        )
+
+        if len(query) > 0:
+            search_results = st.session_state.databroker.search(
+                [query],
+                system_config.rag_params.top_k + 10,
+                collection="base",
+                keywords=st.session_state.keywords,
+                filenames=st.session_state.filenames,
+            )
+
+            if len(search_results[0]) == 0:
+                st.header("No Results")
+                return
+
+            nodes = [
+                Node(
+                    id=r.id,
+                    title=r.document,
+                    label=r.id,
+                    # link= Use this to open up a PDF view?
+                    color=(
+                        "#ff80ed" if i < system_config.rag_params.top_k else "#065535"
+                    ),
+                )
+                for i, r in enumerate(search_results[0])
+            ]
+            dist = [
+                np.linalg.norm(np.array(j.embedding) - np.array(k.embedding))
+                for i, k in enumerate(search_results[0])
+                for j in search_results[0][i + 1 :]
+            ]
+            thresh = min(dist) + st.session_state.edge_thresh * (max(dist) - min(dist))
+            edges = [
+                Edge(source=k.id, target=j.id, type="CURVE_SMOOTH")
+                for i, k in enumerate(search_results[0])
+                for h, j in enumerate(search_results[0][i + 1 :])
+                if dist[int(i * (i + 1) / 2) + h] < thresh
+            ]
+
+            config = Config(
+                width=700,
+                height=700,
+                directed=False,
+                nodeHighlightBehavior=False,
+                highlightColor="#F7A7A6",  # or "blue"
+                collapsible=False,
+                node={"labelProperty": "label"},
+                # **kwargs e.g. node_size=1000 or node_color="blue"
+            )
+
+            return_value = agraph(nodes=nodes, edges=edges, config=config)
+
+        st.session_state.edge_thresh = st.slider("Edge Threshold", 0.0, 1.0, 0.5)
+
+
 def sciencegpt():
     float_init(theme=True, include_unstable_primary=False)
     init_streamlit()
     sidebar()
-    chat_tab, knowledge_base, survey_tab = st.tabs(["Chat", "Knowledge Base", "Survey"])
+    chat_tab, retrieval_tab, knowledge_base, survey_tab = st.tabs(
+        ["Chat", "Retrieval", "Knowledge Base", "Survey"]
+    )
+    search(retrieval_tab)
     chat(chat_tab)
     knowledgebase(knowledge_base)
     survey(survey_tab)

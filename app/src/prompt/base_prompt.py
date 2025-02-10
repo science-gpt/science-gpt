@@ -76,6 +76,8 @@ class PromptDecorator(PromptComponent):
         """
         self._prompt = prompt
         self.cost = self._prompt.cost
+        self.chunks = self._prompt.chunks
+        self.rewrite_query = self._prompt.rewrite_query
 
     def get_prompt(self, query: str) -> str:
         """
@@ -96,6 +98,12 @@ class PromptDecorator(PromptComponent):
 
     def get_cost(self) -> float:
         return self.cost
+
+    def get_chunks(self) -> list:
+        return self.chunks
+
+    def get_rewrite_query(self) -> str:
+        return self.rewrite_query
 
 
 class ConcretePrompt(PromptComponent):
@@ -128,6 +136,8 @@ class ConcretePrompt(PromptComponent):
         """Overrides the prompt template if initialized with a different prompt"""
         self.PromptTemplate = system_prompt + ConcretePrompt.PromptTemplate
         self.cost = 0
+        self.chunks = []
+        self.rewrite_query = ""
 
     def get_prompt(self, query):
         print("Base Prompt")
@@ -135,3 +145,9 @@ class ConcretePrompt(PromptComponent):
 
     def get_cost(self) -> float:
         return self.cost
+
+    def get_chunks(self) -> list:
+        return self.chunks
+
+    def get_rewrite_query(self) -> str:
+        return self.rewrite_query

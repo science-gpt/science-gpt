@@ -9,6 +9,7 @@ from ingestion.chunking import (
     Chunk,
     Chunker,
     DoclingHierarchicalChunker,
+    DoclingHybridChunker,
     RecursiveCharacterChunker,
     SplitSentencesChunker,
 )
@@ -73,8 +74,8 @@ class DataBroker(metaclass=SingletonMeta):
         Raises:
             ValueError: If the configured embedding method is not supported
         """
-        OLLAMA_MODELS = ["mxbai-embed-large", "nomic-embed-text"]
-        HFACE_MODELS = ["all-mpnet-base-v2"]
+        OLLAMA_MODELS = ["mxbai-embed-large", "nomic-embed-text", "bge-m3:567m"]
+        HFACE_MODELS = ["BAAI/bge-m3"]
 
         embedding_model = self._database_config.embedding_model
         if embedding_model in OLLAMA_MODELS:
@@ -88,7 +89,7 @@ class DataBroker(metaclass=SingletonMeta):
                 logger.error(
                     "Failed to connect to the Ollama model. Defaulting to HuggingFace embeddings."
                 )
-                embedder = HuggingFaceEmbedder(model_name="all-mpnet-base-v2")
+                embedder = HuggingFaceEmbedder(model_name="BAAI/bge-m3")
         elif embedding_model in HFACE_MODELS:
             embedder = HuggingFaceEmbedder(model_name=embedding_model)
         else:
@@ -106,7 +107,9 @@ class DataBroker(metaclass=SingletonMeta):
         Raises:
             ValueError: If the configured chunking method is not supported
         """
-        if self._database_config.chunking_method == "docling_hierarchical":
+        if self._database_config.chunking_method == "docling_hybrid":
+            chunker = DoclingHybridChunker()
+        elif self._database_config.chunking_method == "docling_hierarchical":
             chunker = DoclingHierarchicalChunker()
         elif self._database_config.chunking_method == "split_sentences":
             chunker = SplitSentencesChunker()
@@ -313,14 +316,16 @@ class DataBroker(metaclass=SingletonMeta):
 
         # more looping over every entry in the db?
         new_chunks = []
+        metadatum = []
         for chunk in chunks:
             if chunk.name not in existing_ids:
                 new_chunks.append(chunk)
+                metadatum.append({"source": data.name, "id": chunk.name})
 
         if len(new_chunks):
             embeddings = self.embedder(new_chunks)
             try:
-                self.vectorstore[collection].insert(embeddings)
+                self.vectorstore[collection].insert(embeddings, metadatum)
             except Exception as e:
                 logger.error(f"Failed to get or create collection: {e}")
                 return []
@@ -342,6 +347,7 @@ class DataBroker(metaclass=SingletonMeta):
         top_k: int = 5,
         collection="base",
         keywords: Optional[list[str]] = None,
+        filenames: Optional[list[str]] = None,
     ) -> List[List[SearchResult]]:
         """
         Searches the vector store for the most relevant docs based on the given queries.
@@ -351,6 +357,7 @@ class DataBroker(metaclass=SingletonMeta):
             top_k (int): The number of results to return for each query
             collection (str, optional): Which collection to search for. Defaults to "base".
             keywords (List[str], optional): List of keywords to search for. Defaults to None.
+            filenames (List[str], optional): List of filenames to search for. Defaults to None.
 
         Returns:
             List[List[SearchResult]]: A list of lists of SearchResult objects containing
@@ -364,5 +371,7 @@ class DataBroker(metaclass=SingletonMeta):
         query_embeddings = self.embedder(query_chunks)
         query_vectors = [embedding.vector for embedding in query_embeddings]
 
-        results = self.vectorstore[collection].search(query_vectors, top_k, keywords)
+        results = self.vectorstore[collection].search(
+            query_vectors, top_k, keywords, filenames
+        )
         return results

@@ -4,14 +4,6 @@ cookie:
   name: random_cookie_name
 credentials:
   usernames:
-    ak47:
-      email: areel.khan@hc-sc.gc.ca
-      first_name: areel
-      last_name: khan
-      logged_in: false
-      password: $2b$12$4MAlvX4YrpSbeY5aRTS3GOB8pHrUa5Foez/SfjKlH1nadTEUaqtsW
-      password_hint: 'no'
-      roles: null
     bhux:
       email: bing.hu@phac-aspc.gc.ca
       first_name: Bing
@@ -20,20 +12,14 @@ credentials:
       password: $2b$12$2VY7SFAKVbw/n5bqf2kZB.q9NafpgDYzShHYlIb1y.ZTMmJz57B6u
       password_hint: '-'
       roles: null
-    jsmith:
-      email: jsmith@gmail.com
-      failed_login_attempts: 0
-      first_name: John
-      last_name: Smith
+    j55zhong:
+      email: jiaiyou.zhong@hc-sc.gc.ca
+      first_name: Jiayou
+      last_name: Zhong
       logged_in: false
-      password: $2b$12$fdXkuwMXuOWNWSrRodY4hO1bjWXzsBMYt9zOyXvFu5uhxQZy3mFDK
-    rbriggs:
-      email: rbriggs@gmail.com
-      failed_login_attempts: 0
-      first_name: Rebecca
-      last_name: Briggs
-      logged_in: false
-      password: $2b$12$N.D/dUAx0g7CaWi8lJQFnO5dn.11luC49xBJaLUp502wi7ykOdGsm
+      password: $2b$12$XbUz6uuCRYYtBBHfCX0keeQdhZ53EYdQV19GRkEoPQhFLQLFmqtey
+      password_hint: '1'
+      roles: null
     spcrook:
       email: spencer.crook@hc-sc.gc.ca
       first_name: spencer
@@ -51,3 +37,5 @@ pre-authorized:
   - chantal.medina@hc-sc.gc.ca
   - malik.talhat@hc-sc.gc.ca
   - carter.demars@hc-sc.gc.ca
+  - serena.iyoha@hc-sc.gc.ca
+  - jiaiyou.zhong@hc-sc.gc.ca

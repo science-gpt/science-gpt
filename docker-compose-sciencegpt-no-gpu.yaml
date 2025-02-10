@@ -22,13 +22,6 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              capabilities: ["gpu"]
-              device_ids: ["0"] # Change "0" to the desired GPU ID if needed
   nginx:
     image: nginx:latest
     container_name: science-gpt-nginx

@@ -57,13 +57,13 @@ class HuggingFaceEmbedder(Embedder):
     An embedder that uses HuggingFace's Sentence Transformer models to create embeddings.
     """
 
-    def __init__(self, model_name: str = "all-mpnet-base-v2"):
+    def __init__(self, model_name: str = "BAAI/bge-m3"):
         """
         Initialize the HuggingFaceSentenceTransformerEmbedder.
 
         Args:
             model_name (str): The name of the Sentence Transformer model to use.
-                              Defaults to "sentence-transformers/all-mpnet-base-v2".
+                              Defaults to "sentence-transformers/BAAI/bge-m3".
         """
         super().__init__()
         self.model = HuggingFaceEmbeddings(model_name=model_name)

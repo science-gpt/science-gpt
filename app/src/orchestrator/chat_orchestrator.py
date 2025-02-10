@@ -51,7 +51,9 @@ class ChatOrchestrator(metaclass=SingletonMeta):
 
         return LocalAIModel(self.config).test_connection()
 
-    def triage_query(self, query: str, model: str) -> tuple[str, str, float, list[str]]:
+    def triage_query(
+        self, query: str, model: str
+    ) -> tuple[str, str, float, list[str], str]:
         """
         Given a user query, the orchestrator detects user intent and leverages
         appropriate agents to provide a response.
@@ -60,6 +62,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         """
 
         chunks = []
+        rewriten_query = ""
         self.load_model(model)
         prompt = ConcretePrompt(self.system_prompt)
 
@@ -101,6 +104,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
                 }
             )
 
+            rewriten_query = prompt.get_rewrite_query()
             logger.info(
                 "LLM Call",
                 configs=filtered_config,
@@ -116,7 +120,7 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             logger.error("Unable to connect to local model.")
             return "N/A", "The model you selected is not online.", 0.0
 
-        return llm_prompt, response, cost, chunks
+        return llm_prompt, response, cost, chunks, rewriten_query
 
     def direct_query(self, prompt):
         """

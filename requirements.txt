@@ -15,8 +15,12 @@ streamlit-feedback
 streamlit-survey
 streamlit-float
 streamlit-tags
+streamlit-agraph
 streamlit-card
 st-annotated-text
+torch
+torchvision
+torchaudio
 toml
 hydra-core
 omegaconf

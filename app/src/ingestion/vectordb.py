@@ -16,6 +16,7 @@ class SearchResult:
     distance: float
     metadata: Mapping[str, Any]
     document: str
+    embedding: List[float]
 
 
 class VectorDB(ABC):
@@ -110,7 +111,7 @@ class ChromaDB(VectorDB):
         self.client = chromadb.PersistentClient(path=chromadb_path)
         self.collection = self.client.get_or_create_collection(name=collection_name)
 
-    def insert(self, embeddings: List[Embedding]) -> None:
+    def insert(self, embeddings: List[Embedding], metadatum: List[dict]) -> None:
         """
         Insert embeddings into the vector database.
 
@@ -120,13 +121,16 @@ class ChromaDB(VectorDB):
         documents = [embedding.text for embedding in embeddings]
         ids = [embedding.name for embedding in embeddings]
         vectors = [embedding.vector.tolist() for embedding in embeddings]
-        self.collection.add(ids=ids, embeddings=vectors, documents=documents)
+        self.collection.add(
+            ids=ids, embeddings=vectors, documents=documents, metadatum=metadatum
+        )
 
     def search(
         self,
         query_vectors: List[np.ndarray],
         top_k: int = 5,
         keywords: Optional[list[str]] = None,
+        filenames: Optional[list[str]] = None,
     ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database.
@@ -150,24 +154,36 @@ class ChromaDB(VectorDB):
             else:
                 where_document = {"$contains": keywords[0]}
 
+        where = None
+        if filenames:
+            if len(filenames) > 0:
+                where = {"source": {"$in": filenames}}
+
         query_embeddings = [vector.tolist() for vector in query_vectors]
         results = self.collection.query(
             query_embeddings=query_embeddings,
             n_results=top_k,
+            where=where,
             where_document=where_document,
+            include=["documents", "embeddings", "metadatum", "distances"],
         )
 
         all_results = []
         for i in range(len(query_vectors)):
             query_results = [
                 SearchResult(
-                    id=_id, distance=distance, metadata=metadata, document=document
+                    id=_id,
+                    distance=distance,
+                    metadata=metadata,
+                    document=document,
+                    embedding=embedding,
                 )
-                for _id, distance, metadata, document in zip(
+                for _id, distance, metadata, document, embedding in zip(
                     results["ids"][i],
                     results["distances"][i],
-                    results["metadatas"][i],
+                    results["metadatum"][i],
                     results["documents"][i],
+                    results["embeddings"][i],
                 )
             ]
             all_results.append(query_results)
@@ -259,6 +275,13 @@ class MilvusDB(VectorDB):
                 enable_analyzer=True,
                 enable_match=True,
             )
+            schema.add_field(
+                field_name="filename",
+                datatype=DataType.VARCHAR,
+                max_length=65535,
+                enable_analyzer=True,
+                enable_match=True,
+            )
 
             index_params = self.client.prepare_index_params()
             # TODO allow user to change the index parameters
@@ -274,7 +297,7 @@ class MilvusDB(VectorDB):
 
         self.client.load_collection(collection_name)
 
-    def insert(self, embeddings: List[Embedding]) -> None:
+    def insert(self, embeddings: List[Embedding], metadatum: List[dict]) -> None:
         """
         Insert embeddings into the vector database.
         """
@@ -283,9 +306,12 @@ class MilvusDB(VectorDB):
                 "id": embedding.name,
                 "vector": embedding.vector.tolist(),
                 "document": embedding.text,
+                "filename": metadata["source"],
             }
-            for embedding in embeddings
+            for embedding, metadata in zip(embeddings, metadatum)
         ]
+
+        print(entities)
 
         self.client.insert(collection_name=self.collection_name, data=entities)
 
@@ -294,16 +320,26 @@ class MilvusDB(VectorDB):
         query_vectors: List[np.ndarray],
         top_k: int = 5,
         keywords: Optional[List[str]] = None,
+        filenames: Optional[List[str]] = None,
     ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database with optional keyword filtering.
         """
         # TODO allow user to set the search params
-        search_params = {"metric_type": "COSINE", "params": {"nprobe": 10}}
+        search_params = {"metric_type": "COSINE", "params": {"nprobe": 512}}
 
-        filter_expr = (
-            f"TEXT_MATCH(document, '{' '.join(keywords)}')" if keywords else None
-        )
+        filter_list = []
+        if keywords:
+            filter_list.append(f"TEXT_MATCH(document, '{' '.join(keywords)}')")
+
+        if filenames:
+            filter_list.append(f"TEXT_MATCH(filename, '{' '.join(filenames)}')")
+
+        filter_expr = " AND ".join(filter_list) if len(filter_list) > 0 else None
+
+        print("-------------------------")
+        print(filter_expr)
+        print("-------------------------")
 
         results = self.client.search(
             collection_name=self.collection_name,
@@ -312,7 +348,7 @@ class MilvusDB(VectorDB):
             search_params=search_params,
             limit=top_k,
             filter=filter_expr,
-            output_fields=["document"],
+            output_fields=["document", "vector"],
         )
 
         all_results = []
@@ -325,6 +361,7 @@ class MilvusDB(VectorDB):
                         distance=hit.get("distance"),
                         metadata={},
                         document=hit.get("entity", {}).get("document"),
+                        embedding=hit.get("entity", {}).get("vector"),
                     )
                 )
             all_results.append(query_results)
