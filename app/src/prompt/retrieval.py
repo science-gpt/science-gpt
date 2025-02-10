@@ -91,7 +91,12 @@ class ContextRetrieval(PromptDecorator):
         print("Query was rewritten. The retrieval query is:\n", retrieval_query)
         logger.info(
             "Retrieval query",
-            xtra={"custom_dimensions": {"retrieval_query": retrieval_query, "original_query": query}},
+            xtra={
+                "custom_dimensions": {
+                    "retrieval_query": retrieval_query,
+                    "original_query": query,
+                }
+            },
         )
 
         results = self.databroker.search(

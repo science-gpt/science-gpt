@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Optional
 
@@ -7,7 +8,6 @@ from opencensus.ext.azure.trace_exporter import AzureExporter
 from opencensus.trace.samplers import ProbabilitySampler
 from opencensus.trace.tracer import Tracer
 from orchestrator.utils import SingletonMeta
-import json
 
 SURVEY_LEVEL = 25  # Custom log level for survey responses
 AZURE_LOGS_CONNECTION_STRING = (
@@ -62,22 +62,25 @@ class LogManager(logging.Logger, metaclass=SingletonMeta):
         self.extra_info["user"] = user
 
     def set_configs(self, configs: dict[dict]):
-        '''takes a json dump of the configs'''
-        flatdict = {subkey : subvalue for key, value in configs.items() for subkey, subvalue in value.items()}
+        """takes a json dump of the configs"""
+        flatdict = {
+            subkey: subvalue
+            for key, value in configs.items()
+            for subkey, subvalue in value.items()
+        }
         self.extra_info = self.extra_info | flatdict
 
-
-    def info(self, msg, *args, xtra=None, configs:Optional[dict]=None, **kwargs):
+    def info(self, msg, *args, xtra=None, configs: Optional[dict] = None, **kwargs):
         if configs is not None:
             self.set_configs(configs)
         extra_info = {
             "user": self.extra_info["user"],
-            "custom_dimensions": self.extra_info | (xtra if xtra is not None else {})}
-        
-        
+            "custom_dimensions": self.extra_info | (xtra if xtra is not None else {}),
+        }
+
         super().info(msg, *args, extra=extra_info, **kwargs)
 
-    def survey(self, msg, *args, xtra=None,configs:Optional[dict]=None, **kwargs):
+    def survey(self, msg, *args, xtra=None, configs: Optional[dict] = None, **kwargs):
         extra_info = self.extra_info | (xtra if xtra is not None else {})
         if self.isEnabledFor(SURVEY_LEVEL):
             self._log(SURVEY_LEVEL, msg, args, extra=extra_info, **kwargs)

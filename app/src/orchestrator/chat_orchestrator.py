@@ -90,29 +90,25 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             llm_prompt, response, cost = handler.call_llm(query)
             chunks = prompt.get_chunks()
 
-
-                        
             filtered_config = self.config.model_dump(
-                    exclude={  # hides all the options. only shows you what you're using
-                        "extraction": {"supported_extractors"},
-                        "vector_db": {"supported_databases"},
-                        "chunking": {"supported_chunkers"},
-                        "embedding": {"supported_embedders"},
-                        "model_auth": {"api_key", "macbook_endpoint"},
-                        "model_params": {"supported_models"},
-                    })
-            
-            logger.info("LLM Call",configs=filtered_config, xtra={"prompt": llm_prompt, "response": response})
+                exclude={  # hides all the options. only shows you what you're using
+                    "extraction": {"supported_extractors"},
+                    "vector_db": {"supported_databases"},
+                    "chunking": {"supported_chunkers"},
+                    "embedding": {"supported_embedders"},
+                    "model_auth": {"api_key", "macbook_endpoint"},
+                    "model_params": {"supported_models"},
+                }
+            )
 
-    
-            
+            logger.info(
+                "LLM Call",
+                configs=filtered_config,
+                xtra={"prompt": llm_prompt, "response": response},
+            )
 
             print("Model Params", filtered_config)
             print(type(filtered_config))
-
-            
-
-            
 
         # Carter: we will want a better solution here but we need error handling for the time being.
         # This catches errors when the local models are offline
