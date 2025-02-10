@@ -78,11 +78,7 @@ class LogManager(logging.Logger, metaclass=SingletonMeta):
         super().info(msg, *args, extra=extra_info, **kwargs)
 
     def survey(self, msg, *args, xtra=None,configs:Optional[dict]=None, **kwargs):
-        if configs is not None:
-            self.set_configs(configs)
-        extra_info = {
-            "user": self.extra_info["user"],
-            "custom_dimensions": self.extra_info | (xtra if xtra is not None else {})}
+        extra_info = self.extra_info | (xtra if xtra is not None else {})
         if self.isEnabledFor(SURVEY_LEVEL):
             self._log(SURVEY_LEVEL, msg, args, extra=extra_info, **kwargs)
 
