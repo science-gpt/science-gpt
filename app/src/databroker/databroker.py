@@ -215,16 +215,12 @@ class DataBroker(metaclass=SingletonMeta):
 
     def _init_databroker_cache(self, collection="base"):
         chunks = self.vectorstore[collection].get_all_ids()
+        collection_name = self.collection_name[collection]
         for chunk in tqdm(chunks):
             file = chunk.split(" - Chunk ")[0]
-            if (
-                file
-                not in self.data_cache[collection][self.collection_name[collection]]
-            ):
-                self.data_cache[collection][self.collection_name[collection]][file] = []
-            self.data_cache[collection][self.collection_name[collection]][file].append(
-                chunk
-            )
+            if file not in self.data_cache[collection][collection_name]:
+                self.data_cache[collection][collection_name][file] = []
+            self.data_cache[collection][collection_name][file].append(chunk)
 
     def _init_databroker_pipeline(self, database_config: SimpleNamespace) -> None:
         """
