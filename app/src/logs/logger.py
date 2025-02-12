@@ -1,4 +1,6 @@
+import json
 import logging
+from typing import Optional
 
 import toml
 from opencensus.ext.azure.log_exporter import AzureLogHandler
@@ -59,11 +61,26 @@ class LogManager(logging.Logger, metaclass=SingletonMeta):
     def set_user(self, user: str):
         self.extra_info["user"] = user
 
-    def info(self, msg, *args, xtra=None, **kwargs):
-        extra_info = self.extra_info | (xtra if xtra is not None else {})
+    def set_configs(self, configs: dict[dict]):
+        """takes a json dump of the configs"""
+        flatdict = {
+            subkey: subvalue
+            for key, value in configs.items()
+            for subkey, subvalue in value.items()
+        }
+        self.extra_info = self.extra_info | flatdict
+
+    def info(self, msg, *args, xtra=None, configs: Optional[dict] = None, **kwargs):
+        if configs is not None:
+            self.set_configs(configs)
+        extra_info = {
+            "user": self.extra_info["user"],
+            "custom_dimensions": self.extra_info | (xtra if xtra is not None else {}),
+        }
+
         super().info(msg, *args, extra=extra_info, **kwargs)
 
-    def survey(self, msg, *args, xtra=None, **kwargs):
+    def survey(self, msg, *args, xtra=None, configs: Optional[dict] = None, **kwargs):
         extra_info = self.extra_info | (xtra if xtra is not None else {})
         if self.isEnabledFor(SURVEY_LEVEL):
             self._log(SURVEY_LEVEL, msg, args, extra=extra_info, **kwargs)
