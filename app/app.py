@@ -172,20 +172,23 @@ def edit_prompt(prompt, chunks, rewrite_prompt, key=0):
             st.text_area("Your query was rewritten to", rewrite_prompt)
 
         if chunks:
-            pattern = r"Context Source:\s*(?P<context_source>.*?)\s*-\s*Chunk\s*(?P<chunk_number>\d+)\s*Document:\s*(?P<document>.+)"
-
-            ## annotated chunk isn't working as expected so I am using markdown to highlight the chunks
-            # formatted_chunks = []
-            # for i in range(len(chunks)):
-            #     formatted_chunks.append(
-            #        (f"{chunks[i]}", str(i+1))
-            #     )
-            # annotated_text(formatted_chunks)
-            # annotated_text((f"      TOTAL CHUNKS:  {len(chunks)}", f"{len(chunks)}"))
+            pattern = (
+                r"Context\s*Source:\s*"
+                r"(?P<context_source>.+?)"
+                r"\s*-\s*Chunk\s*"
+                r"(?P<chunk_number>[\d_]+)"
+                r"\s*Document:\s*"
+                r"(?P<document>.+)"
+            )
 
             st.subheader("Chunks")
+            print("chunks: ", chunks)
             for chunk in chunks:
-                match = re.match(pattern, chunk, re.DOTALL)
+                match = re.search(pattern, chunk, re.DOTALL)
+                if not match:
+                    st.error(f"Failed to parse chunk: {chunk[:50]}...")
+                    continue
+                
                 context_source = match.group("context_source")
                 chunk_number = match.group("chunk_number")
                 document = match.group("document")
@@ -583,7 +586,7 @@ def search(search_tab):
         if len(query) > 0:
             search_results = st.session_state.databroker.search(
                 [query],
-                system_config.rag_params.top_k + 10,
+                system_config.rag_params.top_k,
                 collection="base",
                 keywords=st.session_state.keywords,
                 filenames=st.session_state.filenames,

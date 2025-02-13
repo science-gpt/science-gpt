@@ -13,7 +13,7 @@ from ingestion.chunking import (
     RecursiveCharacterChunker,
     SplitSentencesChunker,
 )
-from ingestion.embedding import Embedder, HuggingFaceEmbedder, OllamaEmbedder
+from ingestion.embedding import Embedder, HuggingFaceEmbedder, OllamaEmbedder, BGEM3Embedder
 from ingestion.extraction import (
     ContentExtractor,
     DoclingPDFExtract,
@@ -21,7 +21,7 @@ from ingestion.extraction import (
     PyPDF2Extract,
 )
 from ingestion.raw_data import Data
-from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB
+from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB, MilvusBGE_DB
 from orchestrator.utils import SingletonMeta
 
 # Carter: I've left the logger as python's default for now because
@@ -41,6 +41,8 @@ class DataBroker(metaclass=SingletonMeta):
         self,
         database_config: SimpleNamespace = None,
         secrets_path: str = "secrets.toml",
+        use_bge_m3: bool = True,
+        **embedder_kwargs,
     ) -> None:
         """
         Instantiates an object of this class.
@@ -53,6 +55,13 @@ class DataBroker(metaclass=SingletonMeta):
                 "user": {},
             }
             self._init_databroker_pipeline(database_config)
+
+        if use_bge_m3:
+            print("Using BGEM3Embedder")
+            self.embedder = BGEM3Embedder(**embedder_kwargs)
+        else:
+            print("Using HuggingFaceEmbedder")
+            self.embedder = HuggingFaceEmbedder()
 
     def get_database_config(self) -> SimpleNamespace:
         """
@@ -75,29 +84,30 @@ class DataBroker(metaclass=SingletonMeta):
             ValueError: If the configured embedding method is not supported
         """
         OLLAMA_MODELS = ["mxbai-embed-large", "nomic-embed-text", "bge-m3:567m"]
-        HFACE_MODELS = ["BAAI/bge-m3"]
+        HFACE_MODELS = [""]
+        BGEM3_MODELS = ["BAAI/bge-m3"]
 
         embedding_model = self._database_config.embedding_model
         if embedding_model in OLLAMA_MODELS:
             macbook_endpoint = self._secrets["localmodel"]["macbook_endpoint"]
-            embedder = OllamaEmbedder(
-                model_name=embedding_model, endpoint=macbook_endpoint
-            )
+            embedder = OllamaEmbedder(model_name=embedding_model, endpoint=macbook_endpoint)
             try:
                 embedder.test_connection()
             except RuntimeError:
-                logger.error(
-                    "Failed to connect to the Ollama model. Defaulting to HuggingFace embeddings."
-                )
+                logger.error("Failed to connect to the Ollama model. Defaulting to HuggingFace embeddings.")
                 embedder = HuggingFaceEmbedder(model_name="BAAI/bge-m3")
         elif embedding_model in HFACE_MODELS:
+            print("Using HuggingFaceEmbedder")
             embedder = HuggingFaceEmbedder(model_name=embedding_model)
+        elif embedding_model in BGEM3_MODELS:
+            print("Using BGEM3Embedder")
+
+            embedder = BGEM3Embedder()
         else:
-            raise ValueError(
-                f"Unsupported embedding method: {self._database_config.embedding_model}"
-            )
+            raise ValueError(f"Unsupported embedding method: {embedding_model}")
 
         return embedder
+
 
     def _create_chunker(self) -> Chunker:
         """
@@ -155,11 +165,13 @@ class DataBroker(metaclass=SingletonMeta):
 
     def _create_vectorstore(self, embedding_dimension: int) -> Dict[str, VectorDB]:
         if self._database_config.vector_store.database == "chromadb":
+            print("Creating ChromaDB vector store")
             vectorstore = {
                 "base": ChromaDB(collection_name=self.collection_name["base"]),
                 "user": ChromaDB(collection_name=self.collection_name["user"]),
             }
         elif self._database_config.vector_store.database == "milvus":
+            print("Creating Milvus vector store")
             vectorstore = {
                 "base": MilvusDB(
                     collection_name=self.collection_name["base"],
@@ -174,11 +186,28 @@ class DataBroker(metaclass=SingletonMeta):
                     port=self._database_config.vector_store.port,
                 ),
             }
+        elif self._database_config.vector_store.database == "milvus_bge":
+            print("Creating MilvusBGE vector store")
+            vectorstore = {
+                "base": MilvusBGE_DB(
+                    collection_name=self.collection_name["base"],
+                    host=self._database_config.vector_store.host,
+                    port=self._database_config.vector_store.port,
+                    use_bge_m3=True
+                ),
+
+                "user": MilvusBGE_DB(
+                    collection_name=self.collection_name["user"],
+                    host=self._database_config.vector_store.host,   
+                    port=self._database_config.vector_store.port,
+                    use_bge_m3=True
+                ),
+            }
         else:
-            raise ValueError(
-                f"Unsupported chunking method: {self._database_config.chunking_method}"
-            )
+            raise ValueError(f"Unsupported vector store type: {self._database_config.vector_store.database}")
+        
         return vectorstore
+
 
     def _validate_extractor_chunker_compatibility(self):
         """
@@ -299,22 +328,15 @@ class DataBroker(metaclass=SingletonMeta):
     def insert(self, data: Data, collection="base") -> List[str]:
         """
         Process and insert the given raw data into the vector store.
-
-        This method orchestrates the extraction, chunking, embedding, and storage
-        of the input data.
-
-        Args:
-            data (Data): The raw data to be processed and inserted
-            collection (str, optional): Which collection to insert into. Defaults to "base".
+        Supports both standard embeddings and BGEM3 hybrid embeddings.
         """
         extractor = self.extractors.get(data.data_type)
         extracted_content = extractor(data)
 
         chunks = self.chunker(extracted_content)
-
+        print("chunks: ", chunks)
         existing_ids = self.vectorstore[collection].get_all_ids()
 
-        # more looping over every entry in the db?
         new_chunks = []
         metadatum = []
         for chunk in chunks:
@@ -322,17 +344,34 @@ class DataBroker(metaclass=SingletonMeta):
                 new_chunks.append(chunk)
                 metadatum.append({"source": data.name, "id": chunk.name})
 
-        if len(new_chunks):
-            embeddings = self.embedder(new_chunks)
+        if not new_chunks:
+            print("No new documents to add")
+            return []
+
+        # Handle BGEM3 Hybrid Embeddings
+        if self._database_config.vector_store.database == "milvus_bge":
+            embedding = self.embedder(new_chunks)
+            print("embedding: ", embedding)
+
+            # Insert using MilvusBGE_DB
+            try:
+                self.vectorstore[collection].insert(embedding, metadatum)
+                print(f"Successfully inserted {len(new_chunks)} hybrid embeddings into MilvusBGE.")
+            except Exception as e:
+                logger.error(f"Failed to insert into MilvusBGE_DB: {e}")
+
+
+        else:
+            embeddings = self.embedder(new_chunks)  # Standard embedding call
             try:
                 self.vectorstore[collection].insert(embeddings, metadatum)
+                print(f"Successfully inserted {len(new_chunks)} standard embeddings.")
             except Exception as e:
-                logger.error(f"Failed to get or create collection: {e}")
+                logger.error(f"Failed to insert into vector store: {e}")
                 return []
-        else:
-            print("No new documents to add")
 
         return [chunk.name for chunk in chunks]
+
 
     def clear_db(self, collection="base"):
         """
@@ -344,7 +383,7 @@ class DataBroker(metaclass=SingletonMeta):
     def search(
         self,
         queries: List[str],
-        top_k: int = 5,
+        top_k: int = 2,
         collection="base",
         keywords: Optional[list[str]] = None,
         filenames: Optional[list[str]] = None,
@@ -363,15 +402,19 @@ class DataBroker(metaclass=SingletonMeta):
             List[List[SearchResult]]: A list of lists of SearchResult objects containing
                 the search results for each query, sorted by relevance
         """
-        query_chunks = [
-            Chunk(text=query, name=f"Query_{i}", data_type="query")
-            for i, query in enumerate(queries)
-        ]
+        # Handle MilvusBGE hybrid search
+        if self._database_config.vector_store.database == "milvus_bge":
+            print("Using hybrid search in MilvusBGE_DB")
+            results = self.vectorstore[collection].search(queries, top_k, keywords, filenames)
 
-        query_embeddings = self.embedder(query_chunks)
-        query_vectors = [embedding.vector for embedding in query_embeddings]
+        else:
+            query_chunks = [
+                Chunk(text=query, name=f"Query_{i}", data_type="query")
+                for i, query in enumerate(queries)
+            ]
+            query_embeddings = self.embedder(query_chunks)
+            query_vectors = [embedding.vector for embedding in query_embeddings]
+            results = self.vectorstore[collection].search(query_vectors, top_k, keywords, filenames)
 
-        results = self.vectorstore[collection].search(
-            query_vectors, top_k, keywords, filenames
-        )
         return results
+

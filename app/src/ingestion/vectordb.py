@@ -1,11 +1,14 @@
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+import random
 from typing import Any, List, Mapping, Optional
+
+import scipy
 
 import chromadb
 import numpy as np
-from pymilvus import DataType, MilvusClient
+from pymilvus import AnnSearchRequest, DataType, MilvusClient, RRFRanker, WeightedRanker
 
 from .embedding import Embedding
 
@@ -25,21 +28,25 @@ class VectorDB(ABC):
     """
 
     @abstractmethod
-    def insert(self, embeddings: List[Embedding]) -> None:
+    def insert(self, embedding: Embedding, metadatum: Optional[List[dict]] = None) -> None:
         """
         Insert embeddings into the vector database.
 
+
         Args:
-            embeddings (List[Embedding]): List of Embedding objects to insert.
+            embedding (Embedding): Embedding object to insert.
+            metadatum (Optional[List[dict]]): Optional metadata list.
         """
         pass
+
 
     @abstractmethod
     def search(
         self,
-        query_vectors: List[np.ndarray],
+        queries: List[str],
         top_k: int = 5,
-        keywords: Optional[list[str]] = None,
+        keywords: Optional[List[str]] = None,
+        filenames: Optional[List[str]] = None,
     ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database.
@@ -359,7 +366,7 @@ class MilvusDB(VectorDB):
                     SearchResult(
                         id=str(hit.get("id")),
                         distance=hit.get("distance"),
-                        metadata={},
+                        metadata=hit.get("metadatum", {}),
                         document=hit.get("entity", {}).get("document"),
                         embedding=hit.get("entity", {}).get("vector"),
                     )
@@ -401,3 +408,310 @@ class MilvusDB(VectorDB):
         Clear all records from the collection.
         """
         self.client.delete(collection_name=self.collection_name, filter='id != "NULL"')
+
+from pymilvus.model.hybrid import BGEM3EmbeddingFunction
+from pymilvus.model.reranker import BGERerankFunction
+import logging
+from typing import List, Optional
+
+
+# Get a logger for this module.
+logger = logging.getLogger(__name__)
+
+class MilvusBGE_DB(VectorDB):
+    """
+    Concrete implementation of VectorDB for hybrid search with BGE-M3 embeddings.
+    
+    This class creates a Milvus collection designed for storing both dense and sparse vectors.
+    It uses separate fields ("dense_vector" and "sparse_vector") to support BGE-M3's output.
+    """
+    def __init__(self, collection_name: str, host: str = "localhost", port: str = "19530", 
+                 use_bge_m3: bool = True, use_reranker: bool = True):
+        """
+        Initialize the MilvusBGE_DB instance.
+        
+        Args:
+            collection_name (str): The name of the collection to create or use.
+            host (str): The host of the Milvus server.
+            port (str): The port of the Milvus server.
+            use_bge_m3 (bool): Whether to use the BGEM3 embedding function.
+            use_reranker (bool): Whether to use a reranker after search.
+        """
+        self.collection_name = collection_name
+        self.host = host
+        self.port = port
+        self.use_bge_m3 = use_bge_m3
+        self.use_reranker = use_reranker
+        self.dense_dim = 768
+
+        # Use the BGEM3 embedder if enabled.
+        if self.use_bge_m3:
+            print("Using BGEM3 embedder")
+            from pymilvus.model.hybrid import BGEM3EmbeddingFunction
+            self.ef = BGEM3EmbeddingFunction(use_fp16=False, device="cpu")
+            self.dense_dim = self.ef.dim["dense"]
+            print("Using dense_dimension: %d", self.dense_dim)
+        else:
+            self.ef = self.random_embedding
+            print("Using fallback embedder (if implemented)")
+
+
+
+        self._setup_milvus()
+
+    def random_embedding(self, texts):
+        """
+        Generates random embeddings for a list of texts.
+        Returns a dict with keys 'dense' and 'sparse'.
+        """
+        rng = np.random.default_rng()
+        return {
+            "dense": np.random.rand(len(texts), 768),
+            "sparse": [{d: rng.random() for d in random.sample(range(1000), random.randint(20, 30))} for _ in texts],
+        }
+
+
+    def _setup_milvus(self):
+        from pymilvus import connections, Collection, FieldSchema, CollectionSchema, DataType, utility
+        
+        print("Connecting to Milvus at %s:%s", self.host, self.port)
+        connections.connect("default", host=self.host, port=self.port)
+        print("Connected to Milvus successfully.")
+
+
+        # Define the collection schema.
+        fields = [
+            FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, auto_id=False, max_length=100),
+            FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=65535, enable_analyzer=True, enable_match=True),
+            FieldSchema(name="sparse_vector", dtype=DataType.SPARSE_FLOAT_VECTOR),
+            FieldSchema(name="dense_vector", dtype=DataType.FLOAT_VECTOR, dim=self.dense_dim),
+        ]
+        
+        schema = CollectionSchema(fields, "Hybrid search collection")
+        
+        # For debugging: drop any pre-existing collection.
+        if utility.has_collection(self.collection_name):
+            print("Collection %s already exists. Dropping it to re-create.", self.collection_name)
+            utility.drop_collection(self.collection_name)
+        
+
+        # Create the collection.
+        print("Creating collection %s", self.collection_name)
+        self.collection = Collection(self.collection_name, schema, consistency_level="Strong")
+        
+
+        # Create indexes on the vector fields.
+        sparse_index = {"index_type": "SPARSE_INVERTED_INDEX", "metric_type": "IP"}
+        dense_index = {"index_type": "FLAT", "metric_type": "IP"}
+        print("Creating index on 'sparse_vector' with params: %s", sparse_index)
+        self.collection.create_index("sparse_vector", sparse_index)
+
+        print("Creating index on 'dense_vector' with params: %s", dense_index)
+        self.collection.create_index("dense_vector", dense_index)
+        
+
+        # Load the collection so it can serve search requests immediately.
+        print("Loading collection %s", self.collection_name)
+        self.collection.load()
+        print("Collection %s loaded successfully", self.collection_name)
+
+    
+    def insert(self, embedding: Embedding, metadatum: Optional[List[dict]] = None) -> None:
+        """
+        Insert hybrid embeddings into the Milvus collection.
+        """
+        # milbus expects one embedding at a time for bgem3 embedder
+        # Extract the raw documents and ids from the embedding objects.
+        docs = embedding.docs
+
+        print("Inserting %d docs into collection %s" % (len(docs), self.collection_name))
+        
+        # Recompute embeddings using BGEM3 embedder.
+        docs_embeddings = self.ef(docs)
+        print("type(docs_embeddings): ", type(docs_embeddings))
+        
+        # Prepare the entities payload with all four required fields in order:
+        # [id, text, sparse_vector, dense_vector]
+        entities = [
+            [f"{i}" for i in range(len(docs))],  # Generate unique id for each doc
+            docs,                       # text field
+            docs_embeddings["sparse"],  # sparse_vector field
+            docs_embeddings["dense"]    # dense_vector field
+        ]
+        
+        print("[DEBUG] Entities structure:")
+        print("- ids:", type(entities[0]), len(entities[0]))
+        print("- docs:", type(entities[1]), len(entities[1]))
+        print("- sparse:", type(entities[2]))
+        print("- dense:", type(entities[3]))
+
+        self.collection.insert(entities)
+        print("Successfully inserted %d entities" % len(entities))
+        self.collection.flush()
+
+    def search(
+        self,
+        queries: List[str],
+        top_k: int = 2,
+        keywords: Optional[List[str]] = None,
+        filenames: Optional[List[str]] = None,
+    ) -> List[List[SearchResult]]:
+        print("Using hybrid search in MilvusBGE_DB")
+        print("[DEBUG] MilvusBGE_DB.search() received queries:", queries)
+        
+        print("top_k: ", top_k)
+        all_results = []
+        for query in queries:
+            query_results = []
+            
+            # Get embeddings for this query
+            query_embeddings = self.ef([query])
+            
+            # Prepare the search requests for both vector fields
+            sparse_req = AnnSearchRequest(
+                query_embeddings["sparse"],
+                "sparse_vector",
+                {"metric_type": "IP"},
+                limit=top_k
+            )
+            dense_req = AnnSearchRequest(
+                query_embeddings["dense"],
+                "dense_vector",
+                {"metric_type": "IP"},
+                limit=top_k
+            )
+            
+            # Perform hybrid search
+            # Currently Milvus only support 1 query in the same hybrid search request, so
+            # we inspect res[0] directly. In future release Milvus will accept batch
+            # hybrid search queries in the same call.
+            hybrid_results = self.collection.hybrid_search(
+                [sparse_req, dense_req],
+                rerank=RRFRanker() if self.use_reranker else None,
+                limit=top_k,
+                output_fields=["text", "id"]
+            )[0]
+            
+            # Process results
+            if self.use_reranker:
+                result_texts = [hit.fields["text"] for hit in hybrid_results]
+                # https://milvus.io/api-reference/pymilvus/v2.4.x/Rerankers/BGERerankFunction/BGERerankFunction.md
+                # here by default the reranker model is BAAI/bge-reranker-v2-m3
+                bge_rf = BGERerankFunction(device='cpu')
+                
+                try:
+                    # Match the example code's reranker call signature
+                    # rerank the results using BGE CrossEncoder model
+                    reranked_results = bge_rf(query, result_texts, top_k=top_k)
+                    for hit in reranked_results:
+                        print(f'text: {hit.text} distance {hit.score}')
+                        
+                    for i, hit in enumerate(reranked_results):
+                        query_results.append(
+                            SearchResult(
+                                id=hybrid_results[i].fields.get("id", ""),
+                                distance=float(hit.score),
+                                metadata={},
+                                document=hit.text,
+                                embedding=[]
+                            )
+                        )
+                except Exception as e:
+                    print(f"[ERROR] Reranking failed: {str(e)}")
+                    # Fall back to non-reranked results
+                    for hit in hybrid_results:
+                        query_results.append(
+                            SearchResult(
+                                id=hit.fields.get("id", ""),
+                                distance=float(hit.distance),
+                                metadata={},
+                                document=hit.fields["text"],
+                                embedding=[]
+                            )
+                        )
+            else:
+                for hit in hybrid_results:
+                    query_results.append(
+                        SearchResult(
+                            id=hit.fields.get("id", ""),
+                            distance=float(hit.distance),
+                            metadata={},
+                            document=hit.fields["text"],
+                            embedding=[]
+                        )
+                    )
+            
+            all_results.append(query_results)
+        
+        print("all_results: ", all_results)
+        return all_results
+
+
+    # def search(
+    #     self,
+    #     queries: List[str],
+    #     top_k: int = 2,
+    #     keywords: Optional[List[str]] = None,
+    #     filenames: Optional[List[str]] = None,
+    # ) -> List[List[SearchResult]]:
+    #     print("Using hybrid search in MilvusBGE_DB")
+    #     print("[DEBUG] MilvusBGE_DB.search() received queries:", queries)
+        
+    #     print("top_k: ", top_k)
+    #     all_results = []
+    #     for query in queries:
+    #         query_results = []
+            
+    #         # Get embeddings for this query
+    #         query_embeddings = self.ef([query])
+            
+    #         # Prepare the search requests for both vector fields
+    #         sparse_req = AnnSearchRequest(
+    #             query_embeddings["sparse"],
+    #             "sparse_vector",
+    #             {"metric_type": "IP"},
+    #             limit=top_k
+    #         )
+    #         dense_req = AnnSearchRequest(
+    #             query_embeddings["dense"],
+    #             "dense_vector",
+    #             {"metric_type": "IP"},
+    #             limit=top_k
+    #         )
+    #         sparse_weight = 1.0
+    #         dense_weight = 1.0
+    #         reranker = WeightedRanker(sparse_weight, dense_weight)
+            
+    #         hybrid_results = self.collection.hybrid_search(
+    #             [sparse_req, dense_req],
+    #             rerank=reranker,
+    #             limit=top_k,
+    #             output_fields=["text", "id"]
+    #         )[0]
+            
+    #         all_results.append(hybrid_results)
+        
+    #     print("all_results: ", all_results)
+    #     return all_results
+    
+    def delete(self, ids: List[str]) -> None:
+        print("Deleting ids %s from collection %s", ids, self.collection_name)
+        self.collection.delete(expr=f"id in {ids}")
+
+
+    def update(self, ids: List[str], embeddings: List) -> None:
+        print("Updating %d embeddings", len(ids))
+        self.delete(ids)
+        self.insert(embeddings)
+
+
+    def get_all_ids(self) -> List[str]:
+        results = self.collection.query(expr="id != 'NULL'", output_fields=["id"])
+        ids = [result["id"] for result in results]
+        print("Retrieved %d ids from collection", len(ids))
+        return ids
+
+
+    def clear(self) -> None:
+        print("Clearing collection %s", self.collection_name)
+        self.collection.delete(expr='id != "NULL"')
