@@ -3,13 +3,12 @@ from dataclasses import dataclass
 from typing import List
 
 import nltk
-from docling.chunking import HierarchicalChunker
+from docling.chunking import HierarchicalChunker, HybridChunker
+from docling_core.transforms.chunker import DocMeta
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from nltk.tokenize import sent_tokenize
 from tqdm import tqdm
-from docling.chunking import HybridChunker
 from transformers import AutoTokenizer
-from docling_core.transforms.chunker import DocMeta
 
 from .extraction import DoclingDocument, ExtractedContent
 from .raw_data import Data
@@ -102,7 +101,7 @@ class RecursiveCharacterChunker(Chunker):
                 name=f"{content.name} - Chunk {i+1}",
                 data_type=content.data_type,
             )
-            for i, c in tqdm(enumerate(chunks))
+            for i, c in enumerate(tqdm(chunks))
         ]
 
 
@@ -139,7 +138,7 @@ class DoclingHierarchicalChunker(Chunker):
                 name=f"{content.name} - Chunk {i+1}",
                 data_type=content.data_type,
             )
-            for i, chunk in tqdm(enumerate(chunks_iter))
+            for i, chunk in enumerate(tqdm(chunks_iter))
         ]
         return chunks
 
@@ -185,7 +184,7 @@ class DoclingHybridChunker(Chunker):
         chunks = []
 
         # Generate chunk data with headings, captions, and metadata
-        for i, chunk in tqdm(enumerate(chunk_iter)):
+        for i, chunk in enumerate(tqdm(chunk_iter)):
             chunk_text = chunk.text
             headings = chunk.meta.headings or []
             captions = chunk.meta.captions or []

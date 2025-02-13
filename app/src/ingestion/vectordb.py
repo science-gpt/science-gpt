@@ -1,7 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, List, Mapping, Optional
+from typing import Any, List, Mapping, Optional, Set
 
 import chromadb
 import numpy as np
@@ -122,7 +122,7 @@ class ChromaDB(VectorDB):
         ids = [embedding.name for embedding in embeddings]
         vectors = [embedding.vector.tolist() for embedding in embeddings]
         self.collection.add(
-            ids=ids, embeddings=vectors, documents=documents, metadatum=metadatum
+            ids=ids, embeddings=vectors, documents=documents, metadatas=metadatum
         )
 
     def search(
@@ -165,7 +165,7 @@ class ChromaDB(VectorDB):
             n_results=top_k,
             where=where,
             where_document=where_document,
-            include=["documents", "embeddings", "metadatum", "distances"],
+            include=["documents", "embeddings", "metadatas", "distances"],
         )
 
         all_results = []
@@ -181,7 +181,7 @@ class ChromaDB(VectorDB):
                 for _id, distance, metadata, document, embedding in zip(
                     results["ids"][i],
                     results["distances"][i],
-                    results["metadatum"][i],
+                    results["metadatas"][i],
                     results["documents"][i],
                     results["embeddings"][i],
                 )
@@ -219,6 +219,11 @@ class ChromaDB(VectorDB):
             List[str]: List of all document IDs in the database.
         """
         return self.collection.get()["ids"]
+
+    def get_all_files(self) -> Set[str]:
+        return set(
+            [metadata["source"] for metadata in self.collection.get()["metadatas"]]
+        )
 
     def clear(self) -> None:
         """
@@ -395,6 +400,14 @@ class MilvusDB(VectorDB):
             output_fields=["id"],
         )
         return [result["id"] for result in results]
+
+    def get_all_files(self) -> Set[str]:
+        results = self.client.query(
+            collection_name=self.collection_name,
+            filter="id != 'NULL'",
+            output_fields=["id"],
+        )
+        return set([result.get("entity", {}).get("document") for result in results])
 
     def clear(self) -> None:
         """
