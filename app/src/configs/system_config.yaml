@@ -10,9 +10,9 @@ _target_: orchestrator.config.SystemConfig
 
 # Model Config Options
 model_params:
-  model_name: "GPT-4.0"
+  model_name: "GPT-3.5"
   seed: 42
-  temperature: 0.0
+  temperature: 0.2
   top_p: 1.0
   max_tokens: 512
   num_ctx: 2500
@@ -83,10 +83,10 @@ chunking:
   
 
 embedding:
-  embedding_model: "bge-m3:567m"
+  embedding_model: "sentence-transformers/all-mpnet-base-v2"
   supported_embedders:
-    - "bge-m3:567m"
     - "BAAI/bge-m3"
+    - "sentence-transformers/all-mpnet-base-v2"
     - "mxbai-embed-large"
     - "nomic-embed-text"
   
@@ -94,17 +94,18 @@ embedding:
 # Database Options
 vector_db:
   database: "milvus"
-  host: "standalone"
+  host: "localhost"
   port: 19530
   supported_databases:
     - "chromadb"
     - "milvus"
+    - "milvus_bge"
 
 # Default RAG Parameters
 rag_params:
   use_rag: True
   useknowledgebase: False 
-  top_k: 5
+  top_k: 2
   keywords:
   filenames:
   

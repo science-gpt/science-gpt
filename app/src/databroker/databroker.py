@@ -41,7 +41,6 @@ class DataBroker(metaclass=SingletonMeta):
         self,
         database_config: SimpleNamespace = None,
         secrets_path: str = "secrets.toml",
-        use_bge_m3: bool = True,
         **embedder_kwargs,
     ) -> None:
         """
@@ -55,6 +54,11 @@ class DataBroker(metaclass=SingletonMeta):
                 "user": {},
             }
             self._init_databroker_pipeline(database_config)
+            
+        if self._database_config.vector_store.database == "milvus_bge":
+            use_bge_m3 = True
+        else:
+            use_bge_m3 = False
 
         if use_bge_m3:
             print("Using BGEM3Embedder")
@@ -84,7 +88,7 @@ class DataBroker(metaclass=SingletonMeta):
             ValueError: If the configured embedding method is not supported
         """
         OLLAMA_MODELS = ["mxbai-embed-large", "nomic-embed-text", "bge-m3:567m"]
-        HFACE_MODELS = [""]
+        HFACE_MODELS = ["sentence-transformers/all-mpnet-base-v2"]
         BGEM3_MODELS = ["BAAI/bge-m3"]
 
         embedding_model = self._database_config.embedding_model
@@ -95,7 +99,7 @@ class DataBroker(metaclass=SingletonMeta):
                 embedder.test_connection()
             except RuntimeError:
                 logger.error("Failed to connect to the Ollama model. Defaulting to HuggingFace embeddings.")
-                embedder = HuggingFaceEmbedder(model_name="BAAI/bge-m3")
+                embedder = HuggingFaceEmbedder(model_name=embedding_model)
         elif embedding_model in HFACE_MODELS:
             print("Using HuggingFaceEmbedder")
             embedder = HuggingFaceEmbedder(model_name=embedding_model)
@@ -348,27 +352,35 @@ class DataBroker(metaclass=SingletonMeta):
             print("No new documents to add")
             return []
 
-        # Handle BGEM3 Hybrid Embeddings
-        if self._database_config.vector_store.database == "milvus_bge":
+        # # Handle BGEM3 Hybrid Embeddings
+        # if self._database_config.vector_store.database == "milvus_bge":
+        #     embedding = self.embedder(new_chunks)
+        #     print("embedding: ", embedding)
+
+        #     # Insert using MilvusBGE_DB
+        #     try:
+        #         self.vectorstore[collection].insert(embedding, metadatum)
+        #         print(f"Successfully inserted {len(new_chunks)} hybrid embeddings into MilvusBGE.")
+        #     except Exception as e:
+        #         logger.error(f"Failed to insert into MilvusBGE_DB: {e}")
+
+
+        # else:
+        #     embeddings = self.embedder(new_chunks)  # Standard embedding call
+        #     try:
+        #         self.vectorstore[collection].insert(embeddings, metadatum)
+        #         print(f"Successfully inserted {len(new_chunks)} standard embeddings.")
+        #     except Exception as e:
+        #         logger.error(f"Failed to insert into vector store: {e}")
+        #         return []
+        
+        try:
             embedding = self.embedder(new_chunks)
-            print("embedding: ", embedding)
-
-            # Insert using MilvusBGE_DB
-            try:
-                self.vectorstore[collection].insert(embedding, metadatum)
-                print(f"Successfully inserted {len(new_chunks)} hybrid embeddings into MilvusBGE.")
-            except Exception as e:
-                logger.error(f"Failed to insert into MilvusBGE_DB: {e}")
-
-
-        else:
-            embeddings = self.embedder(new_chunks)  # Standard embedding call
-            try:
-                self.vectorstore[collection].insert(embeddings, metadatum)
-                print(f"Successfully inserted {len(new_chunks)} standard embeddings.")
-            except Exception as e:
-                logger.error(f"Failed to insert into vector store: {e}")
-                return []
+            self.vectorstore[collection].insert(embedding, metadatum)
+            print(f"Successfully inserted {len(new_chunks)} standard embeddings.")
+        except Exception as e:
+            logger.error(f"Failed to insert into vector store: {e}")
+            return []
 
         return [chunk.name for chunk in chunks]
 
@@ -402,19 +414,23 @@ class DataBroker(metaclass=SingletonMeta):
             List[List[SearchResult]]: A list of lists of SearchResult objects containing
                 the search results for each query, sorted by relevance
         """
-        # Handle MilvusBGE hybrid search
-        if self._database_config.vector_store.database == "milvus_bge":
-            print("Using hybrid search in MilvusBGE_DB")
-            results = self.vectorstore[collection].search(queries, top_k, keywords, filenames)
-
-        else:
-            query_chunks = [
-                Chunk(text=query, name=f"Query_{i}", data_type="query")
-                for i, query in enumerate(queries)
-            ]
-            query_embeddings = self.embedder(query_chunks)
-            query_vectors = [embedding.vector for embedding in query_embeddings]
-            results = self.vectorstore[collection].search(query_vectors, top_k, keywords, filenames)
-
+        
+        results = self.vectorstore[collection].search(queries, top_k, keywords, filenames)
         return results
+    
+        # # Handle MilvusBGE hybrid search
+        # if self._database_config.vector_store.database == "milvus_bge":
+        #     print("Using hybrid search in MilvusBGE_DB")
+        #     results = self.vectorstore[collection].search(queries, top_k, keywords, filenames)
+
+        # else:
+        #     query_chunks = [
+        #         Chunk(text=query, name=f"Query_{i}", data_type="query")
+        #         for i, query in enumerate(queries)
+        #     ]
+        #     query_embeddings = self.embedder(query_chunks)
+        #     query_vectors = [embedding.vector for embedding in query_embeddings]
+        #     results = self.vectorstore[collection].search(query_vectors, top_k, keywords, filenames)
+
+        # return results
 
