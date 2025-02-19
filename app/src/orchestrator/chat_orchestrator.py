@@ -120,7 +120,6 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             )
 
             print("Model Params", filtered_config)
-            print(type(filtered_config))
 
         # Carter: we will want a better solution here but we need error handling for the time being.
         # This catches errors when the local models are offline
