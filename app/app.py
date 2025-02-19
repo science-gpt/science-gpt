@@ -605,6 +605,9 @@ def search(search_tab):
                 )
                 for i, r in enumerate(search_results[0])
             ]
+
+            print(search_results[0])
+
             dist = [
                 np.linalg.norm(np.array(j.embedding) - np.array(k.embedding))
                 for i, k in enumerate(search_results[0])
@@ -629,9 +632,28 @@ def search(search_tab):
                 # **kwargs e.g. node_size=1000 or node_color="blue"
             )
 
-            return_value = agraph(nodes=nodes, edges=edges, config=config)
+            results = [
+                {
+                    "Chunk Source": r.id,
+                    "Distance": r.distance,
+                    "Chunk": r.document,
+                }
+                for r in search_results[0]
+            ]
+            print(results)
 
-        st.session_state.edge_thresh = st.slider("Edge Threshold", 0.0, 1.0, 0.5)
+            df = pd.DataFrame(results)
+
+            st.session_state.edge_thresh = st.slider("Edge Threshold", 0.0, 1.0, 0.5)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader("Graph Representation")
+                return_value = agraph(nodes=nodes, edges=edges, config=config)
+
+            with col2:
+                st.subheader("Table Representation")
+                st.dataframe(df)
 
 
 def sciencegpt():
