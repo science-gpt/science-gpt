@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from collections import defaultdict
+from dataclasses import dataclass, field
 from typing import List
 
 import nltk
@@ -26,6 +27,7 @@ class Chunk(Data):
     """
 
     text: str
+    metadata: defaultdict[dict] = field(default_factory=lambda: defaultdict(dict))
 
     def __post_init__(self):
         super().__init__(name=self.name, data_type=self.data_type)
@@ -105,6 +107,10 @@ class RecursiveCharacterChunker(Chunker):
         ]
 
 
+# TODO: decide how we want to handle metadata -> do we concatenate it to the text or keep it separate?
+# if we keep it separate, we lose the information in the embedding... maybe we add metadata field to embedding
+
+
 class DoclingHierarchicalChunker(Chunker):
     """
     A Chunker implementation that uses Docling's HierarchicalChunker to split a DoclingDocument into chunks.
@@ -137,9 +143,19 @@ class DoclingHierarchicalChunker(Chunker):
                 text=chunk.text,
                 name=f"{content.name} - Chunk {i+1}",
                 data_type=content.data_type,
+                metadata=defaultdict(
+                    dict,
+                    {
+                        "headings": chunk.meta.headings or [],
+                        "captions": chunk.meta.captions or [],
+                        "metadata": chunk.meta.model_dump(),
+                    },
+                ),
             )
             for i, chunk in tqdm(enumerate(chunks_iter))
         ]
+
+        print(chunks[0].metadata)
         return chunks
 
 
@@ -157,6 +173,8 @@ class DoclingHybridChunker(Chunker):
         self.chunker = HybridChunker(
             tokenizer=self.tokenizer, max_tokens=8192, merge_peers=True
         )
+
+        # TODO: edit the max_tokens and allow better overlap to fix the truncation issues
 
     def __call__(self, content: DoclingDocument) -> List[Chunk]:
         """
@@ -186,9 +204,23 @@ class DoclingHybridChunker(Chunker):
         # Generate chunk data with headings, captions, and metadata
         for i, chunk in tqdm(enumerate(chunk_iter)):
             chunk_text = chunk.text
+
+            # serena: added a metadata field to the chunk
+            metadata = defaultdict(
+                dict,
+                {
+                    "headings": chunk.meta.headings or [],
+                    "captions": chunk.meta.captions or [],
+                    "metadata": chunk.meta.model_dump(),
+                },
+            )
+            print(metadata)
+
             headings = chunk.meta.headings or []
             captions = chunk.meta.captions or []
-            metadata = chunk.meta.dict()
+            metadata = (
+                chunk.meta.dict()
+            )  # serena: this will overwrite the metadata field with the metadata from the chunk.meta object
 
             # Concatenate headings and captions into the text (add them at the start or end)
             combined_text = chunk_text
