@@ -23,6 +23,7 @@ class Embedding(Data):
         text (str): The original text that was embedded.
     """
 
+    # TODO: Add metadata field
     vector: np.ndarray
     text: str
 
