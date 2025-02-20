@@ -593,6 +593,12 @@ def search(search_tab):
                 st.header("No Results")
                 return
 
+            if "selected_chunk" not in st.session_state:
+                st.session_state.selected_chunk = None
+
+            if "edge_thresh" not in st.session_state:
+                st.session_state.edge_thresh = 0.5
+
             nodes = [
                 Node(
                     id=r.id,
@@ -606,7 +612,7 @@ def search(search_tab):
                 for i, r in enumerate(search_results[0])
             ]
 
-            print(search_results[0])
+            # print(search_results[0])
 
             dist = [
                 np.linalg.norm(np.array(j.embedding) - np.array(k.embedding))
@@ -625,7 +631,7 @@ def search(search_tab):
                 width=700,
                 height=700,
                 directed=False,
-                nodeHighlightBehavior=False,
+                nodeHighlightBehavior=True,
                 highlightColor="#F7A7A6",  # or "blue"
                 collapsible=False,
                 node={"labelProperty": "label"},
@@ -640,20 +646,35 @@ def search(search_tab):
                 }
                 for r in search_results[0]
             ]
-            print(results)
+            # print(results)
 
             df = pd.DataFrame(results)
 
             st.session_state.edge_thresh = st.slider("Edge Threshold", 0.0, 1.0, 0.5)
 
             col1, col2 = st.columns(2)
+
             with col1:
                 st.subheader("Graph Representation")
                 return_value = agraph(nodes=nodes, edges=edges, config=config)
 
+                if return_value and st.session_state.selected_chunk != return_value:
+                    st.session_state.selected_chunk = return_value
+
             with col2:
                 st.subheader("Table Representation")
-                st.dataframe(df)
+
+                def highlight_selected(row):
+                    color = (
+                        "background-color: yellow"
+                        if row["Chunk Source"] == st.session_state.selected_chunk
+                        else ""
+                    )
+                    return [color] * len(row)
+
+                styled_df = df.style.apply(highlight_selected, axis=1)
+
+                st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
 
 def sciencegpt():
