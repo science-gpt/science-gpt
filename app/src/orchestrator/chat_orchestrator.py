@@ -3,7 +3,8 @@ from typing import List, Optional
 
 import toml
 from logs.logger import logger
-from orchestrator.call_handlers import LLMCallHandler
+from models.models import LocalAIModel, OpenAIChatModel
+from orchestrator.call_handlers import LLMCallHandler, AgentCallHandler
 from orchestrator.config import SystemConfig
 from orchestrator.utils import DEFAULT_SYSTEM_PROMPT, SingletonMeta, load_config
 from prompt.base_prompt import ConcretePrompt
@@ -27,12 +28,13 @@ class ChatOrchestrator(metaclass=SingletonMeta):
         Load secrets from toml file into config object.
         """
         secrets = toml.load("secrets.toml")
-
+        self.model_key = "gpt40-api"
+        self.secrets = secrets
         if model in ["GPT-3.5", "GPT-4.0"]:
-            model_key = model.lower().replace("-", "").replace(".", "") + "-api"
-            self.config.model_auth.version = secrets[model_key]["api_version"]
-            self.config.model_auth.api_key = secrets[model_key]["api_key"]
-            self.config.model_auth.url = secrets[model_key]["azure_endpoint"]
+            self.model_key = model.lower().replace("-", "").replace(".", "") + "-api"
+            self.config.model_auth.version = secrets[self.model_key]["api_version"]
+            self.config.model_auth.api_key = secrets[self.model_key]["api_key"]
+            self.config.model_auth.url = secrets[self.model_key]["azure_endpoint"]
             self.model = OpenAIChatModel(self.config)
         else:
             self.config.model_auth.macbook_endpoint = (
@@ -90,7 +92,11 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             prompt = OnlyUseContextDecorator(prompt)
 
         try:
-            handler = LLMCallHandler(self.model, prompt, self.config)
+            if self.config.agent_params.enable:
+                handler = AgentCallHandler(self.model_key, self.secrets, prompt, self.config)
+            else:
+                handler = LLMCallHandler(self.model, prompt, self.config)
+
             llm_prompt, response, cost = handler.call_llm(query)
             chunks = prompt.get_chunks()
 
