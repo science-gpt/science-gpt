@@ -1,6 +1,5 @@
 import aiohttp
 import requests
-
 from reasoning.base import Document, DocumentWithEmbedding, Param
 
 from .base import BaseEmbeddings

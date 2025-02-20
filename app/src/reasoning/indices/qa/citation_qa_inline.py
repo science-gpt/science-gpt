@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import Generator
 
 import numpy as np
-
 from reasoning.base import AIMessage, Document, HumanMessage, SystemMessage
 from reasoning.llms import PromptTemplate
 

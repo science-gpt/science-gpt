@@ -10,9 +10,11 @@ class ModelAuth(BaseModel):
     api_key: Optional[str]
     version: Optional[str]
 
+
 class AgentParams(BaseModel):
     enable: bool
     type: str
+
 
 class ModelParams(BaseModel):
     # model_config is added to suppress warnings

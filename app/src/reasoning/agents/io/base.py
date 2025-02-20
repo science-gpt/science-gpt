@@ -6,7 +6,6 @@ from enum import Enum
 from typing import Any, Dict, Literal, NamedTuple, Optional, Union
 
 from pydantic import ConfigDict
-
 from reasoning.base import LLMInterface
 
 

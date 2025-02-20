@@ -4,7 +4,6 @@ from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 from langchain.output_parsers.boolean import BooleanOutputParser
-
 from reasoning.base import Document
 
 from .llm import LLMReranking

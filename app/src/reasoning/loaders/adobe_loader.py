@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Optional
 
 from decouple import config
 from llama_index.core.readers.base import BaseReader
-
 from reasoning.base import Document
 
 logger = logging.getLogger(__name__)

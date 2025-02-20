@@ -2,7 +2,6 @@ import html
 from functools import partial
 
 import tiktoken
-
 from reasoning.base import BaseComponent, Document, RetrievedDocument
 from reasoning.indices.splitters import TokenSplitter
 

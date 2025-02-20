@@ -7,7 +7,6 @@ from decouple import config
 from fsspec import AbstractFileSystem
 from llama_index.readers.file import PDFReader
 from PIL import Image
-
 from reasoning.base import Document
 
 PDF_LOADER_DPI = config("PDF_LOADER_DPI", default=40, cast=int)

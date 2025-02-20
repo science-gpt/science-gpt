@@ -6,9 +6,8 @@ from uuid import uuid4
 
 import requests
 from llama_index.core.readers.base import BaseReader
-from tenacity import after_log, retry, stop_after_attempt, wait_exponential
-
 from reasoning.base import Document
+from tenacity import after_log, retry, stop_after_attempt, wait_exponential
 
 from .utils.pdf_ocr import parse_ocr_output, read_pdf_unstructured
 from .utils.table import strip_special_chars_markdown

@@ -1,5 +1,4 @@
 from decouple import config
-
 from reasoning.base import BaseComponent, RetrievedDocument
 
 TAVILY_API_KEY = config("TAVILY_API_KEY", default="")

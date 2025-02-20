@@ -7,14 +7,12 @@ from llama_index.core.schema import NodeRelationship, RelatedNodeInfo
 from llama_index.core.vector_stores.types import BasePydanticVectorStore
 from llama_index.core.vector_stores.types import VectorStore as LIVectorStore
 from llama_index.core.vector_stores.types import VectorStoreQuery
-
 from reasoning.base import DocumentWithEmbedding
 
 
 class BaseVectorStore(ABC):
     @abstractmethod
-    def __init__(self, *args, **kwargs):
-        ...
+    def __init__(self, *args, **kwargs): ...
 
     @abstractmethod
     def add(

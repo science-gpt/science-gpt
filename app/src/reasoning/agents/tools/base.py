@@ -2,7 +2,6 @@ from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
 from langchain.agents import Tool as LCTool
 from pydantic import BaseModel
-
 from reasoning.base import BaseComponent
 
 
@@ -28,9 +27,9 @@ class BaseTool(BaseComponent):
     """Pydantic model class to validate and parse the tool's input arguments."""
     verbose: bool = False
     """Whether to log the tool's progress."""
-    handle_tool_error: Optional[
-        Union[bool, str, Callable[[ToolException], str]]
-    ] = False
+    handle_tool_error: Optional[Union[bool, str, Callable[[ToolException], str]]] = (
+        False
+    )
     """Handle the content of the ToolException thrown."""
 
     def _parse_input(

@@ -4,8 +4,6 @@ from typing import Generator
 
 import numpy as np
 from decouple import config
-from theflow.settings import settings as flowsettings
-
 from reasoning.base import (
     AIMessage,
     BaseComponent,
@@ -15,6 +13,7 @@ from reasoning.base import (
     SystemMessage,
 )
 from reasoning.llms import ChatLLM, PromptTemplate
+from theflow.settings import settings as flowsettings
 
 from .citation import CitationPipeline
 from .format_context import (

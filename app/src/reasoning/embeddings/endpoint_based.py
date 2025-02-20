@@ -1,5 +1,4 @@
 import requests
-
 from reasoning.base import Document, DocumentWithEmbedding
 
 from .base import BaseEmbeddings

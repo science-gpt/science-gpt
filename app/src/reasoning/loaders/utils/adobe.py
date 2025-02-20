@@ -12,7 +12,6 @@ from typing import List, Union
 
 import pandas as pd
 from decouple import config
-
 from kotaemon.loaders.utils.gpt4v import generate_gpt4v
 
 

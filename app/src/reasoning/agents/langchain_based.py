@@ -3,7 +3,6 @@ from typing import List, Optional
 from langchain.agents import AgentType as LCAgentType
 from langchain.agents import initialize_agent
 from langchain.agents.agent import AgentExecutor as LCAgentExecutor
-
 from reasoning.llms import LLM, ChatLLM
 
 from .base import BaseAgent

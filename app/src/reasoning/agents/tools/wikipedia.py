@@ -1,7 +1,6 @@
 from typing import Any, AnyStr, Optional, Type, Union
 
 from pydantic import BaseModel, Field
-
 from reasoning.base import Document
 
 from .base import BaseTool

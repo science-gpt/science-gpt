@@ -7,7 +7,6 @@ from typing import Any, Dict, Generator, List, Optional, Union
 import requests
 from langchain.utils import get_from_dict_or_env
 from llama_index.core.readers.base import BaseReader
-
 from reasoning.base import Document
 
 from .utils.table import strip_special_chars_markdown

@@ -1,9 +1,8 @@
 from copy import deepcopy
 from typing import Callable, List
 
-from theflow import Function, Node, Param
-
 from reasoning.base import BaseComponent, Document
+from theflow import Function, Node, Param
 
 from .chats import LCAzureChatOpenAI
 from .completions import LLM
