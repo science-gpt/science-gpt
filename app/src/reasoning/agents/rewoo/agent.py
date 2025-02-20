@@ -5,7 +5,6 @@ from functools import partial
 from typing import Any
 
 import tiktoken
-
 from reasoning.agents.base import BaseAgent
 from reasoning.agents.io import AgentOutput, AgentType, BaseScratchPad
 from reasoning.agents.tools import BaseTool

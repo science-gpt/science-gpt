@@ -4,7 +4,6 @@ from typing import List, Optional
 
 import pandas as pd
 from llama_index.core.readers.base import BaseReader
-
 from reasoning.base import Document
 
 

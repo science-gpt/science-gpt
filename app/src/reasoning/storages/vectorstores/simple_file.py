@@ -1,11 +1,11 @@
 """Simple file vector store index."""
+
 from pathlib import Path
 from typing import Any, Optional, Type
 
 import fsspec
 from llama_index.core.vector_stores import SimpleVectorStore as LISimpleVectorStore
 from llama_index.core.vector_stores.simple import SimpleVectorStoreData
-
 from reasoning.base import DocumentWithEmbedding
 
 from .base import LlamaIndexVectorStore

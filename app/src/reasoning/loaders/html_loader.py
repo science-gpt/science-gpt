@@ -3,9 +3,8 @@ from pathlib import Path
 from typing import Optional
 
 from llama_index.core.readers.base import BaseReader
-from theflow.settings import settings as flowsettings
-
 from reasoning.base import Document
+from theflow.settings import settings as flowsettings
 
 
 class HtmlReader(BaseReader):

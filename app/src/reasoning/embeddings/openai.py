@@ -4,6 +4,7 @@ from typing import Optional
 import numpy as np
 import openai
 import tiktoken
+from reasoning.base import Param
 from tenacity import (
     retry,
     retry_if_not_exception_type,
@@ -11,8 +12,6 @@ from tenacity import (
     wait_random_exponential,
 )
 from theflow.utils.modules import import_dotted_string
-
-from reasoning.base import Param
 
 from .base import BaseEmbeddings, Document, DocumentWithEmbedding
 

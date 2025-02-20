@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from decouple import config
-
 from reasoning.base import Document
 
 from .base import BaseReranking

@@ -3,7 +3,6 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 
 from langchain.output_parsers.boolean import BooleanOutputParser
-
 from reasoning.base import Document
 from reasoning.llms import BaseLLM, PromptTemplate
 

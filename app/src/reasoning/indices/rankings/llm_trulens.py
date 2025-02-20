@@ -5,7 +5,6 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
 import tiktoken
-
 from reasoning.base import Document, HumanMessage, SystemMessage
 from reasoning.indices.splitters import TokenSplitter
 from reasoning.llms import BaseLLM, PromptTemplate

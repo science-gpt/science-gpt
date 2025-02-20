@@ -1,6 +1,5 @@
 import requests
 from decouple import config
-
 from reasoning.base import BaseComponent, RetrievedDocument
 
 JINA_API_KEY = config("JINA_API_KEY", default="")

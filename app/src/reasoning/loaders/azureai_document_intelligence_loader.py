@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Optional
 
 from PIL import Image
-
 from reasoning.base import Document, Param
 
 from .base import BaseReader

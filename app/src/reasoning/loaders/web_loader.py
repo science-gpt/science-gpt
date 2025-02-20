@@ -3,7 +3,6 @@ from typing import Optional
 
 import requests
 from decouple import config
-
 from reasoning.base import Document
 
 from .base import BaseReader

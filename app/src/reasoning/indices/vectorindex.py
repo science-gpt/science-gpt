@@ -5,11 +5,10 @@ import uuid
 from pathlib import Path
 from typing import Optional, Sequence, cast
 
-from theflow.settings import settings as flowsettings
-
 from reasoning.base import BaseComponent, Document, RetrievedDocument
 from reasoning.embeddings import BaseEmbeddings
 from reasoning.storages import BaseDocumentStore, BaseVectorStore
+from theflow.settings import settings as flowsettings
 
 from .base import BaseIndexing, BaseRetrieval
 from .rankings import BaseReranking, LLMReranking

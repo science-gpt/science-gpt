@@ -1,8 +1,7 @@
 from typing import Callable
 
-from theflow import Param
-
 from reasoning.base import BaseComponent, Document
+from theflow import Param
 
 from .template import PromptTemplate
 

@@ -4,7 +4,6 @@ from abc import abstractmethod
 from typing import Any, Type
 
 from llama_index.core.node_parser.interface import NodeParser
-
 from reasoning.base import BaseComponent, Document, RetrievedDocument
 
 
@@ -22,8 +21,7 @@ class DocTransformer(BaseComponent):
         self,
         documents: list[Document],
         **kwargs,
-    ) -> list[Document]:
-        ...
+    ) -> list[Document]: ...
 
 
 class LlamaIndexDocTransformerMixin:
@@ -119,5 +117,4 @@ class BaseRetrieval(BaseComponent):
     """Define the base interface for retrieval pipeline"""
 
     @abstractmethod
-    def run(self, *args, **kwargs) -> list[RetrievedDocument]:
-        ...
+    def run(self, *args, **kwargs) -> list[RetrievedDocument]: ...

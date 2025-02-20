@@ -3,11 +3,11 @@
 Pandas parser for .xlsx files.
 
 """
+
 from pathlib import Path
 from typing import Any, List, Optional, Union
 
 from llama_index.core.readers.base import BaseReader
-
 from reasoning.base import Document
 
 

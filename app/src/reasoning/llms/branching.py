@@ -156,7 +156,6 @@ class GatedBranchingPipeline(SimpleBranchingPipeline):
 
 if __name__ == "__main__":
     import dotenv
-
     from kotaemon.llms import BasePromptComponent, LCAzureChatOpenAI
     from kotaemon.parsers import RegexExtractor
 
