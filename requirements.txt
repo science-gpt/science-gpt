@@ -33,3 +33,8 @@ pytest
 docling
 pymilvus[model]
 pymilvus.model
+theflow
+llama-index
+python-decouple 
+googlesearch-python
+wikipedia
