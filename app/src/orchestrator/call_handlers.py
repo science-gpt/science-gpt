@@ -1,6 +1,12 @@
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent
-from reasoning.agents import GoogleSearchTool, LLMTool, RewooAgent, WikipediaTool
+from reasoning.agents import (
+    GoogleSearchTool,
+    LLMTool,
+    LocalSearchTool,
+    RewooAgent,
+    WikipediaTool,
+)
 from reasoning.llms import AzureChatOpenAI
 
 from models.models import ChatModel
@@ -49,6 +55,7 @@ class AgentCallHandler:
             GoogleSearchTool(),
             WikipediaTool(),
             LLMTool(llm=llm),
+            LocalSearchTool(),
         ]
 
         self.model = RewooAgent(planner_llm=llm, solver_llm=llm, plugins=plugins)
