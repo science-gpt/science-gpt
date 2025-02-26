@@ -429,16 +429,19 @@ class MilvusDB(VectorDB):
                         limit=top_k,
                         output_fields=["text", "id"],
                     )[0]
-                
+                    
+                    result_texts = [hit.fields["text"] for hit in hybrid_results]
+                    bge_rf = BGERerankFunction(device='cpu')
+                    reranked_results = bge_rf(query, result_texts, top_k=top_k)
                     query_results = []
-                    for hit in hybrid_results:
-                        print("Hit:", hit.distance)
+                    for i, hit in enumerate(reranked_results):
+                        print(f'text: {hit.text} distance {hit.score}')
                         query_results.append(
                             SearchResult(
-                                id=hit.fields.get("id", ""),
-                                distance=float(hit.distance),
+                                id=hybrid_results[i].fields.get("id", ""),
+                                distance=float(hit.score),
                                 metadata={},
-                                document=hit.fields.get("text", ""),
+                                document=hit.text,
                                 embedding=[]
                             )
                         )
