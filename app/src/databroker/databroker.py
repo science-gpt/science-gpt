@@ -55,17 +55,6 @@ class DataBroker(metaclass=SingletonMeta):
             }
             self._init_databroker_pipeline(database_config)
             
-        if self._database_config.vector_store.database == "milvus_bge":
-            use_bge_m3 = True
-        else:
-            use_bge_m3 = False
-
-        if use_bge_m3:
-            print("Using BGEM3Embedder")
-            self.embedder = BGEM3Embedder(**embedder_kwargs)
-        else:
-            print("Using HuggingFaceEmbedder")
-            self.embedder = HuggingFaceEmbedder()
 
     def get_database_config(self) -> SimpleNamespace:
         """
@@ -92,6 +81,7 @@ class DataBroker(metaclass=SingletonMeta):
         BGEM3_MODELS = ["BAAI/bge-m3"]
 
         embedding_model = self._database_config.embedding_model
+        print("Using embedding model: ", embedding_model)
         if embedding_model in OLLAMA_MODELS:
             macbook_endpoint = self._secrets["localmodel"]["macbook_endpoint"]
             embedder = OllamaEmbedder(model_name=embedding_model, endpoint=macbook_endpoint)
@@ -179,32 +169,23 @@ class DataBroker(metaclass=SingletonMeta):
             vectorstore = {
                 "base": MilvusDB(
                     collection_name=self.collection_name["base"],
-                    dim=embedding_dimension,
+                    dense_dim=embedding_dimension,
                     host=self._database_config.vector_store.host,
                     port=self._database_config.vector_store.port,
+                    dense_embedder=self.embedder,
+                    if_hybrid_search=True, # TODO: make this configurable
+                    use_reranker=True,
+
                 ),
                 "user": MilvusDB(
                     collection_name=self.collection_name["user"],
-                    dim=embedding_dimension,
+                    dense_dim=embedding_dimension,
                     host=self._database_config.vector_store.host,
                     port=self._database_config.vector_store.port,
-                ),
-            }
-        elif self._database_config.vector_store.database == "milvus_bge":
-            print("Creating MilvusBGE vector store")
-            vectorstore = {
-                "base": MilvusBGE_DB(
-                    collection_name=self.collection_name["base"],
-                    host=self._database_config.vector_store.host,
-                    port=self._database_config.vector_store.port,
-                    use_bge_m3=True
-                ),
+                    dense_embedder=self.embedder,
+                    if_hybrid_search=True, # TODO: make this configurable
+                    use_reranker=True,
 
-                "user": MilvusBGE_DB(
-                    collection_name=self.collection_name["user"],
-                    host=self._database_config.vector_store.host,   
-                    port=self._database_config.vector_store.port,
-                    use_bge_m3=True
                 ),
             }
         else:
@@ -373,13 +354,20 @@ class DataBroker(metaclass=SingletonMeta):
         #     except Exception as e:
         #         logger.error(f"Failed to insert into vector store: {e}")
         #         return []
-        
+        # for i, chunk in enumerate(new_chunks):
+        #     if not hasattr(chunk, "name"):
+        #         print("Chunk at index %d is not a proper Chunk object: %s", i, type(chunk))
+        #     else:
+        #         print("Chunk %d has name: %s", i, chunk.name)
+
         try:
             embedding = self.embedder(new_chunks)
+            print("This is true")
             self.vectorstore[collection].insert(embedding, metadatum)
+            print("This is true2")
             print(f"Successfully inserted {len(new_chunks)} standard embeddings.")
         except Exception as e:
-            logger.error(f"Failed to insert into vector store: {e}")
+            print(f"Failed to insert into vector store: {e}")
             return []
 
         return [chunk.name for chunk in chunks]
@@ -414,7 +402,6 @@ class DataBroker(metaclass=SingletonMeta):
             List[List[SearchResult]]: A list of lists of SearchResult objects containing
                 the search results for each query, sorted by relevance
         """
-        
         results = self.vectorstore[collection].search(queries, top_k, keywords, filenames)
         return results
     
