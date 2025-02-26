@@ -5,6 +5,7 @@ import random
 from typing import Any, List, Mapping, Optional, Callable
 import os
 import scipy
+import torch
 
 import chromadb
 import numpy as np
@@ -412,7 +413,7 @@ class MilvusDB(VectorDB):
             # Compute sparse query embedding using BGEM3.
             sparse_query = self.bge_m3_func([query])["sparse"]
             
-            
+            # debug print out the dense_query and sparse_query
             print("Dense query:", dense_query)
             print("Sparse query:", sparse_query)
         
@@ -448,19 +449,31 @@ class MilvusDB(VectorDB):
                     all_results.append(query_results)
             else:
                 # Dense-only search: use only the dense query.
-                search_params = {"metric_type": "COSINE", "params": {"nprobe": 512}}
-                # Convert dense_query to a list of lists if necessary.
-                query_vectors = [vec.tolist() if hasattr(vec, "tolist") else vec for vec in dense_query]
+                search_params = {"metric_type": "IP", "params": {"nprobe": 10}}
                 
+                # Wrap the query into a Chunk for the dense embedder.
+                query_chunk = Chunk(text=query, name=f"Query-{query[:10]}", data_type="query")
+                
+                # Compute dense query embedding using the dense embedder.
+                dense_query = self.dense_embedder([query_chunk]).dense_vector
+                
+                # Convert dense_query to a list-of-lists (works for numpy arrays or torch tensors)
+                if hasattr(dense_query, "tolist"):
+                    dense_query = dense_query.tolist()
+                elif not isinstance(dense_query, list):
+                    raise TypeError("dense_query must be a list or convertible to a list.")
+                
+                # Perform the basic ANN search.
                 results = self.collection.search(
-                    data=query_vectors,
+                    data=dense_query,
                     anns_field="dense_vector",
                     param=search_params,
                     limit=top_k,
-                    expr="",
+                    expr="",  # No filtering expression.
                     output_fields=["text", "id"],
                 )
                 
+                # Process the search results.
                 query_results = []
                 for hit in results[0]:
                     query_results.append(
@@ -468,11 +481,12 @@ class MilvusDB(VectorDB):
                             id=str(hit.id),
                             distance=hit.distance,
                             metadata={},
-                            document=hit.entity.get("text", ""),
-                            embedding=hit.entity.get("dense_vector", [])
+                            document=hit.entity.get("text") or "",
+                            embedding=hit.entity.get("dense_vector") or []
                         )
                     )
                 all_results.append(query_results)
+
         return all_results
 
 
