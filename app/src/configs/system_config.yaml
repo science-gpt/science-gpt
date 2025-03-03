@@ -93,7 +93,7 @@ embedding:
 
 # Database Options
 vector_db:
-  database: "chromadb"
+  database: "milvus" 
   host: "standalone"
   port: 19530
   supported_databases:

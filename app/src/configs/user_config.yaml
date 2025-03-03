@@ -20,6 +20,14 @@ credentials:
       password: $2b$12$XbUz6uuCRYYtBBHfCX0keeQdhZ53EYdQV19GRkEoPQhFLQLFmqtey
       password_hint: '1'
       roles: null
+    serenai:
+      email: serena.iyoha@hc-sc.gc.ca
+      first_name: serena
+      last_name: iyoha
+      logged_in: false
+      password: $2b$12$qJx/2JFPJHOr6mzQW4RTI.R6mzw2TAVwdcUnKER3ylhMAjVlIGfqK
+      password_hint: 'no'
+      roles: null
     spcrook:
       email: spencer.crook@hc-sc.gc.ca
       first_name: spencer
@@ -37,5 +45,5 @@ pre-authorized:
   - chantal.medina@hc-sc.gc.ca
   - malik.talhat@hc-sc.gc.ca
   - carter.demars@hc-sc.gc.ca
-  - serena.iyoha@hc-sc.gc.ca
   - jiaiyou.zhong@hc-sc.gc.ca
+  - serena.iyoha@hc-sc.gc.ca
