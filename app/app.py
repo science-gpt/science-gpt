@@ -182,7 +182,6 @@ def edit_prompt(prompt, chunks, rewrite_prompt, key=0):
             )
 
             st.subheader("Chunks")
-            print("chunks: ", chunks)
             for chunk in chunks:
                 match = re.search(pattern, chunk, re.DOTALL)
                 if not match:
@@ -283,11 +282,18 @@ def database_callback(database_config):
     """
     Regenerates the database when the database settings are changed.
     """
-    if "databroker" not in st.session_state:
-        st.session_state.databroker = DataBroker(st.session_state.database_config)
-    # not a best practice: accessing protected method. but oh well
+    # Clear existing DataBroker instance from session state
+    if "databroker" in st.session_state:
+        del st.session_state.databroker
+    
+    # Create new DataBroker instance with updated config
+    st.session_state.databroker = DataBroker(database_config)
+    
+    # Force reinitialization of the pipeline
     st.session_state.databroker._init_databroker_pipeline(database_config)
-    st.sidebar.success(f"Database Generated!")
+    
+    
+    st.sidebar.success(f"Database regenerated with {database_config.embedding_model}!")
 
 
 def sidebar():
@@ -392,8 +398,8 @@ def sidebar():
 
         with st.sidebar.expander("Database Options", expanded=False):
             with st.form("advanced", border=False):
-
-                system_config.embedding.embedding_model = st.selectbox(
+                # Update system config directly from widgets
+                new_embedding_model = st.selectbox(
                     label="Choose embedding model:",
                     options=system_config.embedding.supported_embedders,
                     index=system_config.embedding.supported_embedders.index(
@@ -401,28 +407,34 @@ def sidebar():
                     ),
                 )
 
-                system_config.chunking.chunking_method = st.selectbox(
+                new_chunking_method = st.selectbox(
                     label="Choose chunking method:",
                     options=system_config.chunking.supported_chunkers,
                     index=system_config.chunking.supported_chunkers.index(
                         system_config.chunking.chunking_method
                     ),
                 )
+
+                # Create NEW database config object on form submission
+                submitted = st.form_submit_button("Regenerate Database")
+                
+            if submitted:
+                # Update config FIRST
+                system_config.embedding.embedding_model = new_embedding_model
+                system_config.chunking.chunking_method = new_chunking_method
+                
+                # THEN create new database config
                 st.session_state.database_config = SimpleNamespace(
                     username=st.session_state.username,
                     userpath=st.session_state.userpath,
-                    embedding_model=system_config.embedding.embedding_model,
-                    chunking_method=system_config.chunking.chunking_method,
+                    embedding_model=new_embedding_model,
+                    chunking_method=new_chunking_method,
                     pdf_extractor=system_config.extraction,
                     vector_store=system_config.vector_db,
                 )
-
-                st.form_submit_button(
-                    "Regenerate Database",
-                    on_click=(
-                        lambda: database_callback(st.session_state.database_config)
-                    ),
-                )
+                
+                # FINALLY trigger callback
+                database_callback(st.session_state.database_config)
             selected_file = st.selectbox(
                 "Show files from the data folder:",
                 options=(
@@ -615,7 +627,6 @@ def search(search_tab):
                 for i, r in enumerate(search_results[0])
             ]
 
-            # print(search_results[0])
 
             dist = [
                 np.linalg.norm(np.array(j.embedding) - np.array(k.embedding))
@@ -649,7 +660,6 @@ def search(search_tab):
                 }
                 for r in search_results[0]
             ]
-            # print(results)
 
             df = pd.DataFrame(results)
 
