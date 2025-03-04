@@ -285,14 +285,13 @@ def database_callback(database_config):
     # Clear existing DataBroker instance from session state
     if "databroker" in st.session_state:
         del st.session_state.databroker
-    
+
     # Create new DataBroker instance with updated config
     st.session_state.databroker = DataBroker(database_config)
-    
+
     # Force reinitialization of the pipeline
     st.session_state.databroker._init_databroker_pipeline(database_config)
-    
-    
+
     st.sidebar.success(f"Database regenerated with {database_config.embedding_model}!")
 
 
@@ -417,12 +416,12 @@ def sidebar():
 
                 # Create NEW database config object on form submission
                 submitted = st.form_submit_button("Regenerate Database")
-                
+
             if submitted:
                 # Update config FIRST
                 system_config.embedding.embedding_model = new_embedding_model
                 system_config.chunking.chunking_method = new_chunking_method
-                
+
                 # THEN create new database config
                 st.session_state.database_config = SimpleNamespace(
                     username=st.session_state.username,
@@ -432,7 +431,7 @@ def sidebar():
                     pdf_extractor=system_config.extraction,
                     vector_store=system_config.vector_db,
                 )
-                
+
                 # FINALLY trigger callback
                 database_callback(st.session_state.database_config)
             selected_file = st.selectbox(
@@ -626,7 +625,6 @@ def search(search_tab):
                 )
                 for i, r in enumerate(search_results[0])
             ]
-
 
             dist = [
                 np.linalg.norm(np.array(j.embedding) - np.array(k.embedding))

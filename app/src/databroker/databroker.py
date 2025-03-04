@@ -26,7 +26,7 @@ from ingestion.extraction import (
     PyPDF2Extract,
 )
 from ingestion.raw_data import Data
-from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB, MilvusBGE_DB
+from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB
 from orchestrator.utils import SingletonMeta
 
 # Carter: I've left the logger as python's default for now because
@@ -166,13 +166,11 @@ class DataBroker(metaclass=SingletonMeta):
 
     def _create_vectorstore(self, embedding_dimension: int) -> Dict[str, VectorDB]:
         if self._database_config.vector_store.database == "chromadb":
-            print("Creating ChromaDB vector store")
             vectorstore = {
                 "base": ChromaDB(collection_name=self.collection_name["base"]),
                 "user": ChromaDB(collection_name=self.collection_name["user"]),
             }
         elif self._database_config.vector_store.database == "milvus":
-            print("Creating Milvus vector store")
             vectorstore = {
                 "base": MilvusDB(
                     collection_name=self.collection_name["base"],
@@ -180,8 +178,7 @@ class DataBroker(metaclass=SingletonMeta):
                     host=self._database_config.vector_store.host,
                     port=self._database_config.vector_store.port,
                     dense_embedder=self.embedder,
-                    if_hybrid_search=True,  # TODO: make this configurable
-                    use_reranker=True,
+                    if_hybrid_search=False,  # TODO: make this configurable
                 ),
                 "user": MilvusDB(
                     collection_name=self.collection_name["user"],
@@ -189,8 +186,7 @@ class DataBroker(metaclass=SingletonMeta):
                     host=self._database_config.vector_store.host,
                     port=self._database_config.vector_store.port,
                     dense_embedder=self.embedder,
-                    if_hybrid_search=True,  # TODO: make this configurable
-                    use_reranker=True,
+                    if_hybrid_search=False,  # TODO: make this configurable
                 ),
             }
         else:
@@ -325,7 +321,6 @@ class DataBroker(metaclass=SingletonMeta):
         extracted_content = extractor(data)
 
         chunks = self.chunker(extracted_content)
-        print("chunks: ", chunks)
         existing_ids = self.vectorstore[collection].get_all_ids()
 
         new_chunks = []
@@ -336,15 +331,12 @@ class DataBroker(metaclass=SingletonMeta):
                 metadatum.append({"source": data.name, "id": chunk.name})
 
         if not new_chunks:
-            print("No new documents to add")
             return []
 
         try:
             embedding = self.embedder(new_chunks)
             self.vectorstore[collection].insert(embedding, metadatum)
-            print(f"Successfully inserted {len(new_chunks)} standard embeddings.")
         except Exception as e:
-            print(f"Failed to insert into vector store: {e}")
             return []
 
         return [chunk.name for chunk in chunks]

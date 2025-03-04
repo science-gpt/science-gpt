@@ -116,7 +116,7 @@ class ContextRetrieval(PromptDecorator):
         if len(results) == 0 or len(results[0]) == 0:
             return "No results found for the query. Please relay that no documents were retrieved for the given query."
 
-        # print(results)
+        print("results: ", results)
 
         self.chunks = [
             f"Context Source: {chunk.id}\nDocument: {chunk.document}"

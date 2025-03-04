@@ -190,16 +190,11 @@ class BGEM3Embedder(Embedder):
         Returns:
             List[Embedding]: A list of Embedding objects containing the embedded vectors and metadata.
         """
-        print(
-            "using bge m3 embedder for processing the list of chunks and embedding them"
-        )
-        print("chunks: ", chunks)
         docs = [chunk.text for chunk in chunks]  # this is a list of chunking strings
 
         # TODO: list of names for the chunks
         names = [chunk.name for chunk in chunks]
 
-        # print("docs: ", docs)
         ef = BGEM3EmbeddingFunction(use_fp16=False, device="cpu")
         self.dense_dim = ef.dim["dense"]
         docs_embeddings = ef(
