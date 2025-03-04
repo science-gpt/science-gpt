@@ -73,8 +73,6 @@ class ChatOrchestrator(metaclass=SingletonMeta):
                 rewrite_model=self.model,
             )
 
-            # print(f"here you go chunk orchestrator - use_rag{chunks}")
-
         # WARNING: if useknowledgebase is enabled without uploading documents, the app errors out
         if self.config.rag_params.useknowledgebase:
             prompt = ContextRetrieval(
@@ -94,15 +92,27 @@ class ChatOrchestrator(metaclass=SingletonMeta):
             handler = LLMCallHandler(self.model, prompt, self.config)
             llm_prompt, response, cost = handler.call_llm(query)
             chunks = prompt.get_chunks()
+
+            filtered_config = self.config.model_dump(
+                exclude={  # hides all the options. only shows you what you're using
+                    "extraction": {"supported_extractors"},
+                    "vector_db": {"supported_databases"},
+                    "chunking": {"supported_chunkers"},
+                    "embedding": {"supported_embedders"},
+                    "model_auth": {"api_key", "macbook_endpoint"},
+                    "model_params": {"supported_models"},
+                }
+            )
+
             rewriten_query = prompt.get_rewrite_query()
             logger.info(
-                "Prompt: "
-                + llm_prompt
-                + " Response: "
-                + response
-                + " System Config: "
-                + self.config.model_dump_json()
+                "LLM Call",
+                configs=filtered_config,
+                xtra={"prompt": llm_prompt, "response": response},
             )
+
+            print("Model Params", filtered_config)
+            print(type(filtered_config))
 
         # Carter: we will want a better solution here but we need error handling for the time being.
         # This catches errors when the local models are offline
