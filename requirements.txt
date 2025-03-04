@@ -31,3 +31,8 @@ pymilvus
 numpy
 pytest
 docling
+theflow
+llama-index
+python-decouple 
+googlesearch-python
+wikipedia

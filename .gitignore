@@ -7,3 +7,4 @@ venv/*
 vectorstore/
 data/
 test_user_data/
+.theflow
