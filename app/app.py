@@ -188,7 +188,7 @@ def edit_prompt(prompt, chunks, rewrite_prompt, key=0):
                 if not match:
                     st.error(f"Failed to parse chunk: {chunk[:50]}...")
                     continue
-                
+
                 context_source = match.group("context_source")
                 chunk_number = match.group("chunk_number")
                 document = match.group("document")
