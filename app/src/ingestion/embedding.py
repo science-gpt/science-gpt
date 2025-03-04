@@ -24,6 +24,7 @@ class Embedding(Data):
         dense_vector (np.ndarray): The dense embedding vector.
         sparse_vector (Optional[dict[str, float]]): The sparse embedding vector (token-weight mapping), optional.
     """
+
     docs: List[str]
     dense_vector: np.ndarray
     sparse_vector: Optional[Dict[str, float]] = None
@@ -171,6 +172,7 @@ class BGEM3Embedder(Embedder):
     If use_bge_m3 is True, it uses the BGEM3EmbeddingFunction from pymilvus;
     otherwise, it uses a random embedding generator.
     """
+
     def __init__(self, use_bge_m3=True, use_fp16=False, device="cpu"):
         super().__init__()
         self.use_bge_m3 = use_bge_m3
@@ -188,26 +190,29 @@ class BGEM3Embedder(Embedder):
         Returns:
             List[Embedding]: A list of Embedding objects containing the embedded vectors and metadata.
         """
-        print("using bge m3 embedder for processing the list of chunks and embedding them")
+        print(
+            "using bge m3 embedder for processing the list of chunks and embedding them"
+        )
         print("chunks: ", chunks)
-        docs = [chunk.text for chunk in chunks] # this is a list of chunking strings
-        
+        docs = [chunk.text for chunk in chunks]  # this is a list of chunking strings
+
         # TODO: list of names for the chunks
         names = [chunk.name for chunk in chunks]
-        
+
         # print("docs: ", docs)
         ef = BGEM3EmbeddingFunction(use_fp16=False, device="cpu")
         self.dense_dim = ef.dim["dense"]
-        docs_embeddings = ef(docs)  # {"dense": np.ndarray, "sparse": list[dict[str, float]]}
-        
-        
+        docs_embeddings = ef(
+            docs
+        )  # {"dense": np.ndarray, "sparse": list[dict[str, float]]}
+
         embedding = Embedding(
             # name = chunks[0].name, # TODO: for this list of chunks, it may have differnt file names.
-            name = names,
-            data_type = chunks[0].data_type,
-            docs = docs,
-            dense_vector = docs_embeddings["dense"],
-            sparse_vector = docs_embeddings["sparse"],
+            name=names,
+            data_type=chunks[0].data_type,
+            docs=docs,
+            dense_vector=docs_embeddings["dense"],
+            sparse_vector=docs_embeddings["sparse"],
         )
 
         return embedding
