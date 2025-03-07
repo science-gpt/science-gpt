@@ -329,6 +329,14 @@ def sidebar():
                     help="Retrieve content from documents uploaded via the Knowledge Base tab. Do not enable this if you have not uploaded any documents.",
                 )
 
+                system_config.rag_params.hybrid_weight = st.slider(
+                    label="Hybrid Search Weighting",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=system_config.rag_params.hybrid_weight,
+                    help="Weighting for Hybrid Search (0 only dense, 1 only sparse)",
+                )
+
                 system_config.rag_params.top_k = st.slider(
                     label="Top K",
                     min_value=0,
@@ -597,7 +605,7 @@ def search(search_tab):
         if len(query) > 0:
             search_results = st.session_state.databroker.search(
                 [query],
-                system_config.rag_params.top_k,
+                system_config.rag_params.top_k + 10,
                 collection="base",
                 keywords=st.session_state.keywords,
                 filenames=st.session_state.filenames,

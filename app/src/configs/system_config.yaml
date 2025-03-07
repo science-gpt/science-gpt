@@ -83,7 +83,7 @@ chunking:
   
 
 embedding:
-  embedding_model: "bge-m3:567m"
+  embedding_model: "BAAI/bge-m3"
   supported_embedders:
     - "bge-m3:567m"
     - "BAAI/bge-m3"
@@ -94,7 +94,7 @@ embedding:
 # Database Options
 vector_db:
   database: "milvus" 
-  host: "standalone"
+  host: "localhost"
   port: 19530
   supported_databases:
     - "chromadb"
@@ -105,6 +105,7 @@ rag_params:
   use_rag: True
   useknowledgebase: False 
   top_k: 5
+  hybrid_weight: 0.5
   keywords:
   filenames:
   

@@ -1,28 +1,27 @@
+import logging
+import os
+import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-import random
-from typing import Any, List, Mapping, Optional, Callable
-import os
-import scipy
-import torch
+from typing import Any, Callable, List, Mapping, Optional
 
 import chromadb
 import numpy as np
+import scipy
+import torch
 from pymilvus import (
     AnnSearchRequest,
+    Collection,
     CollectionSchema,
     DataType,
     FieldSchema,
     MilvusClient,
-    RRFRanker,
     WeightedRanker,
-    Collection,
+    connections,
+    utility,
 )
 
 from .embedding import Embedding
-from pymilvus.model.hybrid import BGEM3EmbeddingFunction
-from pymilvus.model.reranker import BGERerankFunction
-import logging
 
 # Get a logger for this module.
 logger = logging.getLogger(__name__)
@@ -89,17 +88,6 @@ class VectorDB(ABC):
         pass
 
     @abstractmethod
-    def update(self, ids: List[str], embeddings: List[Embedding]) -> None:
-        """
-        Update existing vectors in the database.
-
-        Args:
-            ids (List[str]): List of vector IDs to update.
-            embeddings (List[Embedding]): List of new Embedding objects.
-        """
-        pass
-
-    @abstractmethod
     def get_all_ids(self) -> List[str]:
         """
         Retrieve all IDs from the database.
@@ -125,8 +113,6 @@ class ChromaDB(VectorDB):
     def __init__(
         self,
         collection_name: str,
-        embedder: Optional[Callable[[List[str]], dict]] = None,
-        embedding_dimension: int = 768,
     ):
         """
         Initialize the ChromaDB instance with the specified collection name.
@@ -138,18 +124,9 @@ class ChromaDB(VectorDB):
         os.makedirs(chromadb_path, exist_ok=True)
         self.client = chromadb.PersistentClient(path=chromadb_path)
         self.collection = self.client.get_or_create_collection(name=collection_name)
-        self.embedding_dimension = embedding_dimension
-        # If no embedder is provided, fallback to zero vectors.
-        self.ef = (
-            embedder
-            if embedder is not None
-            else lambda texts: {
-                "dense": np.array([np.zeros(self.embedding_dimension) for _ in texts])
-            }
-        )
 
     def insert(
-        self, embedding: Embedding, metadatum: Optional[List[dict]] = None
+        self, embeddings: List[Embedding], metadatum: Optional[List[dict]] = None
     ) -> None:
         """
         Insert an aggregated Embedding into the Chroma collection.
@@ -158,10 +135,10 @@ class ChromaDB(VectorDB):
         #   embedding.name -> list of IDs
         #   embedding.docs -> list of document texts
         #   embedding.dense_vector -> 2D numpy array (one row per document)
-        documents = embedding.docs
-        ids = embedding.name
+        documents = [embedding.docs for embedding in embeddings]
+        ids = [embedding.name for embedding in embeddings]
         # Convert each dense vector row into a list.
-        vectors = [vec.tolist() for vec in embedding.dense_vector]
+        vectors = [embedding.dense_vector.tolist() for embedding in embeddings]
         self.collection.add(
             ids=ids,
             embeddings=vectors,
@@ -171,10 +148,11 @@ class ChromaDB(VectorDB):
 
     def search(
         self,
-        queries: List[str],
+        query_embeddings: List[Embedding],
         top_k: int = 5,
         keywords: Optional[List[str]] = None,
         filenames: Optional[List[str]] = None,
+        hybrid_weighting: float = 0.5,
     ) -> List[List[SearchResult]]:
         """
         Process query strings internally to compute embeddings, then perform the search.
@@ -187,13 +165,12 @@ class ChromaDB(VectorDB):
                 where_document = {"$contains": keywords[0]}
         where = {"source": {"$in": filenames}} if filenames else None
 
-        # Process queries into embeddings.
-        query_emb_dict = self.ef(queries)
-        query_vectors = query_emb_dict["dense"]
-        query_embeddings = [vec.tolist() for vec in query_vectors]
+        dense_vectors = [
+            embedding.dense_vector.tolist() for embedding in query_embeddings
+        ]
 
         results = self.collection.query(
-            query_embeddings=query_embeddings,
+            query_embeddings=dense_vectors,
             n_results=top_k,
             where=where,
             where_document=where_document,
@@ -201,7 +178,7 @@ class ChromaDB(VectorDB):
         )
 
         all_results = []
-        for i in range(len(queries)):
+        for i in range(len(dense_vectors)):
             query_results = [
                 SearchResult(
                     id=_id,
@@ -229,22 +206,6 @@ class ChromaDB(VectorDB):
             ids (List[str]): List of vector IDs to delete.
         """
         self.collection.delete(ids=ids)
-
-    def update(
-        self,
-        ids: List[str],
-        embedding: Embedding,
-        metadatum: Optional[List[dict]] = None,
-    ) -> None:
-        """
-        Update existing vectors in the database.
-
-        Args:
-            ids (List[str]): List of vector IDs to update.
-            embeddings (List[Embedding]): List of new Embedding objects.
-        """
-        self.delete(ids)
-        self.insert(embedding, metadatum)
 
     def get_all_ids(self) -> List[str]:
         """
@@ -284,8 +245,6 @@ class MilvusDB(VectorDB):
         host: str = "standalone",
         port: str = "19530",
         dense_dim: int = 1536,
-        dense_embedder: Optional[Callable[[List[str]], dict]] = None,
-        if_hybrid_search: bool = True,
     ):
         """
         Args:
@@ -299,74 +258,73 @@ class MilvusDB(VectorDB):
         self.collection_name = collection_name
         self.host = host
         self.port = port
-        self.if_hybrid_search = if_hybrid_search
-        self.dense_dim = dense_dim
-
-        if dense_embedder is None:
-            raise ValueError("A dense_embedder function must be provided.")
-        self.dense_embedder = dense_embedder
-
-        # Always use BGEM3 for the sparse vector component.
-        self.bge_m3_func = BGEM3EmbeddingFunction(use_fp16=False, device="cpu")
+        self.dim = dense_dim
 
         self._setup_milvus()
 
     def _setup_milvus(self):
-        from pymilvus import (
-            connections,
-            Collection,
-            FieldSchema,
-            CollectionSchema,
-            DataType,
-            utility,
-        )
+        self.client = MilvusClient(uri=f"http://{self.host}:{self.port}")
 
-        connections.connect("default", host=self.host, port=self.port)
+        if not self.client.has_collection(self.collection_name):
+            # Define the collection schema.
+            fields = [
+                FieldSchema(
+                    name="id",
+                    dtype=DataType.VARCHAR,
+                    is_primary=True,
+                    auto_id=False,
+                    max_length=100,
+                ),
+                FieldSchema(
+                    name="text",
+                    dtype=DataType.VARCHAR,
+                    max_length=65535,
+                    enable_analyzer=True,
+                    enable_match=True,
+                ),
+                FieldSchema(
+                    name="filename",
+                    dtype=DataType.VARCHAR,
+                    max_length=65535,
+                    enable_analyzer=True,
+                    enable_match=True,
+                ),
+                FieldSchema(name="sparse_vector", dtype=DataType.SPARSE_FLOAT_VECTOR),
+                FieldSchema(
+                    name="dense_vector", dtype=DataType.FLOAT_VECTOR, dim=self.dim
+                ),
+            ]
+            schema = CollectionSchema(fields, "Hybrid search collection")
 
-        # Define the collection schema.
-        fields = [
-            FieldSchema(
-                name="id",
-                dtype=DataType.VARCHAR,
-                is_primary=True,
-                auto_id=False,
-                max_length=100,
-            ),
-            FieldSchema(
-                name="text",
-                dtype=DataType.VARCHAR,
-                max_length=65535,
-                enable_analyzer=True,
-                enable_match=True,
-            ),
-            FieldSchema(name="sparse_vector", dtype=DataType.SPARSE_FLOAT_VECTOR),
-            FieldSchema(
-                name="dense_vector", dtype=DataType.FLOAT_VECTOR, dim=self.dense_dim
-            ),
-        ]
+            # Create index params
+            index_params = self.client.prepare_index_params()
 
-        schema = CollectionSchema(fields, "Hybrid search collection")
+            index_params.add_index(
+                field_name="dense_vector",
+                index_name="dense_vector_index",
+                index_type="FLAT",
+                metric_type="IP",
+            )
 
-        # For debugging: drop any pre-existing collection.
-        if utility.has_collection(self.collection_name):
-            utility.drop_collection(self.collection_name)
+            index_params.add_index(
+                field_name="sparse_vector",
+                index_name="sparse_inverted_index",
+                index_type="SPARSE_INVERTED_INDEX",
+                metric_type="IP",
+                params={"inverted_index_algo": "DAAT_MAXSCORE"},
+            )
 
-        # Create the collection.
-        self.collection = Collection(
-            self.collection_name, schema, consistency_level="Strong"
-        )
+            self.client.create_collection(
+                collection_name=self.collection_name,
+                schema=schema,
+                index_params=index_params,
+            )
 
-        # Create indexes on the vector fields.
-        sparse_index = {"index_type": "SPARSE_INVERTED_INDEX", "metric_type": "IP"}
-        dense_index = {"index_type": "FLAT", "metric_type": "IP"}
+        self.client.load_collection(self.collection_name)
 
-        self.collection.create_index("sparse_vector", sparse_index)
-        self.collection.create_index("dense_vector", dense_index)
-
-        # Load the collection so it can serve search requests immediately.
-        self.collection.load()
-
-    def insert(self, embedding, metadatum: Optional[List[dict]] = None) -> None:
+    def insert(
+        self, embeddings: List[Embedding], metadatum: Optional[List[dict]] = None
+    ) -> None:
         """
         Inserts documents into Milvus.
 
@@ -380,42 +338,32 @@ class MilvusDB(VectorDB):
                 - name: a list of unique IDs.
             metadatum (Optional[List[dict]]): Additional metadata for each document.
         """
-        docs = embedding.docs
-        ids = embedding.name
-        dense_embeddings = embedding.dense_vector
-
-        # Compute sparse embeddings if hybrid search is enabled.
-        try:
-            if self.if_hybrid_search:
-                sparse_result = self.bge_m3_func(docs)
-                sparse_embeddings = sparse_result["sparse"]
-            else:
-                sparse_embeddings = [dict() for _ in docs]
-        except Exception as e:
-            logger.error("Error computing sparse embeddings: %s", str(e))
-            sparse_embeddings = [dict() for _ in docs]
-
         entities = [
-            ids,
-            docs,
-            sparse_embeddings,
-            dense_embeddings,
+            {
+                "id": embedding.name,
+                "text": embedding.docs,
+                "filename": metadata["source"],
+                "dense_vector": embedding.dense_vector.tolist(),
+                "sparse_vector": embedding.sparse_vector,
+            }
+            for embedding, metadata in zip(embeddings, metadatum)
         ]
 
-        self.collection.insert(entities)
-        self.collection.flush()
+        self.client.insert(collection_name=self.collection_name, data=entities)
+        self.client.flush(collection_name=self.collection_name)
         logger.info(
             "Inserted %d documents into Milvus collection '%s'.",
-            len(docs),
+            len(entities),
             self.collection_name,
         )
 
     def search(
         self,
-        queries: List[str],
+        query_embeddings: List[Embedding],
         top_k: int = 5,
         keywords: Optional[List[str]] = None,
         filenames: Optional[List[str]] = None,
+        hybrid_weighting: float = 0.5,
     ) -> List[List[SearchResult]]:
         """
         Searches Milvus for relevant documents.
@@ -436,119 +384,72 @@ class MilvusDB(VectorDB):
         Returns:
             List[List[SearchResult]]: A list of search result lists.
         """
-        from ingestion.chunking import Chunk
 
+        filter_list = []
+        if keywords:
+            filter_list.append(f"TEXT_MATCH(text, '{' '.join(keywords)}')")
+
+        if filenames:
+            filter_list.append(f"TEXT_MATCH(filename, '{' '.join(filenames)}')")
+
+        filter_expr = " AND ".join(filter_list) if len(filter_list) > 0 else None
+
+        dense_req = AnnSearchRequest(
+            [embedding.dense_vector.tolist() for embedding in query_embeddings],
+            "dense_vector",
+            {"metric_type": "IP"},
+            expr=filter_expr,
+            limit=top_k,
+        )
+
+        sparse_req = AnnSearchRequest(
+            [embedding.sparse_vector for embedding in query_embeddings],
+            "sparse_vector",
+            {"metric_type": "IP"},
+            expr=filter_expr,
+            limit=top_k,
+        )
+
+        # Perform hybrid search
+        hybrid_results = self.client.hybrid_search(
+            collection_name=self.collection_name,
+            reqs=[sparse_req, dense_req],
+            ranker=WeightedRanker(hybrid_weighting, 1 - hybrid_weighting),
+            limit=top_k,
+            output_fields=["id", "text", "filename", "dense_vector"],
+        )
+
+        # Process the search results.
         all_results = []
-
-        for query in queries:
-            query_chunk = Chunk(
-                text=query, name=f"Query-{query[:10]}", data_type="query"
-            )
-            # Compute dense query embedding using the dense embedder.
-            dense_query = self.dense_embedder([query_chunk]).dense_vector
-            # Compute sparse query embedding using BGEM3.
-            sparse_query = self.bge_m3_func([query])["sparse"]
-
-            if self.if_hybrid_search:
-                # Create AnnSearchRequest objects for both dense and sparse fields.
-                dense_req = AnnSearchRequest(
-                    dense_query, "dense_vector", {"metric_type": "IP"}, limit=top_k
-                )
-                sparse_req = AnnSearchRequest(
-                    sparse_query, "sparse_vector", {"metric_type": "IP"}, limit=top_k
-                )
-
-                # Perform hybrid search
-                hybrid_results = self.collection.hybrid_search(
-                    reqs=[sparse_req, dense_req],
-                    rerank=(
-                        RRFRanker()
-                    ),  # TODO: can customize this to use WeightedRanker(sparse_weight, dense_weight)
-                    limit=top_k,
-                    output_fields=["text", "id"],
-                )[0]
-
-                result_texts = [hit.fields["text"] for hit in hybrid_results]
-                # https://milvus.io/api-reference/pymilvus/v2.4.x/Rerankers/BGERerankFunction/BGERerankFunction.md
-                # here by default the reranker model is BAAI/bge-reranker-v2-m3
-                bge_rf = BGERerankFunction(device="cpu")
-                reranked_results = bge_rf(query, result_texts, top_k=top_k)
-                query_results = []
-
-                # rerank the results using BGE CrossEncoder model
-                for i, hit in enumerate(reranked_results):
-                    query_results.append(
-                        SearchResult(
-                            id=hybrid_results[i].fields.get("id", ""),
-                            distance=float(hit.score),
-                            metadata={},
-                            document=hit.text,
-                            embedding=[],
-                        )
+        for hits in hybrid_results:
+            query_results = []
+            for hit in hits:
+                query_results.append(
+                    SearchResult(
+                        id=str(hit["id"]),
+                        distance=hit["distance"],
+                        metadata={"filename": hit["entity"].get("filename", "")},
+                        document=hit["entity"].get("text", ""),
+                        embedding=hit["entity"].get("dense_vector", []),
                     )
-                all_results.append(query_results)
-            else:
-                # Dense-only search: use only the dense query.
-                search_params = {"metric_type": "IP", "params": {"nprobe": 10}}
-
-                # Wrap the query into a Chunk for the dense embedder.
-                query_chunk = Chunk(
-                    text=query, name=f"Query-{query[:10]}", data_type="query"
                 )
-
-                # Compute dense query embedding using the dense embedder.
-                dense_query = self.dense_embedder([query_chunk]).dense_vector
-
-                # Convert dense_query to a list-of-lists (works for numpy arrays or torch tensors)
-                if hasattr(dense_query, "tolist"):
-                    dense_query = dense_query.tolist()
-                elif not isinstance(dense_query, list):
-                    raise TypeError(
-                        "dense_query must be a list or convertible to a list."
-                    )
-
-                # Perform the basic ANN search.
-                results = self.collection.search(
-                    data=dense_query,
-                    anns_field="dense_vector",
-                    param=search_params,
-                    limit=top_k,
-                    expr="",
-                    output_fields=["text", "id"],
-                )
-
-                # Process the search results.
-                query_results = []
-                for hit in results[0]:
-                    query_results.append(
-                        SearchResult(
-                            id=str(hit.id),
-                            distance=hit.distance,
-                            metadata={},
-                            document=hit.entity.get("text") or "",
-                            embedding=hit.entity.get("dense_vector") or [],
-                        )
-                    )
-                all_results.append(query_results)
+            all_results.append(query_results)
 
         return all_results
 
     def delete(self, ids: List[str]) -> None:
         """Deletes documents from the collection by their IDs."""
-        self.collection.delete(expr=f"id in {ids}")
-
-    def update(
-        self, ids: List[str], embedding, metadatum: Optional[List[dict]] = None
-    ) -> None:
-        """Updates documents by deleting and reinserting them."""
-        self.delete(ids)
-        self.insert(embedding, metadatum)
+        self.client.delete(collection_name=self.collection_name, expr=f"id in {ids}")
 
     def get_all_ids(self) -> List[str]:
         """Retrieves all document IDs from the collection."""
-        results = self.collection.query(expr="id != 'NULL'", output_fields=["id"])
+        results = self.client.query(
+            collection_name=self.collection_name,
+            filter="id != 'NULL'",
+            output_fields=["id"],
+        )
         return [result["id"] for result in results]
 
     def clear(self) -> None:
         """Clears all documents from the collection."""
-        self.collection.delete(expr='id != "NULL"')
+        self.client.delete(collection_name=self.collection_name, expr='id != "NULL"')

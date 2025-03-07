@@ -14,10 +14,10 @@ from ingestion.chunking import (
     SplitSentencesChunker,
 )
 from ingestion.embedding import (
+    BGEM3Embedder,
     Embedder,
     HuggingFaceEmbedder,
     OllamaEmbedder,
-    BGEM3Embedder,
 )
 from ingestion.extraction import (
     ContentExtractor,
@@ -28,6 +28,7 @@ from ingestion.extraction import (
 from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB
 from orchestrator.utils import SingletonMeta
+from tqdm import tqdm
 
 # Carter: I've left the logger as python's default for now because
 # there are many log statements in the databroker that we might not want to
@@ -97,13 +98,12 @@ class DataBroker(metaclass=SingletonMeta):
                 logger.error(
                     "Failed to connect to the Ollama model. Defaulting to HuggingFace embeddings."
                 )
-                embedder = HuggingFaceEmbedder(model_name=embedding_model)
+                embedder = HuggingFaceEmbedder(model_name=HFACE_MODELS[0])
         elif embedding_model in HFACE_MODELS:
             print("Using HuggingFaceEmbedder")
             embedder = HuggingFaceEmbedder(model_name=embedding_model)
         elif embedding_model in BGEM3_MODELS:
             print("Using BGEM3Embedder")
-
             embedder = BGEM3Embedder()
         else:
             raise ValueError(f"Unsupported embedding method: {embedding_model}")
@@ -177,16 +177,12 @@ class DataBroker(metaclass=SingletonMeta):
                     dense_dim=embedding_dimension,
                     host=self._database_config.vector_store.host,
                     port=self._database_config.vector_store.port,
-                    dense_embedder=self.embedder,
-                    if_hybrid_search=False,  # TODO: make this configurable
                 ),
                 "user": MilvusDB(
                     collection_name=self.collection_name["user"],
                     dense_dim=embedding_dimension,
                     host=self._database_config.vector_store.host,
                     port=self._database_config.vector_store.port,
-                    dense_embedder=self.embedder,
-                    if_hybrid_search=False,  # TODO: make this configurable
                 ),
             }
         else:
@@ -282,7 +278,7 @@ class DataBroker(metaclass=SingletonMeta):
         existing_files = list(self.data_cache[collection][collection_name].keys())
         new_files = list(set(pdf_files) - set(existing_files))
 
-        for pdf_file in new_files:
+        for pdf_file in tqdm(new_files):
             pdf = PDFData(
                 filepath=os.path.join(data_root, pdf_file),
                 name=pdf_file,
@@ -330,14 +326,11 @@ class DataBroker(metaclass=SingletonMeta):
                 new_chunks.append(chunk)
                 metadatum.append({"source": data.name, "id": chunk.name})
 
-        if not new_chunks:
-            return []
-
-        try:
-            embedding = self.embedder(new_chunks)
-            self.vectorstore[collection].insert(embedding, metadatum)
-        except Exception as e:
-            return []
+        if len(new_chunks) > 0:
+            embeddings = self.embedder(new_chunks)
+            self.vectorstore[collection].insert(embeddings, metadatum)
+        else:
+            print("No new documents to add")
 
         return [chunk.name for chunk in chunks]
 
@@ -353,6 +346,7 @@ class DataBroker(metaclass=SingletonMeta):
         queries: List[str],
         top_k: int = 2,
         collection="base",
+        hybrid_weighting: float = 0.5,
         keywords: Optional[list[str]] = None,
         filenames: Optional[list[str]] = None,
     ) -> List[List[SearchResult]]:
@@ -370,7 +364,15 @@ class DataBroker(metaclass=SingletonMeta):
             List[List[SearchResult]]: A list of lists of SearchResult objects containing
                 the search results for each query, sorted by relevance
         """
+
+        query_chunks = [
+            Chunk(text=query, name=f"Query_{i}", data_type="query")
+            for i, query in enumerate(queries)
+        ]
+
+        query_embeddings = self.embedder(query_chunks)
+
         results = self.vectorstore[collection].search(
-            queries, top_k, keywords, filenames
+            query_embeddings, top_k, keywords, filenames, hybrid_weighting
         )
         return results

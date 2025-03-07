@@ -1,17 +1,20 @@
+import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 
 import numpy as np
+import torch
 from langchain_community.embeddings.ollama import OllamaEmbeddings
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
-from tqdm import tqdm
 from pymilvus.model.hybrid import BGEM3EmbeddingFunction
-import random
+from tqdm import tqdm
+
 from .chunking import Chunk
 from .raw_data import Data
 
 
+@staticmethod
 @dataclass
 class Embedding(Data):
     """
@@ -25,7 +28,7 @@ class Embedding(Data):
         sparse_vector (Optional[dict[str, float]]): The sparse embedding vector (token-weight mapping), optional.
     """
 
-    docs: List[str]
+    docs: str
     dense_vector: np.ndarray
     sparse_vector: Optional[Dict[str, float]] = None
 
@@ -40,7 +43,15 @@ class Embedder(ABC):
     """
 
     def __init__(self):
+        self.setup_device()
         self.embedding_dimension: Optional[int] = None
+
+    def setup_device(self):
+        self.device = "cpu"
+        self.use_fp16 = False
+        if torch.cuda.is_available():
+            self.device = "cuda:0"
+            self.use_fp16 = True
 
     @abstractmethod
     def __call__(self, chunks: List[Chunk]) -> List[Embedding]:
@@ -70,7 +81,10 @@ class HuggingFaceEmbedder(Embedder):
                               Defaults to "sentence-transformers/all-mpnet-base-v2".
         """
         super().__init__()
-        self.model = HuggingFaceEmbeddings(model_name=model_name)
+        self.base_embedder = HuggingFaceEmbeddings(model_name=model_name)
+        self.sparse_embedder = BGEM3EmbeddingFunction(
+            use_fp16=self.use_fp16, device=self.device
+        )
         self.embedding_dimension = self.model.client.get_sentence_embedding_dimension()
 
     def __call__(self, chunks: List[Chunk]) -> Embedding:
@@ -88,23 +102,28 @@ class HuggingFaceEmbedder(Embedder):
                 - dense_vector: a stacked NumPy array of dense embeddings,
                 - sparse_vector: a list of empty dicts (no sparse data available).
         """
-        names = [chunk.name for chunk in chunks]
         docs = [chunk.text for chunk in chunks]
 
         dense_list = []
         for text in tqdm(docs, desc="HuggingFace Embedding"):
-            vector = self.model.embed_query(text)
+            vector = self.base_embedder.embed_query(text)
             dense_list.append(vector)
-        dense_vectors = np.stack(dense_list, axis=0)
-        sparse_vectors = [{} for _ in docs]  # no sparse embeddings available
 
-        return Embedding(
-            name=names,
-            data_type=chunks[0].data_type,
-            docs=docs,
-            dense_vector=dense_vectors,
-            sparse_vector=sparse_vectors,
-        )
+        sparse_embeddings = self.sparse_embedder(docs)
+
+        dense_vectors = np.stack(dense_list, axis=0)
+        sparse_vectors = sparse_embeddings["sparse"]
+
+        return [
+            Embedding(
+                name=chunk.name,
+                data_type=chunk.data_type,
+                docs=chunk.text,
+                dense_vector=dense_vectors[i],
+                sparse_vector=sparse_vectors[i],
+            )
+            for i, chunk in enumerate(chunks)
+        ]
 
 
 class OllamaEmbedder(Embedder):
@@ -122,7 +141,10 @@ class OllamaEmbedder(Embedder):
         """
         super().__init__()
         self.model_name = model_name
-        self.model = OllamaEmbeddings(model=self.model_name, base_url=endpoint)
+        self.base_embedder = OllamaEmbeddings(model=self.model_name, base_url=endpoint)
+        self.sparse_embedder = BGEM3EmbeddingFunction(
+            use_fp16=self.use_fp16, device=self.device
+        )
 
     def test_connection(self):
         """Test the connection to the embedding service. Fallback to HuggingFace embeddings if this fails."""
@@ -147,23 +169,28 @@ class OllamaEmbedder(Embedder):
                 - dense_vector: a stacked NumPy array of dense embeddings,
                 - sparse_vector: a list of empty dicts (no sparse data available).
         """
-        names = [chunk.name for chunk in chunks]
         docs = [chunk.text for chunk in chunks]
 
         dense_list = []
         for text in tqdm(docs, desc="Ollama Embedding"):
             vector = self.model.embed_query(text)
             dense_list.append(vector)
-        dense_vectors = np.stack(dense_list, axis=0)
-        sparse_vectors = [{} for _ in docs]  # no sparse embeddings available
 
-        return Embedding(
-            name=names,
-            data_type=chunks[0].data_type,
-            docs=docs,
-            dense_vector=dense_vectors,
-            sparse_vector=sparse_vectors,
-        )
+        sparse_embeddings = self.sparse_embedder(docs)
+
+        dense_vectors = np.stack(dense_list, axis=0)
+        sparse_vectors = sparse_embeddings["sparse"]
+
+        return [
+            Embedding(
+                name=chunk.name,
+                data_type=chunk.data_type,
+                docs=chunk.text,
+                dense_vector=dense_vectors[i],
+                sparse_vector=sparse_vectors[i],
+            )
+            for i, chunk in enumerate(chunks)
+        ]
 
 
 class BGEM3Embedder(Embedder):
@@ -173,12 +200,12 @@ class BGEM3Embedder(Embedder):
     otherwise, it uses a random embedding generator.
     """
 
-    def __init__(self, use_bge_m3=True, use_fp16=False, device="cpu"):
+    def __init__(self):
         super().__init__()
-        self.use_bge_m3 = use_bge_m3
-        if self.use_bge_m3:
-            self.embedder = BGEM3EmbeddingFunction(use_fp16=use_fp16, device=device)
-            self.embedding_dimension = self.embedder.dim["dense"]
+        self.embedder = BGEM3EmbeddingFunction(
+            use_fp16=self.use_fp16, device=self.device
+        )
+        self.embedding_dimension = self.embedder.dim["dense"]
 
     def __call__(self, chunks: List[Chunk]) -> List[Embedding]:
         """
@@ -190,24 +217,19 @@ class BGEM3Embedder(Embedder):
         Returns:
             List[Embedding]: A list of Embedding objects containing the embedded vectors and metadata.
         """
-        docs = [chunk.text for chunk in chunks]  # this is a list of chunking strings
+        docs = [chunk.text for chunk in chunks]
 
-        # TODO: list of names for the chunks
-        names = [chunk.name for chunk in chunks]
-
-        ef = BGEM3EmbeddingFunction(use_fp16=False, device="cpu")
-        self.dense_dim = ef.dim["dense"]
-        docs_embeddings = ef(
+        docs_embeddings = self.embedder(
             docs
         )  # {"dense": np.ndarray, "sparse": list[dict[str, float]]}
 
-        embedding = Embedding(
-            # name = chunks[0].name, # TODO: for this list of chunks, it may have differnt file names.
-            name=names,
-            data_type=chunks[0].data_type,
-            docs=docs,
-            dense_vector=docs_embeddings["dense"],
-            sparse_vector=docs_embeddings["sparse"],
-        )
-
-        return embedding
+        return [
+            Embedding(
+                name=chunk.name,
+                data_type=chunk.data_type,
+                docs=chunk.text,
+                dense_vector=docs_embeddings["dense"][i],
+                sparse_vector=list(docs_embeddings["sparse"])[i],
+            )
+            for i, chunk in enumerate(chunks)
+        ]
