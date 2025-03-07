@@ -74,6 +74,7 @@ class ContextRetrieval(PromptDecorator):
         config: SystemConfig,
         rewrite_model: ChatModel,
         collection="base",
+        hybrid_weight=0.5,
     ) -> None:
         self._prompt = prompt
         self.databroker = DataBroker()
@@ -83,6 +84,7 @@ class ContextRetrieval(PromptDecorator):
         self.cost = self._prompt.cost
         self.chunks = self._prompt.chunks
         self.rewrite_query = self._prompt.rewrite_query
+        self.hybrid_weight = (hybrid_weight,)
 
     def get_prompt(self, query: str) -> str:
 
@@ -110,13 +112,14 @@ class ContextRetrieval(PromptDecorator):
             collection=self.collection,
             keywords=self.config.rag_params.keywords,
             filenames=self.config.rag_params.filenames,
+            hybrid_weighting=self.config.rag_params.hybrid_weight,
         )
 
         # No results were returned.
         if len(results) == 0 or len(results[0]) == 0:
             return "No results found for the query. Please relay that no documents were retrieved for the given query."
 
-        # print(results)
+        print("results: ", results)
 
         self.chunks = [
             f"Context Source: {chunk.id}\nDocument: {chunk.document}"

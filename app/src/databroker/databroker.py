@@ -13,7 +13,12 @@ from ingestion.chunking import (
     RecursiveCharacterChunker,
     SplitSentencesChunker,
 )
-from ingestion.embedding import Embedder, HuggingFaceEmbedder, OllamaEmbedder
+from ingestion.embedding import (
+    BGEM3Embedder,
+    Embedder,
+    HuggingFaceEmbedder,
+    OllamaEmbedder,
+)
 from ingestion.extraction import (
     ContentExtractor,
     DoclingPDFExtract,
@@ -42,6 +47,7 @@ class DataBroker(metaclass=SingletonMeta):
         self,
         database_config: SimpleNamespace = None,
         secrets_path: str = "secrets.toml",
+        **embedder_kwargs,
     ) -> None:
         """
         Instantiates an object of this class.
@@ -76,9 +82,11 @@ class DataBroker(metaclass=SingletonMeta):
             ValueError: If the configured embedding method is not supported
         """
         OLLAMA_MODELS = ["mxbai-embed-large", "nomic-embed-text", "bge-m3:567m"]
-        HFACE_MODELS = ["BAAI/bge-m3"]
+        HFACE_MODELS = ["sentence-transformers/all-mpnet-base-v2"]
+        BGEM3_MODELS = ["BAAI/bge-m3"]
 
         embedding_model = self._database_config.embedding_model
+        print("Using embedding model: ", embedding_model)
         if embedding_model in OLLAMA_MODELS:
             macbook_endpoint = self._secrets["localmodel"]["macbook_endpoint"]
             embedder = OllamaEmbedder(
@@ -90,13 +98,15 @@ class DataBroker(metaclass=SingletonMeta):
                 logger.error(
                     "Failed to connect to the Ollama model. Defaulting to HuggingFace embeddings."
                 )
-                embedder = HuggingFaceEmbedder(model_name="BAAI/bge-m3")
+                embedder = HuggingFaceEmbedder(model_name=HFACE_MODELS[0])
         elif embedding_model in HFACE_MODELS:
+            print("Using HuggingFaceEmbedder")
             embedder = HuggingFaceEmbedder(model_name=embedding_model)
+        elif embedding_model in BGEM3_MODELS:
+            print("Using BGEM3Embedder")
+            embedder = BGEM3Embedder()
         else:
-            raise ValueError(
-                f"Unsupported embedding method: {self._database_config.embedding_model}"
-            )
+            raise ValueError(f"Unsupported embedding method: {embedding_model}")
 
         return embedder
 
@@ -164,21 +174,22 @@ class DataBroker(metaclass=SingletonMeta):
             vectorstore = {
                 "base": MilvusDB(
                     collection_name=self.collection_name["base"],
-                    dim=embedding_dimension,
+                    dense_dim=embedding_dimension,
                     host=self._database_config.vector_store.host,
                     port=self._database_config.vector_store.port,
                 ),
                 "user": MilvusDB(
                     collection_name=self.collection_name["user"],
-                    dim=embedding_dimension,
+                    dense_dim=embedding_dimension,
                     host=self._database_config.vector_store.host,
                     port=self._database_config.vector_store.port,
                 ),
             }
         else:
             raise ValueError(
-                f"Unsupported chunking method: {self._database_config.chunking_method}"
+                f"Unsupported vector store type: {self._database_config.vector_store.database}"
             )
+
         return vectorstore
 
     def _validate_extractor_chunker_compatibility(self):
@@ -213,15 +224,6 @@ class DataBroker(metaclass=SingletonMeta):
                 """
             )
 
-    def _init_databroker_cache(self, collection="base"):
-        chunks = self.vectorstore[collection].get_all_ids()
-        collection_name = self.collection_name[collection]
-        for chunk in tqdm(chunks):
-            file = chunk.split(" - Chunk ")[0]
-            if file not in self.data_cache[collection][collection_name]:
-                self.data_cache[collection][collection_name][file] = []
-            self.data_cache[collection][collection_name][file].append(chunk)
-
     def _init_databroker_pipeline(self, database_config: SimpleNamespace) -> None:
         """
         Initializes the data broker pipeline.
@@ -244,18 +246,15 @@ class DataBroker(metaclass=SingletonMeta):
             """
             return s.translate(str.maketrans("", "", string.punctuation))
 
-        suffix = f"{strip(self._database_config.embedding_model)}_{strip(self._database_config.chunking_method)}"
+        suffix = f"_{strip(self._database_config.embedding_model)}_{strip(self._database_config.chunking_method)}"
 
         self.collection_name = {
-            "base": "{}_{}".format(self._database_config.vector_store.database, suffix),
-            "user": "{}_{}".format(strip(self._database_config.username), suffix),
+            "base": self._database_config.vector_store.database + suffix,
+            "user": self._database_config.username + suffix,
         }
 
-        if self.collection_name["base"] not in self.data_cache["base"]:
-            self.data_cache["base"][self.collection_name["base"]] = {}
-
-        if self.collection_name["user"] not in self.data_cache["user"]:
-            self.data_cache["user"][self.collection_name["user"]] = {}
+        self.data_cache["base"][self.collection_name["base"]] = {}
+        self.data_cache["user"][self.collection_name["user"]] = {}
 
         self.embedder = self._create_embedder()
         self.chunker = self._create_chunker()
@@ -263,9 +262,6 @@ class DataBroker(metaclass=SingletonMeta):
         self.vectorstore = self._create_vectorstore(
             embedding_dimension=self.embedder.embedding_dimension
         )
-
-        self._init_databroker_cache(collection="base")
-        self._init_databroker_cache(collection="user")
 
         self._ingest_root_data(collection="base")
         self._ingest_root_data(collection="user")
@@ -290,7 +286,8 @@ class DataBroker(metaclass=SingletonMeta):
             )
             try:
                 logger.info("Inserting", pdf)
-                self.insert(pdf, collection=collection)
+                chunk_ids = self.insert(pdf, collection=collection)
+                self.data_cache[collection][collection_name][pdf_file] = chunk_ids
             except IOError as e:
                 logger.error(f"Failed to insert {pdf.name} into the vector store: {e}")
 
@@ -304,7 +301,7 @@ class DataBroker(metaclass=SingletonMeta):
         remove_files = list(set(existing_files) - set(pdf_files))
 
         del_chunks = []
-        for pdf_file in tqdm(remove_files):
+        for pdf_file in remove_files:
             del_chunks.extend(self.data_cache[collection][pdf_file])
             self.data_cache[collection][collection_name].pop(pdf_file)
 
@@ -314,23 +311,14 @@ class DataBroker(metaclass=SingletonMeta):
     def insert(self, data: Data, collection="base") -> List[str]:
         """
         Process and insert the given raw data into the vector store.
-
-        This method orchestrates the extraction, chunking, embedding, and storage
-        of the input data.
-
-        Args:
-            data (Data): The raw data to be processed and inserted
-            collection (str, optional): Which collection to insert into. Defaults to "base".
+        Supports both standard embeddings and BGEM3 hybrid embeddings.
         """
-        collection_name = self.collection_name[collection]
         extractor = self.extractors.get(data.data_type)
         extracted_content = extractor(data)
 
         chunks = self.chunker(extracted_content)
+        existing_ids = self.vectorstore[collection].get_all_ids()
 
-        existing_ids = {id: "" for id in self.vectorstore[collection].get_all_ids()}
-
-        # more looping over every entry in the db?
         new_chunks = []
         metadatum = []
         for chunk in chunks:
@@ -338,15 +326,9 @@ class DataBroker(metaclass=SingletonMeta):
                 new_chunks.append(chunk)
                 metadatum.append({"source": data.name, "id": chunk.name})
 
-        self.data_cache[collection][collection_name][data.name] = chunks
-
-        if len(new_chunks):
+        if len(new_chunks) > 0:
             embeddings = self.embedder(new_chunks)
-            try:
-                self.vectorstore[collection].insert(embeddings, metadatum)
-            except Exception as e:
-                logger.error(f"Failed to get or create collection: {e}")
-                return []
+            self.vectorstore[collection].insert(embeddings, metadatum)
         else:
             print("No new documents to add")
 
@@ -362,8 +344,9 @@ class DataBroker(metaclass=SingletonMeta):
     def search(
         self,
         queries: List[str],
-        top_k: int = 5,
+        top_k: int = 2,
         collection="base",
+        hybrid_weighting: float = 0.5,
         keywords: Optional[list[str]] = None,
         filenames: Optional[list[str]] = None,
     ) -> List[List[SearchResult]]:
@@ -381,15 +364,15 @@ class DataBroker(metaclass=SingletonMeta):
             List[List[SearchResult]]: A list of lists of SearchResult objects containing
                 the search results for each query, sorted by relevance
         """
+
         query_chunks = [
             Chunk(text=query, name=f"Query_{i}", data_type="query")
             for i, query in enumerate(queries)
         ]
 
         query_embeddings = self.embedder(query_chunks)
-        query_vectors = [embedding.vector for embedding in query_embeddings]
 
         results = self.vectorstore[collection].search(
-            query_vectors, top_k, keywords, filenames
+            query_embeddings, top_k, keywords, filenames, hybrid_weighting
         )
         return results

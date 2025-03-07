@@ -172,20 +172,22 @@ def edit_prompt(prompt, chunks, rewrite_prompt, key=0):
             st.text_area("Your query was rewritten to", rewrite_prompt)
 
         if chunks:
-            pattern = r"Context Source:\s*(?P<context_source>.*?)\s*-\s*Chunk\s*(?P<chunk_number>\d+)\s*Document:\s*(?P<document>.+)"
-
-            ## annotated chunk isn't working as expected so I am using markdown to highlight the chunks
-            # formatted_chunks = []
-            # for i in range(len(chunks)):
-            #     formatted_chunks.append(
-            #        (f"{chunks[i]}", str(i+1))
-            #     )
-            # annotated_text(formatted_chunks)
-            # annotated_text((f"      TOTAL CHUNKS:  {len(chunks)}", f"{len(chunks)}"))
+            pattern = (
+                r"Context\s*Source:\s*"
+                r"(?P<context_source>.+?)"
+                r"\s*-\s*Chunk\s*"
+                r"(?P<chunk_number>[\d_]+)"
+                r"\s*Document:\s*"
+                r"(?P<document>.+)"
+            )
 
             st.subheader("Chunks")
             for chunk in chunks:
-                match = re.match(pattern, chunk, re.DOTALL)
+                match = re.search(pattern, chunk, re.DOTALL)
+                if not match:
+                    st.error(f"Failed to parse chunk: {chunk[:50]}...")
+                    continue
+
                 context_source = match.group("context_source")
                 chunk_number = match.group("chunk_number")
                 document = match.group("document")
@@ -280,11 +282,17 @@ def database_callback(database_config):
     """
     Regenerates the database when the database settings are changed.
     """
-    if "databroker" not in st.session_state:
-        st.session_state.databroker = DataBroker(st.session_state.database_config)
-    # not a best practice: accessing protected method. but oh well
+    # Clear existing DataBroker instance from session state
+    if "databroker" in st.session_state:
+        del st.session_state.databroker
+
+    # Create new DataBroker instance with updated config
+    st.session_state.databroker = DataBroker(database_config)
+
+    # Force reinitialization of the pipeline
     st.session_state.databroker._init_databroker_pipeline(database_config)
-    st.sidebar.success(f"Database Generated!")
+
+    st.sidebar.success(f"Database regenerated with {database_config.embedding_model}!")
 
 
 def sidebar():
@@ -319,6 +327,14 @@ def sidebar():
                     label="Use Uploaded Documents",
                     value=False,
                     help="Retrieve content from documents uploaded via the Knowledge Base tab. Do not enable this if you have not uploaded any documents.",
+                )
+
+                system_config.rag_params.hybrid_weight = st.slider(
+                    label="Hybrid Search Weighting",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=system_config.rag_params.hybrid_weight,
+                    help="Weighting for Hybrid Search (0 only dense, 1 only sparse)",
                 )
 
                 system_config.rag_params.top_k = st.slider(
@@ -389,8 +405,8 @@ def sidebar():
 
         with st.sidebar.expander("Database Options", expanded=False):
             with st.form("advanced", border=False):
-
-                system_config.embedding.embedding_model = st.selectbox(
+                # Update system config directly from widgets
+                new_embedding_model = st.selectbox(
                     label="Choose embedding model:",
                     options=system_config.embedding.supported_embedders,
                     index=system_config.embedding.supported_embedders.index(
@@ -398,28 +414,34 @@ def sidebar():
                     ),
                 )
 
-                system_config.chunking.chunking_method = st.selectbox(
+                new_chunking_method = st.selectbox(
                     label="Choose chunking method:",
                     options=system_config.chunking.supported_chunkers,
                     index=system_config.chunking.supported_chunkers.index(
                         system_config.chunking.chunking_method
                     ),
                 )
+
+                # Create NEW database config object on form submission
+                submitted = st.form_submit_button("Regenerate Database")
+
+            if submitted:
+                # Update config FIRST
+                system_config.embedding.embedding_model = new_embedding_model
+                system_config.chunking.chunking_method = new_chunking_method
+
+                # THEN create new database config
                 st.session_state.database_config = SimpleNamespace(
                     username=st.session_state.username,
                     userpath=st.session_state.userpath,
-                    embedding_model=system_config.embedding.embedding_model,
-                    chunking_method=system_config.chunking.chunking_method,
+                    embedding_model=new_embedding_model,
+                    chunking_method=new_chunking_method,
                     pdf_extractor=system_config.extraction,
                     vector_store=system_config.vector_db,
                 )
 
-                st.form_submit_button(
-                    "Regenerate Database",
-                    on_click=(
-                        lambda: database_callback(st.session_state.database_config)
-                    ),
-                )
+                # FINALLY trigger callback
+                database_callback(st.session_state.database_config)
             selected_file = st.selectbox(
                 "Show files from the data folder:",
                 options=(
@@ -612,8 +634,6 @@ def search(search_tab):
                 for i, r in enumerate(search_results[0])
             ]
 
-            # print(search_results[0])
-
             dist = [
                 np.linalg.norm(np.array(j.embedding) - np.array(k.embedding))
                 for i, k in enumerate(search_results[0])
@@ -646,7 +666,6 @@ def search(search_tab):
                 }
                 for r in search_results[0]
             ]
-            # print(results)
 
             df = pd.DataFrame(results)
 
