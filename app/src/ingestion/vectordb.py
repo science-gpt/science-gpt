@@ -1,13 +1,30 @@
+import logging
 import os
+import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, List, Mapping, Optional, Set
+from typing import Any, Callable, List, Mapping, Optional
 
 import chromadb
 import numpy as np
-from pymilvus import DataType, MilvusClient
+import scipy
+import torch
+from pymilvus import (
+    AnnSearchRequest,
+    Collection,
+    CollectionSchema,
+    DataType,
+    FieldSchema,
+    MilvusClient,
+    WeightedRanker,
+    connections,
+    utility,
+)
 
 from .embedding import Embedding
+
+# Get a logger for this module.
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -25,21 +42,26 @@ class VectorDB(ABC):
     """
 
     @abstractmethod
-    def insert(self, embeddings: List[Embedding]) -> None:
+    def insert(
+        self, embedding: Embedding, metadatum: Optional[List[dict]] = None
+    ) -> None:
         """
         Insert embeddings into the vector database.
 
+
         Args:
-            embeddings (List[Embedding]): List of Embedding objects to insert.
+            embedding (Embedding): Embedding object to insert.
+            metadatum (Optional[List[dict]]): Optional metadata list.
         """
         pass
 
     @abstractmethod
     def search(
         self,
-        query_vectors: List[np.ndarray],
+        queries: List[str],
         top_k: int = 5,
-        keywords: Optional[list[str]] = None,
+        keywords: Optional[List[str]] = None,
+        filenames: Optional[List[str]] = None,
     ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database.
@@ -66,17 +88,6 @@ class VectorDB(ABC):
         pass
 
     @abstractmethod
-    def update(self, ids: List[str], embeddings: List[Embedding]) -> None:
-        """
-        Update existing vectors in the database.
-
-        Args:
-            ids (List[str]): List of vector IDs to update.
-            embeddings (List[Embedding]): List of new Embedding objects.
-        """
-        pass
-
-    @abstractmethod
     def get_all_ids(self) -> List[str]:
         """
         Retrieve all IDs from the database.
@@ -99,77 +110,75 @@ class ChromaDB(VectorDB):
     Concrete implementation of VectorDB using Chroma.
     """
 
-    def __init__(self, collection_name: str):
+    def __init__(
+        self,
+        collection_name: str,
+    ):
         """
         Initialize the ChromaDB instance with the specified collection name.
 
         Args:
             collection_name (str): The name of the collection to create or use.
         """
-        chromadb_path = f"{os.getcwd()}/vectorstore/chromadb/"
+        chromadb_path = os.path.join(os.getcwd(), "vectorstore", "chromadb")
         os.makedirs(chromadb_path, exist_ok=True)
         self.client = chromadb.PersistentClient(path=chromadb_path)
         self.collection = self.client.get_or_create_collection(name=collection_name)
 
-    def insert(self, embeddings: List[Embedding], metadatum: List[dict]) -> None:
+    def insert(
+        self, embeddings: List[Embedding], metadatum: Optional[List[dict]] = None
+    ) -> None:
         """
-        Insert embeddings into the vector database.
-
-        Args:
-            embeddings (List[Embedding]): List of Embedding objects to insert.
+        Insert an aggregated Embedding into the Chroma collection.
         """
-        documents = [embedding.text for embedding in embeddings]
+        # Expecting aggregated embedding with:
+        #   embedding.name -> list of IDs
+        #   embedding.docs -> list of document texts
+        #   embedding.dense_vector -> 2D numpy array (one row per document)
+        documents = [embedding.docs for embedding in embeddings]
         ids = [embedding.name for embedding in embeddings]
-        vectors = [embedding.vector.tolist() for embedding in embeddings]
+        # Convert each dense vector row into a list.
+        vectors = [embedding.dense_vector.tolist() for embedding in embeddings]
         self.collection.add(
-            ids=ids, embeddings=vectors, documents=documents, metadatas=metadatum
+            ids=ids,
+            embeddings=vectors,
+            documents=documents,
+            metadatum=metadatum,
         )
 
     def search(
         self,
-        query_vectors: List[np.ndarray],
+        query_embeddings: List[Embedding],
         top_k: int = 5,
-        keywords: Optional[list[str]] = None,
-        filenames: Optional[list[str]] = None,
+        keywords: Optional[List[str]] = None,
+        filenames: Optional[List[str]] = None,
+        hybrid_weighting: float = 0.5,
     ) -> List[List[SearchResult]]:
         """
-        Search for similar vectors in the database.
-
-        Args:
-            query_vectors (List[np.ndarray]): The query vectors to search for.
-            top_k (int): The number of most similar vectors to return for each query.
-            keywords: An optional list that has filter for content in the list
-
-        Returns:
-            List[List[SearchResult]]: List of lists of SearchResult objects containing search results.
-                                      The i-th inner list corresponds to the results for the i-th query vector.
+        Process query strings internally to compute embeddings, then perform the search.
         """
-
         where_document = None
         if keywords:
             if len(keywords) > 1:
-                where_document = {
-                    "$or": [{"$contains": keyword} for keyword in keywords]
-                }
+                where_document = {"$or": [{"$contains": kw} for kw in keywords]}
             else:
                 where_document = {"$contains": keywords[0]}
+        where = {"source": {"$in": filenames}} if filenames else None
 
-        where = None
-        if filenames:
-            if len(filenames) > 0:
-                where = {"source": {"$in": filenames}}
+        dense_vectors = [
+            embedding.dense_vector.tolist() for embedding in query_embeddings
+        ]
 
-        query_embeddings = [vector.tolist() for vector in query_vectors]
         results = self.collection.query(
-            query_embeddings=query_embeddings,
+            query_embeddings=dense_vectors,
             n_results=top_k,
             where=where,
             where_document=where_document,
-            include=["documents", "embeddings", "metadatas", "distances"],
+            include=["documents", "embeddings", "metadatum", "distances"],
         )
 
         all_results = []
-        for i in range(len(query_vectors)):
+        for i in range(len(dense_vectors)):
             query_results = [
                 SearchResult(
                     id=_id,
@@ -181,13 +190,12 @@ class ChromaDB(VectorDB):
                 for _id, distance, metadata, document, embedding in zip(
                     results["ids"][i],
                     results["distances"][i],
-                    results["metadatas"][i],
+                    results["metadatum"][i],
                     results["documents"][i],
                     results["embeddings"][i],
                 )
             ]
             all_results.append(query_results)
-
         return all_results
 
     def delete(self, ids: List[str]) -> None:
@@ -199,18 +207,6 @@ class ChromaDB(VectorDB):
         """
         self.collection.delete(ids=ids)
 
-    def update(self, ids: List[str], embeddings: List[Embedding]) -> None:
-        """
-        Update existing vectors in the database.
-
-        Args:
-            ids (List[str]): List of vector IDs to update.
-            embeddings (List[Embedding]): List of new Embedding objects.
-        """
-        documents = [embedding.text for embedding in embeddings]
-        vectors = [embedding.vector.tolist() for embedding in embeddings]
-        self.collection.update(ids=ids, embeddings=vectors, documents=documents)
-
     def get_all_ids(self) -> List[str]:
         """
         Retrieve all IDs from the database.
@@ -219,11 +215,6 @@ class ChromaDB(VectorDB):
             List[str]: List of all document IDs in the database.
         """
         return self.collection.get()["ids"]
-
-    def get_all_files(self) -> Set[str]:
-        return set(
-            [metadata["source"] for metadata in self.collection.get()["metadatas"]]
-        )
 
     def clear(self) -> None:
         """
@@ -236,7 +227,16 @@ class ChromaDB(VectorDB):
 
 class MilvusDB(VectorDB):
     """
-    Concrete implementation of VectorDB using Milvus.
+    Unified Milvus Vector Database that supports both standard and BGEM3 hybrid embeddings.
+
+    The collection schema is always:
+        - id (VARCHAR primary key)
+        - text (VARCHAR)
+        - sparse_vector (SPARSE_FLOAT_VECTOR)
+        - dense_vector (FLOAT_VECTOR)
+
+    When if_hybrid_search is True, the sparse vector is computed via BGEM3 and used during search.
+    Otherwise, sparse_vector is filled with empty dictionaries and only dense_vector is used.
     """
 
     def __init__(
@@ -244,156 +244,205 @@ class MilvusDB(VectorDB):
         collection_name: str,
         host: str = "standalone",
         port: str = "19530",
-        dim: int = 1536,
+        dense_dim: int = 1536,
     ):
         """
-        Initialize the MilvusDB instance with the specified collection name.
-
         Args:
-            collection_name (str): The name of the collection to create or use.
-            host (str): The host of the Milvus server (defaults to "standalone")
-            port (str): The port of the Milvus server (defaults to "19530")
-            dim (int): Dimension of the vectors to be stored (defaults to 1536 for OpenAI embeddings)
+            collection_name (str): Name of the Milvus collection.
+            host (str): Milvus host.
+            port (str): Milvus port.
+            dense_dim (int): Dimension for the dense vector.
+            dense_embedder (Callable): Function that takes a list of texts and returns a dict with a "dense" key.
+            if_hybrid_search (bool): If True, use hybrid search (dense + sparse); if False, use only dense search.
         """
         self.collection_name = collection_name
-        self.client = MilvusClient(uri=f"http://{host}:{port}")
+        self.host = host
+        self.port = port
+        self.dim = dense_dim
 
-        if not self.client.has_collection(collection_name):
-            schema = MilvusClient.create_schema(
-                auto_id=False,
-                enable_dynamic_field=True,
-            )
+        self._setup_milvus()
 
-            schema.add_field(
-                field_name="id",
-                datatype=DataType.VARCHAR,
-                max_length=100,
-                is_primary=True,
-            )
-            schema.add_field(
-                field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=dim
-            )
-            schema.add_field(
-                field_name="document",
-                datatype=DataType.VARCHAR,
-                max_length=65535,
-                enable_analyzer=True,
-                enable_match=True,
-            )
-            schema.add_field(
-                field_name="filename",
-                datatype=DataType.VARCHAR,
-                max_length=65535,
-                enable_analyzer=True,
-                enable_match=True,
-            )
+    def _setup_milvus(self):
+        self.client = MilvusClient(uri=f"http://{self.host}:{self.port}")
 
+        if not self.client.has_collection(self.collection_name):
+            # Define the collection schema.
+            fields = [
+                FieldSchema(
+                    name="id",
+                    dtype=DataType.VARCHAR,
+                    is_primary=True,
+                    auto_id=False,
+                    max_length=100,
+                ),
+                FieldSchema(
+                    name="text",
+                    dtype=DataType.VARCHAR,
+                    max_length=65535,
+                    enable_analyzer=True,
+                    enable_match=True,
+                ),
+                FieldSchema(
+                    name="filename",
+                    dtype=DataType.VARCHAR,
+                    max_length=65535,
+                    enable_analyzer=True,
+                    enable_match=True,
+                ),
+                FieldSchema(name="sparse_vector", dtype=DataType.SPARSE_FLOAT_VECTOR),
+                FieldSchema(
+                    name="dense_vector", dtype=DataType.FLOAT_VECTOR, dim=self.dim
+                ),
+            ]
+            schema = CollectionSchema(fields, "Hybrid search collection")
+
+            # Create index params
             index_params = self.client.prepare_index_params()
-            # TODO allow user to change the index parameters
+
             index_params.add_index(
-                field_name="vector", index_type="AUTOINDEX", metric_type="COSINE"
+                field_name="dense_vector",
+                index_name="dense_vector_index",
+                index_type="FLAT",
+                metric_type="IP",
+            )
+
+            index_params.add_index(
+                field_name="sparse_vector",
+                index_name="sparse_inverted_index",
+                index_type="SPARSE_INVERTED_INDEX",
+                metric_type="IP",
+                params={"inverted_index_algo": "DAAT_MAXSCORE"},
             )
 
             self.client.create_collection(
-                collection_name=collection_name,
+                collection_name=self.collection_name,
                 schema=schema,
                 index_params=index_params,
             )
 
-        self.client.load_collection(collection_name)
+        self.client.load_collection(self.collection_name)
 
-    def insert(self, embeddings: List[Embedding], metadatum: List[dict]) -> None:
+    def insert(
+        self, embeddings: List[Embedding], metadatum: Optional[List[dict]] = None
+    ) -> None:
         """
-        Insert embeddings into the vector database.
+        Inserts documents into Milvus.
+
+        Computes the dense vector using the provided dense_embedder.
+        Computes the sparse vector using BGEM3 if hybrid search is enabled;
+        otherwise, fills the sparse_vector field with empty dicts.
+
+        Args:
+            embedding: An object that contains:
+                - docs: a list of document texts.
+                - name: a list of unique IDs.
+            metadatum (Optional[List[dict]]): Additional metadata for each document.
         """
         entities = [
             {
                 "id": embedding.name,
-                "vector": embedding.vector.tolist(),
-                "document": embedding.text,
+                "text": embedding.docs,
                 "filename": metadata["source"],
+                "dense_vector": embedding.dense_vector.tolist(),
+                "sparse_vector": embedding.sparse_vector,
             }
             for embedding, metadata in zip(embeddings, metadatum)
         ]
 
-        print(entities)
-
         self.client.insert(collection_name=self.collection_name, data=entities)
+        self.client.flush(collection_name=self.collection_name)
+        logger.info(
+            "Inserted %d documents into Milvus collection '%s'.",
+            len(entities),
+            self.collection_name,
+        )
 
     def search(
         self,
-        query_vectors: List[np.ndarray],
+        query_embeddings: List[Embedding],
         top_k: int = 5,
         keywords: Optional[List[str]] = None,
         filenames: Optional[List[str]] = None,
+        hybrid_weighting: float = 0.5,
     ) -> List[List[SearchResult]]:
         """
-        Search for similar vectors in the database with optional keyword filtering.
+        Searches Milvus for relevant documents.
+
+        For each query:
+        - The dense embedding is computed using the chosen dense embedder (with the query wrapped as a Chunk).
+        - The sparse embedding is computed using BGEM3.
+
+        If if_hybrid_search is True, both embeddings are used to create a hybrid search request.
+        Otherwise, only the dense query is used.
+
+        Args:
+            queries (List[str]): Query texts.
+            top_k (int): Number of results to return per query.
+            keywords (Optional[List[str]]): Keywords for filtering (not used in this snippet).
+            filenames (Optional[List[str]]): Filenames for filtering (not used in this snippet).
+
+        Returns:
+            List[List[SearchResult]]: A list of search result lists.
         """
-        # TODO allow user to set the search params
-        search_params = {"metric_type": "COSINE", "params": {"nprobe": 512}}
 
         filter_list = []
         if keywords:
-            filter_list.append(f"TEXT_MATCH(document, '{' '.join(keywords)}')")
+            filter_list.append(f"TEXT_MATCH(text, '{' '.join(keywords)}')")
 
         if filenames:
             filter_list.append(f"TEXT_MATCH(filename, '{' '.join(filenames)}')")
 
         filter_expr = " AND ".join(filter_list) if len(filter_list) > 0 else None
 
-        print("-------------------------")
-        print(filter_expr)
-        print("-------------------------")
-
-        results = self.client.search(
-            collection_name=self.collection_name,
-            data=[v.tolist() for v in query_vectors],
-            anns_field="vector",
-            search_params=search_params,
+        dense_req = AnnSearchRequest(
+            [embedding.dense_vector.tolist() for embedding in query_embeddings],
+            "dense_vector",
+            {"metric_type": "IP"},
+            expr=filter_expr,
             limit=top_k,
-            filter=filter_expr,
-            output_fields=["document", "vector"],
         )
 
+        sparse_req = AnnSearchRequest(
+            [embedding.sparse_vector for embedding in query_embeddings],
+            "sparse_vector",
+            {"metric_type": "IP"},
+            expr=filter_expr,
+            limit=top_k,
+        )
+
+        # Perform hybrid search
+        hybrid_results = self.client.hybrid_search(
+            collection_name=self.collection_name,
+            reqs=[sparse_req, dense_req],
+            ranker=WeightedRanker(hybrid_weighting, 1 - hybrid_weighting),
+            limit=top_k,
+            output_fields=["id", "text", "filename", "dense_vector"],
+        )
+
+        # Process the search results.
         all_results = []
-        for hits in results:
+        for hits in hybrid_results:
             query_results = []
             for hit in hits:
                 query_results.append(
                     SearchResult(
-                        id=str(hit.get("id")),
-                        distance=hit.get("distance"),
-                        metadata={},
-                        document=hit.get("entity", {}).get("document"),
-                        embedding=hit.get("entity", {}).get("vector"),
+                        id=str(hit["id"]),
+                        distance=hit["distance"],
+                        metadata={"filename": hit["entity"].get("filename", "")},
+                        document=hit["entity"].get("text", ""),
+                        embedding=hit["entity"].get("dense_vector", []),
                     )
                 )
             all_results.append(query_results)
+
         return all_results
 
     def delete(self, ids: List[str]) -> None:
-        """
-        Delete vectors from the database by their IDs.
-        """
-        self.client.delete(collection_name=self.collection_name, filter=f"id in {ids}")
-
-    def update(self, ids: List[str], embeddings: List[Embedding]) -> None:
-        """
-        Update existing vectors in the database.
-        """
-        # Milvus doesn't support direct updates, so delete and reinsert
-        self.delete(ids)
-        self.insert(embeddings)
+        """Deletes documents from the collection by their IDs."""
+        self.client.delete(collection_name=self.collection_name, expr=f"id in {ids}")
 
     def get_all_ids(self) -> List[str]:
-        """
-        Retrieve all IDs from the database.
-
-        Returns:
-            List[str]: List of all document IDs in the database.
-        """
-        # no milvus built-in for "grab everything", so hacking it
+        """Retrieves all document IDs from the collection."""
         results = self.client.query(
             collection_name=self.collection_name,
             filter="id != 'NULL'",
@@ -401,16 +450,6 @@ class MilvusDB(VectorDB):
         )
         return [result["id"] for result in results]
 
-    def get_all_files(self) -> Set[str]:
-        results = self.client.query(
-            collection_name=self.collection_name,
-            filter="id != 'NULL'",
-            output_fields=["id"],
-        )
-        return set([result.get("entity", {}).get("document") for result in results])
-
     def clear(self) -> None:
-        """
-        Clear all records from the collection.
-        """
-        self.client.delete(collection_name=self.collection_name, filter='id != "NULL"')
+        """Clears all documents from the collection."""
+        self.client.delete(collection_name=self.collection_name, expr='id != "NULL"')
