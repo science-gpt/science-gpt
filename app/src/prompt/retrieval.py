@@ -48,7 +48,7 @@ class TestRetrieval(PromptDecorator):
     def __init__(self, prompt: PromptComponent) -> None:
         self._prompt = prompt
         self.cost = self._prompt.cost
-        self.chunks = self._prompt.chunks
+        self.search_results = self._prompt.search_results
         self.rewrite_query = self._prompt.rewrite_query
 
     def get_prompt(self, query: str) -> str:
@@ -80,7 +80,7 @@ class ContextRetrieval(PromptDecorator):
         self.collection = collection
         self.rewrite_model = rewrite_model
         self.cost = self._prompt.cost
-        self.chunks = self._prompt.chunks
+        self.search_results = self._prompt.search_results
         self.rewrite_query = self._prompt.rewrite_query
 
     def get_prompt(self, query: str) -> str:
@@ -111,19 +111,21 @@ class ContextRetrieval(PromptDecorator):
             filenames=self.config.rag_params.filenames,
         )
 
+        self.search_results = results
+
         # No results were returned.
         if len(results) == 0 or len(results[0]) == 0:
             return "No results found for the query. Please relay that no documents were retrieved for the given query."
 
         # print(results)
 
-        self.chunks = [
-            f"Context Source: {chunk.id}\nDocument: {chunk.document}"
-            for result in results
-            for chunk in result
-        ]
-
-        context_text = "\n\n---\n\n".join(self.chunks)
+        context_text = "\n\n---\n\n".join(
+            [
+                f"Context Source: {chunk.id}\nDocument: {chunk.document}"
+                for result in results
+                for chunk in result
+            ]
+        )
 
         return self._prompt.get_prompt(query).format(
             decorate=self.PromptTemplate.format(
