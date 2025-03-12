@@ -210,10 +210,10 @@ class BGEM3Embedder(Embedder):
     def get_sparse_vector(self, docs: List[str]):
         """
         Get sparse vectors for the given documents using the existing embedder.
-        
+
         Args:
             docs (List[str]): List of document texts.
-            
+
         Returns:
             List of sparse vectors in Milvus format without changing the type to list.
         """

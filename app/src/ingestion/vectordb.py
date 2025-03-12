@@ -261,7 +261,9 @@ class MilvusDB(VectorDB):
         self.dim = dense_dim
 
         self._setup_milvus()
-        self.sparse_embedder = BGEM3Embedder()  # Initialize the embedder for sparse vector
+        self.sparse_embedder = (
+            BGEM3Embedder()
+        )  # Initialize the embedder for sparse vector
 
     def _setup_milvus(self):
         self.client = MilvusClient(uri=f"http://{self.host}:{self.port}")
@@ -345,7 +347,9 @@ class MilvusDB(VectorDB):
                 "text": embedding.docs,
                 "filename": metadata["source"],
                 "dense_vector": embedding.dense_vector.tolist(),
-                "sparse_vector": self.sparse_embedder.get_sparse_vector([embedding.docs])
+                "sparse_vector": self.sparse_embedder.get_sparse_vector(
+                    [embedding.docs]
+                ),
             }
             for embedding, metadata in zip(embeddings, metadatum)
         ]
@@ -403,7 +407,10 @@ class MilvusDB(VectorDB):
             limit=top_k,
         )
         # get the sparse vector for query
-        query_sparse_vectors = [self.sparse_embedder.get_sparse_vector([embedding.docs]) for embedding in query_embeddings]
+        query_sparse_vectors = [
+            self.sparse_embedder.get_sparse_vector([embedding.docs])
+            for embedding in query_embeddings
+        ]
         sparse_req = AnnSearchRequest(
             query_sparse_vectors,
             "sparse_vector",
