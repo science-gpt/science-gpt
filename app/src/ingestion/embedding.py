@@ -207,6 +207,20 @@ class BGEM3Embedder(Embedder):
         )
         self.embedding_dimension = self.embedder.dim["dense"]
 
+    def get_sparse_vector(self, docs: List[str]):
+        """
+        Get sparse vectors for the given documents using the existing embedder.
+        
+        Args:
+            docs (List[str]): List of document texts.
+            
+        Returns:
+            List of sparse vectors in Milvus format without changing the type to list.
+        """
+        sparse_embeddings = self.embedder(docs)
+        sparse_vectors = sparse_embeddings["sparse"]
+        return sparse_vectors
+
     def __call__(self, chunks: List[Chunk]) -> List[Embedding]:
         """
         Embed a list of text chunks using the BGEM3 model (both dense & sparse).
@@ -229,7 +243,6 @@ class BGEM3Embedder(Embedder):
                 data_type=chunk.data_type,
                 docs=chunk.text,
                 dense_vector=docs_embeddings["dense"][i],
-                sparse_vector=list(docs_embeddings["sparse"])[i],
             )
             for i, chunk in enumerate(chunks)
         ]
