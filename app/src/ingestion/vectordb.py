@@ -107,6 +107,13 @@ class VectorDB(ABC):
         """
         pass
 
+    @abstractmethod
+    def pretty_print(self, embeddings: List[List[SearchResult]]) -> List[str]:
+        """
+        Pretty print the contents of the database.
+        """
+        pass
+
 
 class ChromaDB(VectorDB):
     """
@@ -142,6 +149,7 @@ class ChromaDB(VectorDB):
         ids = [embedding.name for embedding in embeddings]
         # Convert each dense vector row into a list.
         vectors = [embedding.dense_vector.tolist() for embedding in embeddings]
+        metadatum = [embedding.metadata for embedding in embeddings]
         self.collection.add(
             ids=ids,
             embeddings=vectors,
@@ -231,6 +239,25 @@ class ChromaDB(VectorDB):
         all_ids = self.get_all_ids()
         if all_ids:
             self.collection.delete(ids=all_ids)
+
+    def pretty_print(self, results: List[List[SearchResult]]) -> None:
+        """
+        Pretty print the contents of the database.
+        """
+
+        if results:
+            print("Search Results:")
+            for i, query_results in enumerate(results):
+                print(f"Query {i}:")
+                for result in query_results:
+                    print(
+                        f"  ID: {result.id}\n Distance: {result.distance}\n Document: {result.document}"
+                    )
+
+                if result.metadata:
+                    print("Metadata:")
+                    for key, value in result.metadata.items():
+                        print(f"  {key}: {value}")
 
 
 class MilvusDB(VectorDB):
@@ -351,6 +378,7 @@ class MilvusDB(VectorDB):
                 "filename": metadata["source"],
                 "dense_vector": embedding.dense_vector.tolist(),
                 "sparse_vector": embedding.sparse_vector,
+                "metadata": embedding.metadata,
             }
             for embedding, metadata in zip(embeddings, metadatum)
         ]
@@ -465,3 +493,22 @@ class MilvusDB(VectorDB):
     def clear(self) -> None:
         """Clears all documents from the collection."""
         self.client.delete(collection_name=self.collection_name, expr='id != "NULL"')
+
+    def pretty_print(self, results: List[List[SearchResult]]) -> None:
+        """
+        Pretty print the contents of the database.
+        """
+
+        if results:
+            print("Search Results:")
+            for i, query_results in enumerate(results):
+                print(f"Query {i}:")
+                for result in query_results:
+                    print(
+                        f"  ID: {result.id}\n Distance: {result.distance}\n Document: {result.document}"
+                    )
+
+                if result.metadata:
+                    print("Metadata:")
+                    for key, value in result.metadata.items():
+                        print(f"  {key}: {value}")
