@@ -108,7 +108,6 @@ class RecursiveCharacterChunker(Chunker):
 
 
 # TODO: decide how we want to handle metadata -> do we concatenate it to the text or keep it separate?
-# if we keep it separate, we lose the information in the embedding... maybe we add metadata field to embedding
 
 
 class DoclingHierarchicalChunker(Chunker):
@@ -216,40 +215,49 @@ class DoclingHybridChunker(Chunker):
             )
             print(metadata)
 
-            headings = chunk.meta.headings or []
-            captions = chunk.meta.captions or []
-            metadata = (
-                chunk.meta.dict()
-            )  # serena: this will overwrite the metadata field with the metadata from the chunk.meta object
-
-            # Concatenate headings and captions into the text (add them at the start or end)
-            combined_text = chunk_text
-            if headings:
-                combined_text = (
-                    f"Headings: {headings}\n" + combined_text
-                )  # Add headings at the top
-            if captions:
-                combined_text = (
-                    f"Captions: {captions}\n" + combined_text
-                )  # Add captions after headings
-            # if metadata:
-            #     combined_text += f"\nMetadata: {json.dumps(metadata)}"  # Add metadata at the end
-
-            # Prepare chunk data
-            chunk_data = {
-                "text": combined_text,
-                "headings": headings,
-                "captions": captions,
-                # "metadata": metadata,
-                "document_name": content.name,
-            }
-
-            # Create the chunk with the combined text
             chunks.append(
                 Chunk(
-                    text=chunk_data["text"],
+                    text=chunk_text,
                     name=f"{content.name} - Chunk {i+1}",
-                    data_type=content.data_type,  # Assuming 'data_type' exists in content
+                    data_type=content.data_type,
+                    metadata=metadata,
                 )
             )
+
+            # headings = chunk.meta.headings or []
+            # captions = chunk.meta.captions or []
+            # metadata = (
+            #     chunk.meta.dict()
+            # )  # serena: this will overwrite the metadata field with the metadata from the chunk.meta object
+
+            # # Concatenate headings and captions into the text (add them at the start or end)
+            # combined_text = chunk_text
+            # if headings:
+            #     combined_text = (
+            #         f"Headings: {headings}\n" + combined_text
+            #     )  # Add headings at the top
+            # if captions:
+            #     combined_text = (
+            #         f"Captions: {captions}\n" + combined_text
+            #     )  # Add captions after headings
+            # # if metadata:
+            # #     combined_text += f"\nMetadata: {json.dumps(metadata)}"  # Add metadata at the end
+
+            # # Prepare chunk data
+            # chunk_data = {
+            #     "text": combined_text,
+            #     "headings": headings,
+            #     "captions": captions,
+            #     # "metadata": metadata,
+            #     "document_name": content.name,
+            # }
+
+            # # Create the chunk with the combined text
+            # chunks.append(
+            #     Chunk(
+            #         text=chunk_data["text"],
+            #         name=f"{content.name} - Chunk {i+1}",
+            #         data_type=content.data_type,  # Assuming 'data_type' exists in content
+            #     )
+            # )
         return chunks

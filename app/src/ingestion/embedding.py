@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import List, Optional
+from dataclasses import dataclass, field
+from typing import List, Optional, defaultdict
 
 import numpy as np
 from langchain_community.embeddings.ollama import OllamaEmbeddings
@@ -26,6 +26,7 @@ class Embedding(Data):
     # TODO: Add metadata field
     vector: np.ndarray
     text: str
+    metadata: defaultdict[dict] = field(default_factory=lambda: defaultdict(dict))
 
     def __post_init__(self):
         super().__init__(name=self.name, data_type=self.data_type)
@@ -88,6 +89,7 @@ class HuggingFaceEmbedder(Embedder):
                 data_type=chunk.data_type,
                 vector=np.array(vector),
                 text=chunk.text,
+                metadata=chunk.metadata,
             )
             embeddings.append(embedding)
         return embeddings
@@ -138,6 +140,7 @@ class OllamaEmbedder(Embedder):
                 data_type=chunk.data_type,
                 vector=np.array(vector),
                 text=chunk.text,
+                metadata=chunk.metadata,
             )
             embeddings.append(embedding)
         return embeddings
