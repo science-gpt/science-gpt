@@ -161,7 +161,7 @@ def send_prompt(prompt):
     )
 
 
-def edit_prompt(prompt, chunks, rewrite_prompt, key=0):
+def edit_prompt(prompt, context, rewrite_prompt, key=0):
     """
     This is the textbox that allows the user to view and modify the prompt
     """
