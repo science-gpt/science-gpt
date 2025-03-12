@@ -158,7 +158,7 @@ def send_prompt(prompt):
     )
 
 
-def edit_prompt(prompt, chunks, rewrite_prompt, key=0):
+def edit_prompt(prompt, context, rewrite_prompt, key=0):
     """
     This is the textbox that allows the user to view and modify the prompt
     """
@@ -171,29 +171,9 @@ def edit_prompt(prompt, chunks, rewrite_prompt, key=0):
             st.subheader("Prompt Information")
             st.text_area("Your query was rewritten to", rewrite_prompt)
 
-        if chunks:
-            pattern = r"Context Source:\s*(?P<context_source>.*?)\s*-\s*Chunk\s*(?P<chunk_number>\d+)\s*Document:\s*(?P<document>.+)"
-
-            ## annotated chunk isn't working as expected so I am using markdown to highlight the chunks
-            # formatted_chunks = []
-            # for i in range(len(chunks)):
-            #     formatted_chunks.append(
-            #        (f"{chunks[i]}", str(i+1))
-            #     )
-            # annotated_text(formatted_chunks)
-            # annotated_text((f"      TOTAL CHUNKS:  {len(chunks)}", f"{len(chunks)}"))
-
-            st.subheader("Chunks")
-            for chunk in chunks:
-                match = re.match(pattern, chunk, re.DOTALL)
-                context_source = match.group("context_source")
-                chunk_number = match.group("chunk_number")
-                document = match.group("document")
-
-                st.markdown(f"##### Context Source: {context_source}")
-                st.markdown(f"##### Chunk {chunk_number}")
-                st.markdown(f":blue-background[{document}]")
-                st.divider()
+        if context:
+            print(context)
+            # keep this for now to see how you want to handle it
 
         with st.expander("View LLM Prompt", expanded=False):
             st.subheader("The LLM Prompt")
