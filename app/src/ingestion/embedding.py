@@ -179,7 +179,6 @@ class OllamaEmbedder(Embedder):
             sparse_embeddings = self.sparse_embedder([text])
             dense_list.append(vector)
             sparse_list.append(sparse_embeddings["sparse"])
-            
 
         dense_vectors = np.stack(dense_list, axis=0)
         sparse_vectors = np.stack(sparse_list, axis=0)

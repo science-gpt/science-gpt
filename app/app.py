@@ -17,13 +17,12 @@ from streamlit_survey import StreamlitSurvey
 from streamlit_tags import st_tags
 
 sys.path.insert(0, "./src")
+import torch
 from databroker.databroker import DataBroker
 from logs.logger import logger
 from orchestrator.chat_orchestrator import ChatOrchestrator
 
-import torch
-
-torch.classes.__path__ = [os.path.join(torch.__path__[0], torch.classes.__file__)] 
+torch.classes.__path__ = [os.path.join(torch.__path__[0], torch.classes.__file__)]
 
 
 def init_streamlit():
