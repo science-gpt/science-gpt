@@ -105,14 +105,15 @@ class HuggingFaceEmbedder(Embedder):
         docs = [chunk.text for chunk in chunks]
 
         dense_list = []
+        sparse_list = []
         for text in tqdm(docs, desc="HuggingFace Embedding"):
             vector = self.base_embedder.embed_query(text)
+            sparse_embeddings = self.sparse_embedder([text])
             dense_list.append(vector)
-
-        sparse_embeddings = self.sparse_embedder(docs)
+            sparse_list.append(sparse_embeddings["sparse"])
 
         dense_vectors = np.stack(dense_list, axis=0)
-        sparse_vectors = sparse_embeddings["sparse"]
+        sparse_vectors = np.stack(sparse_list, axis=0)
 
         return [
             Embedding(

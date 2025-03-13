@@ -21,6 +21,10 @@ from databroker.databroker import DataBroker
 from logs.logger import logger
 from orchestrator.chat_orchestrator import ChatOrchestrator
 
+import torch
+
+torch.classes.__path__ = [os.path.join(torch.__path__[0], torch.classes.__file__)] 
+
 
 def init_streamlit():
     """
