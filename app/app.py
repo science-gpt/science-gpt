@@ -605,6 +605,14 @@ def search(search_tab):
             key="keyword_tags",
         )
 
+        st.session_state.hybrid_weight = st.slider(
+            label="Hybrid Search Weighting",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.5,
+            help="Weighting for Hybrid Search (0 only dense, 1 only sparse)",
+        )
+
         if len(query) > 0:
             search_results = st.session_state.databroker.search(
                 [query],
@@ -612,6 +620,7 @@ def search(search_tab):
                 collection="base",
                 keywords=st.session_state.keywords,
                 filenames=st.session_state.filenames,
+                hybrid_weighting=st.session_state.hybrid_weight,
             )
 
             if len(search_results[0]) == 0:
