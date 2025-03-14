@@ -31,3 +31,5 @@ pymilvus
 numpy
 pytest
 docling
+pymilvus[model]
+pymilvus.model
