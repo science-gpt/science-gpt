@@ -27,7 +27,7 @@ omegaconf
 nltk
 PyPDF2
 ChromaDB
-pymilvus==2.5.4
+pymilvus
 numpy
 pytest
 docling
