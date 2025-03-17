@@ -142,14 +142,31 @@ class DoclingHierarchicalChunker(Chunker):
                 text=chunk.text,
                 name=f"{content.name} - Chunk {i+1}",
                 data_type=content.data_type,
-                metadata=defaultdict(
-                    dict,
-                    {
-                        "headings": chunk.meta.headings or [],
-                        "captions": chunk.meta.captions or [],
-                        "metadata": chunk.meta.model_dump(),
-                    },
-                ),
+                metadata={
+                    "headings": chunk.meta.headings[0] if chunk.meta.headings else "",
+                    "captions": chunk.meta.captions if chunk.meta.captions else "",
+                    **(
+                        chunk.meta.doc_items[0].model_dump()["prov"][0]["bbox"]
+                        if chunk.meta.doc_items
+                        else {}
+                    ),
+                    "coord_origin": (
+                        str(
+                            chunk.meta.doc_items[0]
+                            .model_dump()["prov"][0]["bbox"]
+                            .get("coord_origin", "UNKNOWN")
+                        )
+                        if chunk.meta.doc_items
+                        else "UNKNOWN"
+                    ),
+                    "page_no": (
+                        chunk.meta.doc_items[0]
+                        .model_dump()["prov"][0]
+                        .get("page_no", "UNKNOWN")
+                        if chunk.meta.doc_items
+                        else ""
+                    ),
+                },
             )
             for i, chunk in tqdm(enumerate(chunks_iter))
         ]
@@ -205,22 +222,41 @@ class DoclingHybridChunker(Chunker):
             chunk_text = chunk.text
 
             # serena: added a metadata field to the chunk
-            metadata = defaultdict(
-                dict,
-                {
-                    "headings": chunk.meta.headings or [],
-                    "captions": chunk.meta.captions or [],
-                    "metadata": chunk.meta.model_dump(),
-                },
-            )
-            print(metadata)
+            # metadata = dict(chunk.meta.model_dump())
+            # print(metadata)
 
             chunks.append(
                 Chunk(
-                    text=chunk_text,
+                    text=chunk.text,
                     name=f"{content.name} - Chunk {i+1}",
                     data_type=content.data_type,
-                    metadata=metadata,
+                    metadata={
+                        "headings": (
+                            chunk.meta.headings[0] if chunk.meta.headings else ""
+                        ),
+                        "captions": chunk.meta.captions if chunk.meta.captions else "",
+                        **(
+                            chunk.meta.doc_items[0].model_dump()["prov"][0]["bbox"]
+                            if chunk.meta.doc_items
+                            else {}
+                        ),
+                        "coord_origin": (
+                            str(
+                                chunk.meta.doc_items[0]
+                                .model_dump()["prov"][0]["bbox"]
+                                .get("coord_origin", "UNKNOWN")
+                            )
+                            if chunk.meta.doc_items
+                            else "UNKNOWN"
+                        ),
+                        "page_no": (
+                            chunk.meta.doc_items[0]
+                            .model_dump()["prov"][0]
+                            .get("page_no", "UNKNOWN")
+                            if chunk.meta.doc_items
+                            else ""
+                        ),
+                    },
                 )
             )
 
