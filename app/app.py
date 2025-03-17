@@ -17,9 +17,12 @@ from streamlit_survey import StreamlitSurvey
 from streamlit_tags import st_tags
 
 sys.path.insert(0, "./src")
+import torch
 from databroker.databroker import DataBroker
 from logs.logger import logger
 from orchestrator.chat_orchestrator import ChatOrchestrator
+
+torch.classes.__path__ = [os.path.join(torch.__path__[0], torch.classes.__file__)]
 
 
 def init_streamlit():
@@ -400,6 +403,14 @@ def sidebar():
                         lambda: database_callback(st.session_state.database_config)
                     ),
                 )
+
+                # st.button(
+                # "Clear Database",
+                # on_click=lambda: clear_database_callback(st.session_state.database_config),
+                # type="secondary",
+                # help="Warning: This will delete all vectors from the database"
+                # )
+
             selected_file = st.selectbox(
                 "Show files from the data folder:",
                 options=(
@@ -568,6 +579,7 @@ def search(search_tab):
                 keywords=st.session_state.keywords,
                 filenames=st.session_state.filenames,
             )
+            print(search_results)
 
             if len(search_results[0]) == 0:
                 st.header("No Results")
