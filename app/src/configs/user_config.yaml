@@ -22,10 +22,11 @@ credentials:
       roles: null
     serenai:
       email: serena.iyoha@hc-sc.gc.ca
-      first_name: serena
-      last_name: iyoha
+      failed_login_attempts: 3
+      first_name: Serena
+      last_name: Iyoha
       logged_in: false
-      password: $2b$12$qJx/2JFPJHOr6mzQW4RTI.R6mzw2TAVwdcUnKER3ylhMAjVlIGfqK
+      password: $2b$12$6zuJhW4QV7pkJ93IpP0Do.BRFicyTo4UT4QezqI8vSegG.rvRHKGa
       password_hint: 'no'
       roles: null
     spcrook:
