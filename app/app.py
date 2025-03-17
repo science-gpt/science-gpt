@@ -474,6 +474,14 @@ def sidebar():
 
                 # FINALLY trigger callback
                 database_callback(st.session_state.database_config)
+
+                # st.button(
+                # "Clear Database",
+                # on_click=lambda: clear_database_callback(st.session_state.database_config),
+                # type="secondary",
+                # help="Warning: This will delete all vectors from the database"
+                # )
+
             selected_file = st.selectbox(
                 "Show files from the data folder:",
                 options=(
@@ -668,6 +676,7 @@ def search(search_tab):
                 hybrid_weighting=st.session_state.hybrid_weight,
                 reranker_model=st.session_state.reranker_model,
             )
+            print(search_results)
 
             if len(search_results[0]) == 0:
                 st.header("No Results")
