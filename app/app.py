@@ -464,7 +464,7 @@ def chat(tab):
         with st.container():
             if prompt := st.chat_input("Write your query here..."):
                 st.session_state.question_state = True
-            button_css = float_css_helper(width="2.2rem", bottom="3rem", transition=0)
+            button_css = float_css_helper(width="33%", bottom="3rem", left="50%", transform="translateX(-50%)", transition=0)
             float_parent(css=button_css)
 
         if st.session_state.question_state:
