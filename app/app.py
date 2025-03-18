@@ -337,6 +337,7 @@ def sidebar():
                     min_value=0.0,
                     max_value=1.0,
                     value=system_config.rag_params.hybrid_weight,
+                    key="hybrid_weight_slider",
                     help="Weighting for Hybrid Search (0 only dense, 1 only sparse)",
                 )
 
