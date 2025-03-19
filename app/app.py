@@ -387,6 +387,12 @@ def sidebar():
 
         with st.sidebar.expander("General Model Settings", expanded=False):
 
+            system_config.agent_params.enable = st.checkbox(
+                "Experimental: Advanced Reasoning (with google and wikipedia)",
+                value=system_config.agent_params.enable,
+                help="Instruct the model to use advanced reasoning (ReWOO) (Experimental Feature)",
+            )
+
             system_config.model_params.seed = st.number_input(
                 "Seed",
                 value=system_config.model_params.seed,

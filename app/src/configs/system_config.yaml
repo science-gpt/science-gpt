@@ -53,7 +53,11 @@ model_params:
   - "mistral-nemo:12b"
   - "gemma2:27b"
   - "llama3:70b"
-        
+
+agent_params:
+  enable: False
+  type: "ReWoo"
+
 model_auth:
   macbook_endpoint:
   url: 

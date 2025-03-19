@@ -3,7 +3,7 @@ import os
 import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, List, Mapping, Optional
+from typing import Any, Callable, List, Mapping, Optional, Set
 
 import chromadb
 import numpy as np
@@ -215,6 +215,11 @@ class ChromaDB(VectorDB):
             List[str]: List of all document IDs in the database.
         """
         return self.collection.get()["ids"]
+
+    def get_all_files(self) -> Set[str]:
+        return set(
+            [metadata["source"] for metadata in self.collection.get()["metadatas"]]
+        )
 
     def clear(self) -> None:
         """
@@ -449,6 +454,14 @@ class MilvusDB(VectorDB):
             output_fields=["id"],
         )
         return [result["id"] for result in results]
+
+    def get_all_files(self) -> Set[str]:
+        results = self.client.query(
+            collection_name=self.collection_name,
+            filter="id != 'NULL'",
+            output_fields=["id"],
+        )
+        return set([result.get("entity", {}).get("document") for result in results])
 
     def clear(self) -> None:
         """Clears all documents from the collection."""

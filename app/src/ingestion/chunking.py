@@ -101,7 +101,7 @@ class RecursiveCharacterChunker(Chunker):
                 name=f"{content.name} - Chunk {i+1}",
                 data_type=content.data_type,
             )
-            for i, c in enumerate(tqdm(chunks))
+            for i, c in tqdm(enumerate(chunks))
         ]
 
 
@@ -138,7 +138,7 @@ class DoclingHierarchicalChunker(Chunker):
                 name=f"{content.name} - Chunk {i+1}",
                 data_type=content.data_type,
             )
-            for i, chunk in enumerate(tqdm(chunks_iter))
+            for i, chunk in tqdm(enumerate(chunks_iter))
         ]
         return chunks
 
@@ -184,7 +184,7 @@ class DoclingHybridChunker(Chunker):
         chunks = []
 
         # Generate chunk data with headings, captions, and metadata
-        for i, chunk in enumerate(tqdm(chunk_iter)):
+        for i, chunk in tqdm(enumerate(chunk_iter)):
             chunk_text = chunk.text
             headings = chunk.meta.headings or []
             captions = chunk.meta.captions or []
