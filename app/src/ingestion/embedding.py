@@ -105,14 +105,15 @@ class HuggingFaceEmbedder(Embedder):
         docs = [chunk.text for chunk in chunks]
 
         dense_list = []
+        sparse_list = []
         for text in tqdm(docs, desc="HuggingFace Embedding"):
             vector = self.base_embedder.embed_query(text)
+            sparse_embeddings = self.sparse_embedder([text])
             dense_list.append(vector)
-
-        sparse_embeddings = self.sparse_embedder(docs)
+            sparse_list.append(sparse_embeddings["sparse"])
 
         dense_vectors = np.stack(dense_list, axis=0)
-        sparse_vectors = sparse_embeddings["sparse"]
+        sparse_vectors = np.stack(sparse_list, axis=0)
 
         return [
             Embedding(
@@ -172,14 +173,15 @@ class OllamaEmbedder(Embedder):
         docs = [chunk.text for chunk in chunks]
 
         dense_list = []
+        sparse_list = []
         for text in tqdm(docs, desc="Ollama Embedding"):
             vector = self.model.embed_query(text)
+            sparse_embeddings = self.sparse_embedder([text])
             dense_list.append(vector)
-
-        sparse_embeddings = self.sparse_embedder(docs)
+            sparse_list.append(sparse_embeddings["sparse"])
 
         dense_vectors = np.stack(dense_list, axis=0)
-        sparse_vectors = sparse_embeddings["sparse"]
+        sparse_vectors = np.stack(sparse_list, axis=0)
 
         return [
             Embedding(
@@ -219,17 +221,25 @@ class BGEM3Embedder(Embedder):
         """
         docs = [chunk.text for chunk in chunks]
 
-        docs_embeddings = self.embedder(
-            docs
-        )  # {"dense": np.ndarray, "sparse": list[dict[str, float]]}
+        dense_list = []
+        sparse_list = []
+        for text in tqdm(docs, desc="BGEM3 Embedding"):
+            embeddings = self.embedder(
+                [text]
+            )  # {"dense": np.ndarray, "sparse": list[dict[str, float]]}
+            dense_list.extend(embeddings["dense"])
+            sparse_list.append(embeddings["sparse"])
+
+        dense_vectors = np.stack(dense_list, axis=0)
+        sparse_vectors = np.stack(sparse_list, axis=0)
 
         return [
             Embedding(
                 name=chunk.name,
                 data_type=chunk.data_type,
                 docs=chunk.text,
-                dense_vector=docs_embeddings["dense"][i],
-                sparse_vector=list(docs_embeddings["sparse"])[i],
+                dense_vector=dense_vectors[i],
+                sparse_vector=sparse_vectors[i],
             )
             for i, chunk in enumerate(chunks)
         ]
