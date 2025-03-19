@@ -82,7 +82,7 @@ class DocumentIngestor(BaseComponent):
         chunk_size=1024,
         chunk_overlap=256,
         separator="\n\n",
-        backup_separators=["\n", ".", " ", "\u200B"],
+        backup_separators=["\n", ".", " ", "\u200b"],
     )
     override_file_extractors: dict[str, Type[BaseReader]] = {}
 
