@@ -276,7 +276,7 @@ class MilvusDB(VectorDB):
                     dtype=DataType.VARCHAR,
                     is_primary=True,
                     auto_id=False,
-                    max_length=100,
+                    max_length=65535,
                 ),
                 FieldSchema(
                     name="text",

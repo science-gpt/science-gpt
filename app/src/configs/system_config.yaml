@@ -17,8 +17,6 @@ model_params:
   max_tokens: 512
   num_ctx: 2500
   supported_models:
-  - "deepseek-r1:32b"
-  - "deepseek-r1:70b"
   - "llama3:latest"
   - "GPT-4.0"
   - "GPT-3.5"
@@ -46,7 +44,6 @@ model_params:
   - "llava:34b-v1.6-q5_K_M"
   - "mistral-nemo:12b-instruct-2407-q3_K_M"
   - "llama3.2:3b-instruct-q4_K_M"
-  - "deepseek-v2:16b"
   - "llama3.1:405b-instruct-q2_K"
   - "llama3.1:8b-instruct-q4_K_M"
   - "Mistral-7B-Instruct-v0.3-Q4_K_M:latest"
@@ -94,7 +91,7 @@ embedding:
 # Database Options
 vector_db:
   database: "milvus" 
-  host: "localhost"
+  host: "standalone"
   port: 19530
   supported_databases:
     - "chromadb"

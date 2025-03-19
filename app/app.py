@@ -17,9 +17,12 @@ from streamlit_survey import StreamlitSurvey
 from streamlit_tags import st_tags
 
 sys.path.insert(0, "./src")
+import torch
 from databroker.databroker import DataBroker
 from logs.logger import logger
 from orchestrator.chat_orchestrator import ChatOrchestrator
+
+torch.classes.__path__ = [os.path.join(torch.__path__[0], torch.classes.__file__)]
 
 
 def init_streamlit():
@@ -334,6 +337,7 @@ def sidebar():
                     min_value=0.0,
                     max_value=1.0,
                     value=system_config.rag_params.hybrid_weight,
+                    key="hybrid_weight_slider",
                     help="Weighting for Hybrid Search (0 only dense, 1 only sparse)",
                 )
 
@@ -461,7 +465,13 @@ def chat(tab):
         with st.container():
             if prompt := st.chat_input("Write your query here..."):
                 st.session_state.question_state = True
-            button_css = float_css_helper(width="2.2rem", bottom="3rem", transition=0)
+            button_css = float_css_helper(
+                width="33%",
+                bottom="3rem",
+                left="50%",
+                transform="translateX(-50%)",
+                transition=0,
+            )
             float_parent(css=button_css)
 
         if st.session_state.question_state:
@@ -602,6 +612,14 @@ def search(search_tab):
             key="keyword_tags",
         )
 
+        st.session_state.hybrid_weight = st.slider(
+            label="Hybrid Search Weighting",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.5,
+            help="Weighting for Hybrid Search (0 only dense, 1 only sparse)",
+        )
+
         if len(query) > 0:
             search_results = st.session_state.databroker.search(
                 [query],
@@ -609,6 +627,7 @@ def search(search_tab):
                 collection="base",
                 keywords=st.session_state.keywords,
                 filenames=st.session_state.filenames,
+                hybrid_weighting=st.session_state.hybrid_weight,
             )
 
             if len(search_results[0]) == 0:

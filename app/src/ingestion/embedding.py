@@ -105,14 +105,15 @@ class HuggingFaceEmbedder(Embedder):
         docs = [chunk.text for chunk in chunks]
 
         dense_list = []
+        sparse_list = []
         for text in tqdm(docs, desc="HuggingFace Embedding"):
             vector = self.base_embedder.embed_query(text)
+            sparse_embeddings = self.sparse_embedder([text])
             dense_list.append(vector)
-
-        sparse_embeddings = self.sparse_embedder(docs)
+            sparse_list.append(sparse_embeddings["sparse"])
 
         dense_vectors = np.stack(dense_list, axis=0)
-        sparse_vectors = sparse_embeddings["sparse"]
+        sparse_vectors = np.stack(sparse_list, axis=0)
 
         return [
             Embedding(
@@ -172,14 +173,15 @@ class OllamaEmbedder(Embedder):
         docs = [chunk.text for chunk in chunks]
 
         dense_list = []
+        sparse_list = []
         for text in tqdm(docs, desc="Ollama Embedding"):
             vector = self.model.embed_query(text)
+            sparse_embeddings = self.sparse_embedder([text])
             dense_list.append(vector)
-
-        sparse_embeddings = self.sparse_embedder(docs)
+            sparse_list.append(sparse_embeddings["sparse"])
 
         dense_vectors = np.stack(dense_list, axis=0)
-        sparse_vectors = sparse_embeddings["sparse"]
+        sparse_vectors = np.stack(sparse_list, axis=0)
 
         return [
             Embedding(
@@ -207,20 +209,6 @@ class BGEM3Embedder(Embedder):
         )
         self.embedding_dimension = self.embedder.dim["dense"]
 
-    def get_sparse_vector(self, docs: List[str]):
-        """
-        Get sparse vectors for the given documents using the existing embedder.
-
-        Args:
-            docs (List[str]): List of document texts.
-
-        Returns:
-            List of sparse vectors in Milvus format without changing the type to list.
-        """
-        sparse_embeddings = self.embedder(docs)
-        sparse_vectors = sparse_embeddings["sparse"]
-        return sparse_vectors
-
     def __call__(self, chunks: List[Chunk]) -> List[Embedding]:
         """
         Embed a list of text chunks using the BGEM3 model (both dense & sparse).
@@ -233,16 +221,25 @@ class BGEM3Embedder(Embedder):
         """
         docs = [chunk.text for chunk in chunks]
 
-        docs_embeddings = self.embedder(
-            docs
-        )  # {"dense": np.ndarray, "sparse": list[dict[str, float]]}
+        dense_list = []
+        sparse_list = []
+        for text in tqdm(docs, desc="BGEM3 Embedding"):
+            embeddings = self.embedder(
+                [text]
+            )  # {"dense": np.ndarray, "sparse": list[dict[str, float]]}
+            dense_list.extend(embeddings["dense"])
+            sparse_list.append(embeddings["sparse"])
+
+        dense_vectors = np.stack(dense_list, axis=0)
+        sparse_vectors = np.stack(sparse_list, axis=0)
 
         return [
             Embedding(
                 name=chunk.name,
                 data_type=chunk.data_type,
                 docs=chunk.text,
-                dense_vector=docs_embeddings["dense"][i],
+                dense_vector=dense_vectors[i],
+                sparse_vector=sparse_vectors[i],
             )
             for i, chunk in enumerate(chunks)
         ]
