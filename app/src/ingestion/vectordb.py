@@ -397,10 +397,8 @@ class MilvusDB(VectorDB):
         """
         print(f"reranker_model: {reranker_model}")
         print(f"Hybrid weighting: {hybrid_weighting}")
-        # If a specific reranker model is specified, use it
-        if reranker_model:
-            print(f"reranker_model: {reranker_model}")
-            self.reranker = Reranker(model_name=reranker_model)
+        print(f"Reranker_model: {reranker_model}")
+        self.reranker = Reranker(model_name=reranker_model)
 
         filter_list = []
         if keywords:
