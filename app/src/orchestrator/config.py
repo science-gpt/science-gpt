@@ -54,6 +54,8 @@ class RAGParams(BaseModel):
     useknowledgebase: bool
     keywords: Optional[list[str]]
     filenames: Optional[list[str]]
+    reranker_model: Optional[str] = "BAAI/bge-reranker-v2-m3"
+    supported_rerankers: Optional[List[str]] = None
 
 
 class SystemConfig(BaseModel):

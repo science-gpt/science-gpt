@@ -22,6 +22,7 @@ from pymilvus import (
 )
 
 from .embedding import Embedding, BGEM3Embedder
+from .reranker import Reranker
 
 # Get a logger for this module.
 logger = logging.getLogger(__name__)
@@ -62,6 +63,8 @@ class VectorDB(ABC):
         top_k: int = 5,
         keywords: Optional[List[str]] = None,
         filenames: Optional[List[str]] = None,
+        hybrid_weighting: float = 0.5,
+        reranker_model: str = "BAAI/bge-reranker-v2-m3",
     ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database.
@@ -70,6 +73,9 @@ class VectorDB(ABC):
             query_vectors (List[np.ndarray]): The query vectors to search for.
             top_k (int): The number of most similar vectors to return for each query.
             keywords (List[str]): The keywords to use for keyword search.
+            filenames (List[str]): The filenames to filter by.
+            hybrid_weighting (float): Weight for hybrid search (dense vs sparse).
+            reranker_model (str): Name of the reranker model to use.
 
         Returns:
             List[List[SearchResult]]: List of lists of SearchResult objects containing search results.
@@ -245,6 +251,7 @@ class MilvusDB(VectorDB):
         host: str = "standalone",
         port: str = "19530",
         dense_dim: int = 1536,
+        reranker_model: str = "BAAI/bge-reranker-v2-m3",
     ):
         """
         Args:
@@ -252,8 +259,7 @@ class MilvusDB(VectorDB):
             host (str): Milvus host.
             port (str): Milvus port.
             dense_dim (int): Dimension for the dense vector.
-            dense_embedder (Callable): Function that takes a list of texts and returns a dict with a "dense" key.
-            if_hybrid_search (bool): If True, use hybrid search (dense + sparse); if False, use only dense search.
+            reranker_model (str): Model name for the BGE reranker
         """
         self.collection_name = collection_name
         self.host = host
@@ -264,6 +270,9 @@ class MilvusDB(VectorDB):
         self.sparse_embedder = (
             BGEM3Embedder()
         )  # Initialize the embedder for sparse vector
+
+        # Initialize reranker
+        self.reranker = Reranker(model_name=reranker_model)
 
     def _setup_milvus(self):
         self.client = MilvusClient(uri=f"http://{self.host}:{self.port}")
@@ -347,9 +356,7 @@ class MilvusDB(VectorDB):
                 "text": embedding.docs,
                 "filename": metadata["source"],
                 "dense_vector": embedding.dense_vector.tolist(),
-                "sparse_vector": self.sparse_embedder.get_sparse_vector(
-                    [embedding.docs]
-                ),
+                "sparse_vector": embedding.sparse_vector,
             }
             for embedding, metadata in zip(embeddings, metadatum)
         ]
@@ -369,26 +376,34 @@ class MilvusDB(VectorDB):
         keywords: Optional[List[str]] = None,
         filenames: Optional[List[str]] = None,
         hybrid_weighting: float = 0.5,
+        reranker_model: str = "BAAI/bge-reranker-v2-m3",
     ) -> List[List[SearchResult]]:
         """
-        Searches Milvus for relevant documents.
+        Searches Milvus for relevant documents and applies reranking.
 
         For each query:
-        - The dense embedding is computed using the chosen dense embedder (with the query wrapped as a Chunk).
+        - The dense embedding is computed using the dense embedder.
         - The sparse embedding is computed using BGEM3.
-
-        If if_hybrid_search is True, both embeddings are used to create a hybrid search request.
-        Otherwise, only the dense query is used.
+        - Both embeddings are used for hybrid search.
+        - Results are reranked using BGE reranker.
 
         Args:
-            queries (List[str]): Query texts.
+            query_embeddings (List[Embedding]): Query embeddings.
             top_k (int): Number of results to return per query.
-            keywords (Optional[List[str]]): Keywords for filtering (not used in this snippet).
-            filenames (Optional[List[str]]): Filenames for filtering (not used in this snippet).
+            keywords (Optional[List[str]]): Keywords for filtering.
+            filenames (Optional[List[str]]): Filenames for filtering.
+            hybrid_weighting (float): Weight for sparse vector in hybrid search (1-weight for dense).
+            reranker_model (str): Name of the reranker model to use.
 
         Returns:
             List[List[SearchResult]]: A list of search result lists.
         """
+        print(f"reranker_model: {reranker_model}")
+        print(f"Hybrid weighting: {hybrid_weighting}")
+        # If a specific reranker model is specified, use it
+        if reranker_model:
+            print(f"reranker_model: {reranker_model}")
+            self.reranker = Reranker(model_name=reranker_model)
 
         filter_list = []
         if keywords:
@@ -406,13 +421,9 @@ class MilvusDB(VectorDB):
             expr=filter_expr,
             limit=top_k,
         )
-        # get the sparse vector for query
-        query_sparse_vectors = [
-            self.sparse_embedder.get_sparse_vector([embedding.docs])
-            for embedding in query_embeddings
-        ]
+
         sparse_req = AnnSearchRequest(
-            query_sparse_vectors,
+            [embedding.sparse_vector for embedding in query_embeddings],
             "sparse_vector",
             {"metric_type": "IP"},
             expr=filter_expr,
@@ -428,11 +439,16 @@ class MilvusDB(VectorDB):
             output_fields=["id", "text", "filename", "dense_vector"],
         )
 
-        # Process the search results.
         all_results = []
-        for hits in hybrid_results:
+        # Milvus currently only supports 1 query per hybrid search
+        for i, (embedding, hits) in enumerate(zip(query_embeddings, hybrid_results)):
+            # Rerank the results for this query
+            reranked_hits = self.reranker.rerank_milvus_results(
+                query=embedding.docs, hits=hits, top_k=top_k
+            )
+
             query_results = []
-            for hit in hits:
+            for hit in reranked_hits:
                 query_results.append(
                     SearchResult(
                         id=str(hit["id"]),

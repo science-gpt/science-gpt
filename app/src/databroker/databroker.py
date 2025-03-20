@@ -349,6 +349,7 @@ class DataBroker(metaclass=SingletonMeta):
         hybrid_weighting: float = 0.5,
         keywords: Optional[list[str]] = None,
         filenames: Optional[list[str]] = None,
+        reranker_model: str = "BAAI/bge-reranker-v2-m3",
     ) -> List[List[SearchResult]]:
         """
         Searches the vector store for the most relevant docs based on the given queries.
@@ -357,8 +358,10 @@ class DataBroker(metaclass=SingletonMeta):
             queries (List[str]): List of search queries
             top_k (int): The number of results to return for each query
             collection (str, optional): Which collection to search for. Defaults to "base".
+            hybrid_weighting (float, optional): Weight between dense and sparse search. Defaults to 0.5.
             keywords (List[str], optional): List of keywords to search for. Defaults to None.
             filenames (List[str], optional): List of filenames to search for. Defaults to None.
+            reranker_model (str, optional): Name of the reranker model to use. Defaults to None.
 
         Returns:
             List[List[SearchResult]]: A list of lists of SearchResult objects containing
@@ -373,6 +376,11 @@ class DataBroker(metaclass=SingletonMeta):
         query_embeddings = self.embedder(query_chunks)
 
         results = self.vectorstore[collection].search(
-            query_embeddings, top_k, keywords, filenames, hybrid_weighting
+            query_embeddings,
+            top_k,
+            keywords,
+            filenames,
+            hybrid_weighting,
+            reranker_model,
         )
         return results
