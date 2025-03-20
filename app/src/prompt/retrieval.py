@@ -113,16 +113,15 @@ class ContextRetrieval(PromptDecorator):
             keywords=self.config.rag_params.keywords,
             filenames=self.config.rag_params.filenames,
             hybrid_weighting=self.config.rag_params.hybrid_weight,
+            reranker_model=self.config.rag_params.reranker_model,
         )
 
         # No results were returned.
         if len(results) == 0 or len(results[0]) == 0:
             return "No results found for the query. Please relay that no documents were retrieved for the given query."
 
-        print("results: ", results)
-
         self.chunks = [
-            f"Context Source: {chunk.id}\nDocument: {chunk.document}"
+            f"Context Source: {chunk.id}\nDocument: {chunk.document}\nDistance: {chunk.distance}"
             for result in results
             for chunk in result
         ]
