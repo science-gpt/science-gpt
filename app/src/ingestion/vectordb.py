@@ -267,9 +267,6 @@ class MilvusDB(VectorDB):
         self.dim = dense_dim
 
         self._setup_milvus()
-        self.sparse_embedder = (
-            BGEM3Embedder()
-        )  # Initialize the embedder for sparse vector
 
         # Initialize reranker
         self.reranker = Reranker(model_name=reranker_model)
