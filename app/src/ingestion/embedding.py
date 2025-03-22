@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import List, Optional, defaultdict
+from typing import List, Optional
 
 import numpy as np
 from langchain_community.embeddings.ollama import OllamaEmbeddings

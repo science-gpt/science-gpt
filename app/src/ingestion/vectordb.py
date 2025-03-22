@@ -315,6 +315,14 @@ class MilvusDB(VectorDB):
                 enable_match=True,
             )
 
+            schema.add_field(
+                field_name="metadata",
+                datatype=DataType.JSON,
+                max_length=65535,
+                enable_analyzer=True,
+                enable_match=True,
+            )
+
             index_params = self.client.prepare_index_params()
             # TODO allow user to change the index parameters
             index_params.add_index(
@@ -344,7 +352,7 @@ class MilvusDB(VectorDB):
             for embedding, metadata in zip(embeddings, metadatum)
         ]
 
-        print(entities)
+        # print(entities)
 
         self.client.insert(collection_name=self.collection_name, data=entities)
 
@@ -381,7 +389,7 @@ class MilvusDB(VectorDB):
             search_params=search_params,
             limit=top_k,
             filter=filter_expr,
-            output_fields=["document", "vector"],
+            output_fields=["document", "vector", "metadata"],
         )
 
         all_results = []
@@ -392,11 +400,14 @@ class MilvusDB(VectorDB):
                     SearchResult(
                         id=str(hit.get("id")),
                         distance=hit.get("distance"),
-                        metadata={},
+                        metadata=hit.get("entity", {}).get("metadata", {}),
                         document=hit.get("entity", {}).get("document"),
                         embedding=hit.get("entity", {}).get("vector"),
                     )
                 )
+                print(list(hit.keys()))
+                print(list((hit.get("entity", {}).keys())))
+                print(hit.get("entity", {}.get("metadata")))
             all_results.append(query_results)
         return all_results
 
