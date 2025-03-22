@@ -329,6 +329,14 @@ class MilvusDB(VectorDB):
             ]
             schema = CollectionSchema(fields, "Hybrid search collection")
 
+            schema.add_field(
+                field_name="metadata",
+                datatype=DataType.JSON,
+                max_length=65535,
+                enable_analyzer=True,
+                enable_match=True,
+            )
+
             # Create index params
             index_params = self.client.prepare_index_params()
 
@@ -448,7 +456,7 @@ class MilvusDB(VectorDB):
             reqs=[sparse_req, dense_req],
             ranker=WeightedRanker(hybrid_weighting, 1 - hybrid_weighting),
             limit=top_k,
-            output_fields=["id", "text", "filename", "dense_vector"],
+            output_fields=["id", "text", "filename", "dense_vector", "metadata"],
         )
 
         # Process the search results.
@@ -458,13 +466,16 @@ class MilvusDB(VectorDB):
             for hit in hits:
                 query_results.append(
                     SearchResult(
-                        id=str(hit["id"]),
-                        distance=hit["distance"],
-                        metadata={"filename": hit["entity"].get("filename", "")},
-                        document=hit["entity"].get("text", ""),
-                        embedding=hit["entity"].get("dense_vector", []),
+                        id=str(hit.get("id")),
+                        distance=hit.get("distance"),
+                        metadata=hit.get("entity", {}).get("metadata", {}),
+                        document=hit.get("entity", {}).get("text"),
+                        embedding=hit.get("entity", {}).get("dense_vector"),
                     )
                 )
+                print(list(hit.keys()))
+                print(list((hit.get("entity", {}).keys())))
+                print(hit.get("entity", {}.get("metadata")))
             all_results.append(query_results)
 
         return all_results
