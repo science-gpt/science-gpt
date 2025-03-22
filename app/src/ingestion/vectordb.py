@@ -164,22 +164,39 @@ class ChromaDB(VectorDB):
         keywords: Optional[List[str]] = None,
         filenames: Optional[List[str]] = None,
         hybrid_weighting: float = 0.5,
+        page_no: Optional[int] = None,
+        component=Optional[str],
     ) -> List[List[SearchResult]]:
         """
         Process query strings internally to compute embeddings, then perform the search.
         """
         where_document = None
+        filters = []
+
         if keywords:
-            if len(keywords) > 1:
-                where_document = {"$or": [{"$contains": kw} for kw in keywords]}
-            else:
-                where_document = {"$contains": keywords[0]}
-        where = {"source": {"$in": filenames}} if filenames else None
+            # if len(keywords) > 1:
+            #     where_document = {
+            #         "$or": [{"$contains": keyword} for keyword in keywords]
+            #     }
+            # else:
+            #     where_document = {"$contains": keywords[0]}
+            where_document = {"$in": keywords}
+            filters.append({"headings": {"$contains": keywords}})
 
-        dense_vectors = [
-            embedding.dense_vector.tolist() for embedding in query_embeddings
-        ]
+        if filenames:
+            if len(filenames) > 0:
+                filters.append({"source": {"$in": filenames}})
 
+        if page_no:
+            filters.append({"page_no": {"$eq": page_no}})
+
+        # TODO: filter by component
+
+        where = (
+            {"$and": filters} if len(filters) > 1 else filters[0] if filters else None
+        )
+
+        query_embeddings = [vector.tolist() for vector in query_vectors]
         results = self.collection.query(
             query_embeddings=dense_vectors,
             n_results=top_k,
@@ -406,6 +423,8 @@ class MilvusDB(VectorDB):
         keywords: Optional[List[str]] = None,
         filenames: Optional[List[str]] = None,
         hybrid_weighting: float = 0.5,
+        page_no: Optional[int] = None,
+        component: Optional[str] = None,
     ) -> List[List[SearchResult]]:
         """
         Searches Milvus for relevant documents.
@@ -426,11 +445,24 @@ class MilvusDB(VectorDB):
             List[List[SearchResult]]: A list of search result lists.
         """
         filter_list = []
+        # check the document and the headings for keywords
         if keywords:
-            filter_list.append(f"TEXT_MATCH(text, '{' '.join(keywords)}')")
+            filter_list.extend(
+                [
+                    f"TEXT_MATCH(text, '{' '.join(keywords)}')",
+                    f"JSON_CONTAINS(metadata, '{keywords}', '$.headings')",
+                ]
+            )
 
         if filenames:
             filter_list.append(f"TEXT_MATCH(filename, '{' '.join(filenames)}')")
+
+        if page_no:
+            filter_list.append(
+                f"TEXT_MATCH(metadata, '{' '.join(page_no)}', '$.page_no')"
+            )
+
+        # TODO: filter by component
 
         filter_expr = " AND ".join(filter_list) if len(filter_list) > 0 else None
 
