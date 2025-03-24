@@ -175,7 +175,9 @@ def edit_prompt(prompt, context, rewrite_prompt, key=0):
             st.text_area("Your query was rewritten to", rewrite_prompt)
 
         if context:
-            print(context)
+            pass
+            # print(context)
+
             # keep this for now to see how you want to handle it
 
         with st.expander("View LLM Prompt", expanded=False):
@@ -427,11 +429,9 @@ def chat(tab):
     Main chat window for users to submit queries.
     """
     with tab:
-        with st.container():
-            if prompt := st.chat_input("Write your query here..."):
-                st.session_state.question_state = True
-            button_css = float_css_helper(width="2.2rem", bottom="3rem", transition=0)
-            float_parent(css=button_css)
+
+        if prompt := st.chat_input("Write your query here..."):
+            st.session_state.question_state = True
 
         if st.session_state.question_state:
             with st.container(height=500, border=False):
@@ -547,29 +547,37 @@ def search(search_tab):
         #     maxtags=15,  # max number of tags
         #     key="filename_tags",
         # )
-        st.session_state.filenames = st.multiselect(
-            "Select files for filtering:",
-            options=(
-                [
-                    os.path.splitext(f)[0]
-                    for f in os.listdir("/usr/src/app/data")
-                    if f.endswith(".pdf")
-                ]
-                if os.path.exists("/usr/src/app/data")
-                else []
-            ),
-            default=st.session_state.get("filenames", []),
-            help="Choose one or more files from the list to filter results.",
-            key="searchtab_filenames",
-        )
-        st.session_state.keywords = st_tags(
-            label="Keyword Filtered Retrieval",
-            text="Enter keywords and press enter",
-            value=st.session_state.get("keywords", []),
-            suggestions=["Toxicology", "Regulation", "Environment"],
-            maxtags=10,  # max number of tags
-            key="keyword_tags",
-        )
+
+        st.session_state.edge_thresh = st.slider("Edge Threshold", 0.0, 1.0, 0.5)
+
+        with st.form("Advanced Search"):
+            st.write("Adavanced Search Options")
+            st.session_state.filenames = st.multiselect(
+                "Select files for filtering:",
+                options=(
+                    [
+                        os.path.splitext(f)[0]
+                        for f in os.listdir("/usr/src/app/data")
+                        if f.endswith(".pdf")
+                    ]
+                    if os.path.exists("/usr/src/app/data")
+                    else []
+                ),
+                default=st.session_state.get("filenames", []),
+                help="Choose one or more files from the list to filter results.",
+                key="searchtab_filenames",
+            )
+
+            st.session_state.keywords = st_tags(
+                label="Keyword Filtered Retrieval",
+                text="Enter keywords and press enter",
+                value=st.session_state.get("keywords", []),
+                suggestions=["Toxicology", "Regulation", "Environment"],
+                maxtags=10,  # max number of tags
+                key="keyword_tags",
+            )
+
+            submitted = st.form_submit_button("Submit")
 
         if len(query) > 0:
             search_results = st.session_state.databroker.search(
@@ -623,7 +631,23 @@ def search(search_tab):
 
             return_value = agraph(nodes=nodes, edges=edges, config=config)
 
-        st.session_state.edge_thresh = st.slider("Edge Threshold", 0.0, 1.0, 0.5)
+        # for i, r in enumerate(search_results[0]):
+
+        #     if r.distance < st.session_state.edge_thresh:
+        #         continue
+
+        #     with st.card(f"Chunk {i} (Page {r.metadata['page']})"):
+        # # Add score as a colored metric
+        #         st.metric("Relevance Score", f"{r.distance:.2f}", delta_color="normal")
+
+        # # Display chunk text
+        #         st.markdown("**Text:**")
+        #         st.markdown(r.metadata["document"])
+
+        #         # Additional metadata
+        #         st.markdown("**Source:**")
+        #         st.markdown("**heading:**")
+        #         st.markdown(r.metadata["metadata"]["heading"])
 
 
 def sciencegpt():
