@@ -1,7 +1,8 @@
 import random
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Dict, List, Optional
+from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import List, Dict, Optional
 
 import numpy as np
 import torch
@@ -23,12 +24,13 @@ class Embedding(Data):
     Attributes:
         name (str): The name of the embedding.
         data_type (RAW_DATA_TYPES): The type of the original data source.
-        docs (List[str]): The list of document texts that were embedded.
+        docs (str): The text that was embedded.
         dense_vector (np.ndarray): The dense embedding vector.
         sparse_vector (Optional[dict[str, float]]): The sparse embedding vector (token-weight mapping), optional.
     """
 
-    docs: str
+    text: str
+    metadata: defaultdict[dict] = field(default_factory=lambda: defaultdict(dict))
     dense_vector: np.ndarray
     sparse_vector: Optional[Dict[str, float]] = None
 
@@ -119,7 +121,8 @@ class HuggingFaceEmbedder(Embedder):
             Embedding(
                 name=chunk.name,
                 data_type=chunk.data_type,
-                docs=chunk.text,
+                text=chunk.text,
+                metadata=chunk.metadata,
                 dense_vector=dense_vectors[i],
                 sparse_vector=sparse_vectors[i],
             )
@@ -237,7 +240,8 @@ class BGEM3Embedder(Embedder):
             Embedding(
                 name=chunk.name,
                 data_type=chunk.data_type,
-                docs=chunk.text,
+                text=chunk.text,
+                metadata=chunk.metadata,
                 dense_vector=dense_vectors[i],
                 sparse_vector=sparse_vectors[i],
             )

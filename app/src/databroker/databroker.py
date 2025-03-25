@@ -324,7 +324,10 @@ class DataBroker(metaclass=SingletonMeta):
         for chunk in chunks:
             if chunk.name not in existing_ids:
                 new_chunks.append(chunk)
-                metadatum.append({"source": data.name, "id": chunk.name})
+                metadatum.append(
+                    {"source": data.name, "id": chunk.name, **chunk.metadata}
+                )
+        self.data_cache[collection][collection_name][data.name] = chunks
 
         if len(new_chunks) > 0:
             embeddings = self.embedder(new_chunks)

@@ -161,7 +161,7 @@ def send_prompt(prompt):
     )
 
 
-def edit_prompt(prompt, chunks, rewrite_prompt, key=0):
+def edit_prompt(prompt, context, rewrite_prompt, key=0):
     """
     This is the textbox that allows the user to view and modify the prompt
     """
@@ -174,31 +174,11 @@ def edit_prompt(prompt, chunks, rewrite_prompt, key=0):
             st.subheader("Prompt Information")
             st.text_area("Your query was rewritten to", rewrite_prompt)
 
-        if chunks:
-            pattern = (
-                r"Context\s*Source:\s*"
-                r"(?P<context_source>.+?)"
-                r"\s*-\s*Chunk\s*"
-                r"(?P<chunk_number>[\d_]+)"
-                r"\s*Document:\s*"
-                r"(?P<document>.+)"
-            )
+        if context:
+            pass
+            # print(context)
 
-            st.subheader("Chunks")
-            for chunk in chunks:
-                match = re.search(pattern, chunk, re.DOTALL)
-                if not match:
-                    st.error(f"Failed to parse chunk: {chunk[:50]}...")
-                    continue
-
-                context_source = match.group("context_source")
-                chunk_number = match.group("chunk_number")
-                document = match.group("document")
-
-                st.markdown(f"##### Context Source: {context_source}")
-                st.markdown(f"##### Chunk {chunk_number}")
-                st.markdown(f":blue-background[{document}]")
-                st.divider()
+            # keep this for now to see how you want to handle it
 
         with st.expander("View LLM Prompt", expanded=False):
             st.subheader("The LLM Prompt")
@@ -444,8 +424,23 @@ def sidebar():
                     vector_store=system_config.vector_db,
                 )
 
+                st.form_submit_button(
+                    "Regenerate Database",
+                    on_click=(
+                        lambda: database_callback(st.session_state.database_config)
+                    ),
+                )
+
+                # st.button(
+                # "Clear Database",
+                # on_click=lambda: clear_database_callback(st.session_state.database_config),
+                # type="secondary",
+                # help="Warning: This will delete all vectors from the database"
+                # )
+
                 # FINALLY trigger callback
                 database_callback(st.session_state.database_config)
+                
             selected_file = st.selectbox(
                 "Show files from the data folder:",
                 options=(
@@ -462,17 +457,8 @@ def chat(tab):
     Main chat window for users to submit queries.
     """
     with tab:
-        with st.container():
-            if prompt := st.chat_input("Write your query here..."):
-                st.session_state.question_state = True
-            button_css = float_css_helper(
-                width="33%",
-                bottom="3rem",
-                left="50%",
-                transform="translateX(-50%)",
-                transition=0,
-            )
-            float_parent(css=button_css)
+
+        if prompt := st.chat_input("Write your query here..."):
 
         if st.session_state.question_state:
             with st.container(height=500, border=False):
@@ -588,29 +574,37 @@ def search(search_tab):
         #     maxtags=15,  # max number of tags
         #     key="filename_tags",
         # )
-        st.session_state.filenames = st.multiselect(
-            "Select files for filtering:",
-            options=(
-                [
-                    os.path.splitext(f)[0]
-                    for f in os.listdir("/usr/src/app/data")
-                    if f.endswith(".pdf")
-                ]
-                if os.path.exists("/usr/src/app/data")
-                else []
-            ),
-            default=st.session_state.get("filenames", []),
-            help="Choose one or more files from the list to filter results.",
-            key="searchtab_filenames",
-        )
-        st.session_state.keywords = st_tags(
-            label="Keyword Filtered Retrieval",
-            text="Enter keywords and press enter",
-            value=st.session_state.get("keywords", []),
-            suggestions=["Toxicology", "Regulation", "Environment"],
-            maxtags=10,  # max number of tags
-            key="keyword_tags",
-        )
+
+        st.session_state.edge_thresh = st.slider("Edge Threshold", 0.0, 1.0, 0.5)
+
+        with st.form("Advanced Search"):
+            st.write("Adavanced Search Options")
+            st.session_state.filenames = st.multiselect(
+                "Select files for filtering:",
+                options=(
+                    [
+                        os.path.splitext(f)[0]
+                        for f in os.listdir("/usr/src/app/data")
+                        if f.endswith(".pdf")
+                    ]
+                    if os.path.exists("/usr/src/app/data")
+                    else []
+                ),
+                default=st.session_state.get("filenames", []),
+                help="Choose one or more files from the list to filter results.",
+                key="searchtab_filenames",
+            )
+
+            st.session_state.keywords = st_tags(
+                label="Keyword Filtered Retrieval",
+                text="Enter keywords and press enter",
+                value=st.session_state.get("keywords", []),
+                suggestions=["Toxicology", "Regulation", "Environment"],
+                maxtags=10,  # max number of tags
+                key="keyword_tags",
+            )
+
+            submitted = st.form_submit_button("Submit")
 
         st.session_state.hybrid_weight = st.slider(
             label="Hybrid Search Weighting",
@@ -629,6 +623,7 @@ def search(search_tab):
                 filenames=st.session_state.filenames,
                 hybrid_weighting=st.session_state.hybrid_weight,
             )
+            print(search_results)
 
             if len(search_results[0]) == 0:
                 st.header("No Results")
@@ -711,7 +706,7 @@ def search(search_tab):
                     return [color] * len(row)
 
                 styled_df = df.style.apply(highlight_selected, axis=1)
-
+ 
                 st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
 
