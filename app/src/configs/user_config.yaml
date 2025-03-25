@@ -27,6 +27,7 @@ credentials:
       last_name: Iyoha
       logged_in: false
       password: $2b$12$6zuJhW4QV7pkJ93IpP0Do.BRFicyTo4UT4QezqI8vSegG.rvRHKGa
+
       password_hint: 'no'
       roles: null
     spcrook:
@@ -47,3 +48,4 @@ pre-authorized:
   - malik.talhat@hc-sc.gc.ca
   - carter.demars@hc-sc.gc.ca
   - jiaiyou.zhong@hc-sc.gc.ca
+  - serena.iyoha@hc-sc.gc.ca

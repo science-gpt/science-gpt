@@ -47,6 +47,7 @@ class VectorDB(BaseModel):
 
 class RAGParams(BaseModel):
     use_rag: bool
+    hybrid_weight: float
     top_k: int
     moderationfilter: bool
     onlyusecontext: bool

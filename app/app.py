@@ -265,11 +265,17 @@ def database_callback(database_config):
     """
     Regenerates the database when the database settings are changed.
     """
-    if "databroker" not in st.session_state:
-        st.session_state.databroker = DataBroker(st.session_state.database_config)
-    # not a best practice: accessing protected method. but oh well
+    # Clear existing DataBroker instance from session state
+    if "databroker" in st.session_state:
+        del st.session_state.databroker
+
+    # Create new DataBroker instance with updated config
+    st.session_state.databroker = DataBroker(database_config)
+
+    # Force reinitialization of the pipeline
     st.session_state.databroker._init_databroker_pipeline(database_config)
-    st.sidebar.success(f"Database Generated!")
+
+    st.sidebar.success(f"Database regenerated with {database_config.embedding_model}!")
 
 
 def sidebar():
@@ -304,6 +310,15 @@ def sidebar():
                     label="Use Uploaded Documents",
                     value=False,
                     help="Retrieve content from documents uploaded via the Knowledge Base tab. Do not enable this if you have not uploaded any documents.",
+                )
+
+                system_config.rag_params.hybrid_weight = st.slider(
+                    label="Hybrid Search Weighting",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=system_config.rag_params.hybrid_weight,
+                    key="hybrid_weight_slider",
+                    help="Weighting for Hybrid Search (0 only dense, 1 only sparse)",
                 )
 
                 system_config.rag_params.top_k = st.slider(
@@ -374,8 +389,8 @@ def sidebar():
 
         with st.sidebar.expander("Database Options", expanded=False):
             with st.form("advanced", border=False):
-
-                system_config.embedding.embedding_model = st.selectbox(
+                # Update system config directly from widgets
+                new_embedding_model = st.selectbox(
                     label="Choose embedding model:",
                     options=system_config.embedding.supported_embedders,
                     index=system_config.embedding.supported_embedders.index(
@@ -383,18 +398,28 @@ def sidebar():
                     ),
                 )
 
-                system_config.chunking.chunking_method = st.selectbox(
+                new_chunking_method = st.selectbox(
                     label="Choose chunking method:",
                     options=system_config.chunking.supported_chunkers,
                     index=system_config.chunking.supported_chunkers.index(
                         system_config.chunking.chunking_method
                     ),
                 )
+
+                # Create NEW database config object on form submission
+                submitted = st.form_submit_button("Regenerate Database")
+
+            if submitted:
+                # Update config FIRST
+                system_config.embedding.embedding_model = new_embedding_model
+                system_config.chunking.chunking_method = new_chunking_method
+
+                # THEN create new database config
                 st.session_state.database_config = SimpleNamespace(
                     username=st.session_state.username,
                     userpath=st.session_state.userpath,
-                    embedding_model=system_config.embedding.embedding_model,
-                    chunking_method=system_config.chunking.chunking_method,
+                    embedding_model=new_embedding_model,
+                    chunking_method=new_chunking_method,
                     pdf_extractor=system_config.extraction,
                     vector_store=system_config.vector_db,
                 )
@@ -413,6 +438,9 @@ def sidebar():
                 # help="Warning: This will delete all vectors from the database"
                 # )
 
+                # FINALLY trigger callback
+                database_callback(st.session_state.database_config)
+                
             selected_file = st.selectbox(
                 "Show files from the data folder:",
                 options=(
@@ -431,7 +459,6 @@ def chat(tab):
     with tab:
 
         if prompt := st.chat_input("Write your query here..."):
-            st.session_state.question_state = True
 
         if st.session_state.question_state:
             with st.container(height=500, border=False):
@@ -579,6 +606,14 @@ def search(search_tab):
 
             submitted = st.form_submit_button("Submit")
 
+        st.session_state.hybrid_weight = st.slider(
+            label="Hybrid Search Weighting",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.5,
+            help="Weighting for Hybrid Search (0 only dense, 1 only sparse)",
+        )
+
         if len(query) > 0:
             search_results = st.session_state.databroker.search(
                 [query],
@@ -586,12 +621,19 @@ def search(search_tab):
                 collection="base",
                 keywords=st.session_state.keywords,
                 filenames=st.session_state.filenames,
+                hybrid_weighting=st.session_state.hybrid_weight,
             )
             print(search_results)
 
             if len(search_results[0]) == 0:
                 st.header("No Results")
                 return
+
+            if "selected_chunk" not in st.session_state:
+                st.session_state.selected_chunk = None
+
+            if "edge_thresh" not in st.session_state:
+                st.session_state.edge_thresh = 0.5
 
             nodes = [
                 Node(
@@ -605,6 +647,7 @@ def search(search_tab):
                 )
                 for i, r in enumerate(search_results[0])
             ]
+
             dist = [
                 np.linalg.norm(np.array(j.embedding) - np.array(k.embedding))
                 for i, k in enumerate(search_results[0])
@@ -622,32 +665,49 @@ def search(search_tab):
                 width=700,
                 height=700,
                 directed=False,
-                nodeHighlightBehavior=False,
+                nodeHighlightBehavior=True,
                 highlightColor="#F7A7A6",  # or "blue"
                 collapsible=False,
                 node={"labelProperty": "label"},
                 # **kwargs e.g. node_size=1000 or node_color="blue"
             )
 
-            return_value = agraph(nodes=nodes, edges=edges, config=config)
+            results = [
+                {
+                    "Chunk Source": r.id,
+                    "Distance": r.distance,
+                    "Chunk": r.document,
+                }
+                for r in search_results[0]
+            ]
 
-        # for i, r in enumerate(search_results[0]):
+            df = pd.DataFrame(results)
 
-        #     if r.distance < st.session_state.edge_thresh:
-        #         continue
+            st.session_state.edge_thresh = st.slider("Edge Threshold", 0.0, 1.0, 0.5)
 
-        #     with st.card(f"Chunk {i} (Page {r.metadata['page']})"):
-        # # Add score as a colored metric
-        #         st.metric("Relevance Score", f"{r.distance:.2f}", delta_color="normal")
+            col1, col2 = st.columns(2)
 
-        # # Display chunk text
-        #         st.markdown("**Text:**")
-        #         st.markdown(r.metadata["document"])
+            with col1:
+                st.subheader("Graph Representation")
+                return_value = agraph(nodes=nodes, edges=edges, config=config)
 
-        #         # Additional metadata
-        #         st.markdown("**Source:**")
-        #         st.markdown("**heading:**")
-        #         st.markdown(r.metadata["metadata"]["heading"])
+                if return_value and st.session_state.selected_chunk != return_value:
+                    st.session_state.selected_chunk = return_value
+
+            with col2:
+                st.subheader("Table Representation")
+
+                def highlight_selected(row):
+                    color = (
+                        "background-color: yellow"
+                        if row["Chunk Source"] == st.session_state.selected_chunk
+                        else ""
+                    )
+                    return [color] * len(row)
+
+                styled_df = df.style.apply(highlight_selected, axis=1)
+ 
+                st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
 
 def sciencegpt():

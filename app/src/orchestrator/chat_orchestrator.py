@@ -3,7 +3,6 @@ from typing import List, Optional
 
 import toml
 from logs.logger import logger
-from models.models import LocalAIModel, OpenAIChatModel
 from orchestrator.call_handlers import LLMCallHandler
 from orchestrator.config import SystemConfig
 from orchestrator.utils import DEFAULT_SYSTEM_PROMPT, SingletonMeta, load_config
@@ -11,6 +10,8 @@ from prompt.base_prompt import ConcretePrompt
 from prompt.prompts import ModerationDecorator, OnlyUseContextDecorator
 from prompt.retrieval import ContextRetrieval
 from requests.exceptions import ConnectTimeout
+
+from models.models import LocalAIModel, OpenAIChatModel
 
 
 class ChatOrchestrator(metaclass=SingletonMeta):
