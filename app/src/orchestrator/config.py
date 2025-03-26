@@ -11,6 +11,11 @@ class ModelAuth(BaseModel):
     version: Optional[str]
 
 
+class AgentParams(BaseModel):
+    enable: bool
+    type: str
+
+
 class ModelParams(BaseModel):
     # model_config is added to suppress warnings
     model_config = ConfigDict(protected_namespaces=())
@@ -63,6 +68,7 @@ class SystemConfig(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
     model_params: ModelParams
     model_auth: ModelAuth
+    agent_params: AgentParams
     extraction: Extraction
     chunking: Chunking
     embedding: Embedding
