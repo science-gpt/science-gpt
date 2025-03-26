@@ -224,6 +224,15 @@ class DataBroker(metaclass=SingletonMeta):
                 """
             )
 
+    def _init_databroker_cache(self, collection="base"):
+        chunks = self.vectorstore[collection].get_all_ids()
+        collection_name = self.collection_name[collection]
+        for chunk in tqdm(chunks):
+            file = chunk.split(" - Chunk ")[0]
+            if file not in self.data_cache[collection][collection_name]:
+                self.data_cache[collection][collection_name][file] = []
+            self.data_cache[collection][collection_name][file].append(chunk)
+
     def _init_databroker_pipeline(self, database_config: SimpleNamespace) -> None:
         """
         Initializes the data broker pipeline.
@@ -249,12 +258,15 @@ class DataBroker(metaclass=SingletonMeta):
         suffix = f"_{strip(self._database_config.embedding_model)}_{strip(self._database_config.chunking_method)}"
 
         self.collection_name = {
-            "base": self._database_config.vector_store.database + suffix,
-            "user": self._database_config.username + suffix,
+            "base": "{}_{}".format(self._database_config.vector_store.database, suffix),
+            "user": "{}_{}".format(strip(self._database_config.username), suffix),
         }
 
-        self.data_cache["base"][self.collection_name["base"]] = {}
-        self.data_cache["user"][self.collection_name["user"]] = {}
+        if self.collection_name["base"] not in self.data_cache["base"]:
+            self.data_cache["base"][self.collection_name["base"]] = {}
+
+        if self.collection_name["user"] not in self.data_cache["user"]:
+            self.data_cache["user"][self.collection_name["user"]] = {}
 
         self.embedder = self._create_embedder()
         self.chunker = self._create_chunker()
@@ -262,6 +274,9 @@ class DataBroker(metaclass=SingletonMeta):
         self.vectorstore = self._create_vectorstore(
             embedding_dimension=self.embedder.embedding_dimension
         )
+
+        self._init_databroker_cache(collection="base")
+        self._init_databroker_cache(collection="user")
 
         self._ingest_root_data(collection="base")
         self._ingest_root_data(collection="user")
@@ -286,8 +301,7 @@ class DataBroker(metaclass=SingletonMeta):
             )
             try:
                 logger.info("Inserting", pdf)
-                chunk_ids = self.insert(pdf, collection=collection)
-                self.data_cache[collection][collection_name][pdf_file] = chunk_ids
+                self.insert(pdf, collection=collection)
             except IOError as e:
                 logger.error(f"Failed to insert {pdf.name} into the vector store: {e}")
 
@@ -301,7 +315,7 @@ class DataBroker(metaclass=SingletonMeta):
         remove_files = list(set(existing_files) - set(pdf_files))
 
         del_chunks = []
-        for pdf_file in remove_files:
+        for pdf_file in tqdm(remove_files):
             del_chunks.extend(self.data_cache[collection][pdf_file])
             self.data_cache[collection][collection_name].pop(pdf_file)
 
@@ -313,11 +327,12 @@ class DataBroker(metaclass=SingletonMeta):
         Process and insert the given raw data into the vector store.
         Supports both standard embeddings and BGEM3 hybrid embeddings.
         """
+        collection_name = self.collection_name[collection]
         extractor = self.extractors.get(data.data_type)
         extracted_content = extractor(data)
 
         chunks = self.chunker(extracted_content)
-        existing_ids = self.vectorstore[collection].get_all_ids()
+        existing_ids = {id: "" for id in self.vectorstore[collection].get_all_ids()}
 
         new_chunks = []
         metadatum = []
@@ -325,6 +340,8 @@ class DataBroker(metaclass=SingletonMeta):
             if chunk.name not in existing_ids:
                 new_chunks.append(chunk)
                 metadatum.append({"source": data.name, "id": chunk.name})
+
+        self.data_cache[collection][collection_name][data.name] = chunks
 
         if len(new_chunks) > 0:
             embeddings = self.embedder(new_chunks)
