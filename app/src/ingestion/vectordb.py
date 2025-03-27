@@ -63,7 +63,6 @@ class VectorDB(ABC):
         keywords: Optional[List[str]] = None,
         filenames: Optional[List[str]] = None,
         hybrid_weighting: float = 0.5,
-        reranker_model: str = "BAAI/bge-reranker-v2-m3",
     ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database.
@@ -73,8 +72,7 @@ class VectorDB(ABC):
             top_k (int): The number of most similar vectors to return for each query.
             keywords (List[str]): The keywords to use for keyword search.
             filenames (List[str]): The filenames to filter by.
-            hybrid_weighting (float): Weight for hybrid search (dense vs sparse).
-            reranker_model (str): Name of the reranker model to use.
+            hybrid_weighting (float): Weight for hybrid search.
 
         Returns:
             List[List[SearchResult]]: List of lists of SearchResult objects containing search results.
