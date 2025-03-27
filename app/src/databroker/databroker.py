@@ -27,6 +27,7 @@ from ingestion.extraction import (
 )
 from ingestion.raw_data import Data
 from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB
+from ingestion.reranker import Reranker
 from orchestrator.utils import SingletonMeta
 from tqdm import tqdm
 
@@ -233,6 +234,18 @@ class DataBroker(metaclass=SingletonMeta):
                 self.data_cache[collection][collection_name][file] = []
             self.data_cache[collection][collection_name][file].append(chunk)
 
+    def _create_reranker(self, model_name: str = "BAAI/bge-reranker-v2-m3") -> Reranker:
+        """
+        Creates a reranker based on the specified model name.
+        
+        Args:
+            model_name (str): Name of the reranker model to use
+            
+        Returns:
+            Reranker: An instance of the Reranker class
+        """
+        return Reranker(model_name=model_name)
+
     def _init_databroker_pipeline(self, database_config: SimpleNamespace) -> None:
         """
         Initializes the data broker pipeline.
@@ -274,6 +287,8 @@ class DataBroker(metaclass=SingletonMeta):
         self.vectorstore = self._create_vectorstore(
             embedding_dimension=self.embedder.embedding_dimension
         )
+        self.reranker = self._create_reranker()
+        self.current_reranker_model = "BAAI/bge-reranker-v2-m3"
 
         self._init_databroker_cache(collection="base")
         self._init_databroker_cache(collection="user")
@@ -378,26 +393,44 @@ class DataBroker(metaclass=SingletonMeta):
             hybrid_weighting (float, optional): Weight between dense and sparse search. Defaults to 0.5.
             keywords (List[str], optional): List of keywords to search for. Defaults to None.
             filenames (List[str], optional): List of filenames to search for. Defaults to None.
-            reranker_model (str, optional): Name of the reranker model to use. Defaults to None.
+            reranker_model (str, optional): Name of the reranker model to use. Defaults to "BAAI/bge-reranker-v2-m3".
 
         Returns:
             List[List[SearchResult]]: A list of lists of SearchResult objects containing
                 the search results for each query, sorted by relevance
         """
-
         query_chunks = [
             Chunk(text=query, name=f"Query_{i}", data_type="query")
             for i, query in enumerate(queries)
         ]
-
         query_embeddings = self.embedder(query_chunks)
 
-        results = self.vectorstore[collection].search(
+        raw_results = self.vectorstore[collection].search(
             query_embeddings,
-            top_k,
+            top_k + 15,  # Get more results than needed for reranking
             keywords,
             filenames,
             hybrid_weighting,
-            reranker_model,
         )
-        return results
+        
+        if reranker_model != self.current_reranker_model:
+            self.reranker = self._create_reranker(model_name=reranker_model)
+            self.current_reranker_model = reranker_model
+            print("Current reranker model: ", self.current_reranker_model)
+        
+        reranked_results = []
+        
+        for query, result_list in zip(queries, raw_results):
+            if not result_list:
+                reranked_results.append([])
+                continue
+                
+            reranked_items = self.reranker.rerank(
+                query=query,
+                results=result_list,
+                top_k=min(top_k, len(result_list))
+            )
+            
+            reranked_results.append(reranked_items)
+                
+        return reranked_results
