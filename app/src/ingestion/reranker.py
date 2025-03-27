@@ -67,61 +67,37 @@ class Reranker:
 
         return device, use_fp16
 
-    def rerank(self, query: str, docs: List[str], top_k: int = 10) -> List[str]:
+    def rerank(self, query: str, results: List[Any], top_k: int = 10) -> List[Any]:
         """
-        Rerank documents using the BGE reranker.
+        Rerank SearchResult objects.
 
         Args:
-            query: The query string
-            docs: List of documents to rerank
-            top_k: Number of top documents to return
-
-        Returns:
-            List of reranked documents
-        """
-        return self.reranker(query, docs, top_k)
-
-    def rerank_milvus_results(
-        self, query: str, hits: List[Dict[str, Any]], top_k: int = 10
-    ) -> List[Dict[str, Any]]:
-        """
-        Rerank Milvus search results.
-
-        Args:
-            query: Original query string
-            hits: List of hit results from Milvus search
+            query: The search query string
+            results: List of SearchResult objects to rerank
             top_k: Number of top results to return
 
         Returns:
-            Reranked list of hits with updated distances based on reranker scores
+            List of reranked SearchResult objects
         """
-        if not hits:
+        if not results:
             return []
 
-        # Extract documents from hits
-        docs = []
-        doc_to_hit_map = {}
+        docs = [result.document for result in results]
+        doc_to_result = {result.document: result for result in results}
 
-        for hit in hits:
-            doc = hit["entity"].get("text", "")
-            docs.append(doc)
-            doc_to_hit_map[doc] = hit
+        reranked_docs = self.reranker(query, docs, min(top_k, len(docs)))
 
-        if not docs:
-            return []
+        reranked_results = []
+        for doc in reranked_docs:
+            original = doc_to_result[doc.text]
+            reranked_results.append(
+                type(original)(
+                    id=original.id,
+                    distance=float(doc.score),
+                    metadata=original.metadata,
+                    document=original.document,
+                    embedding=original.embedding,
+                )
+            )
 
-        # BGERerankFunction returns a list of objects with text and score attributes
-        reranked_results = self.reranker(query, docs, min(len(docs), top_k))
-
-        reranked_hits = []
-        for result in reranked_results:
-            # Access the text and score attributes directly
-            doc = result.text
-            score = result.score
-
-            if doc in doc_to_hit_map:
-                original_hit = doc_to_hit_map[doc].copy()
-                original_hit["distance"] = float(score)
-                reranked_hits.append(original_hit)
-
-        return reranked_hits
+        return reranked_results

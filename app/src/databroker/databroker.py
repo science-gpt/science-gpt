@@ -237,10 +237,10 @@ class DataBroker(metaclass=SingletonMeta):
     def _create_reranker(self, model_name: str = "BAAI/bge-reranker-v2-m3") -> Reranker:
         """
         Creates a reranker based on the specified model name.
-        
+
         Args:
             model_name (str): Name of the reranker model to use
-            
+
         Returns:
             Reranker: An instance of the Reranker class
         """
@@ -412,25 +412,23 @@ class DataBroker(metaclass=SingletonMeta):
             filenames,
             hybrid_weighting,
         )
-        
+
         if reranker_model != self.current_reranker_model:
             self.reranker = self._create_reranker(model_name=reranker_model)
             self.current_reranker_model = reranker_model
             print("Current reranker model: ", self.current_reranker_model)
-        
+
         reranked_results = []
-        
+
         for query, result_list in zip(queries, raw_results):
             if not result_list:
                 reranked_results.append([])
                 continue
-                
+
             reranked_items = self.reranker.rerank(
-                query=query,
-                results=result_list,
-                top_k=min(top_k, len(result_list))
+                query=query, results=result_list, top_k=min(top_k, len(result_list))
             )
-            
+
             reranked_results.append(reranked_items)
-                
+
         return reranked_results
