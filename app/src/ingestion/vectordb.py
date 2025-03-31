@@ -21,7 +21,7 @@ from pymilvus import (
     utility,
 )
 
-from .embedding import Embedding
+from .embedding import Embedding, BGEM3Embedder
 
 # Get a logger for this module.
 logger = logging.getLogger(__name__)
@@ -62,6 +62,7 @@ class VectorDB(ABC):
         top_k: int = 5,
         keywords: Optional[List[str]] = None,
         filenames: Optional[List[str]] = None,
+        hybrid_weighting: float = 0.5,
     ) -> List[List[SearchResult]]:
         """
         Search for similar vectors in the database.
@@ -70,6 +71,8 @@ class VectorDB(ABC):
             query_vectors (List[np.ndarray]): The query vectors to search for.
             top_k (int): The number of most similar vectors to return for each query.
             keywords (List[str]): The keywords to use for keyword search.
+            filenames (List[str]): The filenames to filter by.
+            hybrid_weighting (float): Weight for hybrid search.
 
         Returns:
             List[List[SearchResult]]: List of lists of SearchResult objects containing search results.
@@ -257,8 +260,6 @@ class MilvusDB(VectorDB):
             host (str): Milvus host.
             port (str): Milvus port.
             dense_dim (int): Dimension for the dense vector.
-            dense_embedder (Callable): Function that takes a list of texts and returns a dict with a "dense" key.
-            if_hybrid_search (bool): If True, use hybrid search (dense + sparse); if False, use only dense search.
         """
         self.collection_name = collection_name
         self.host = host
@@ -374,22 +375,20 @@ class MilvusDB(VectorDB):
         Searches Milvus for relevant documents.
 
         For each query:
-        - The dense embedding is computed using the chosen dense embedder (with the query wrapped as a Chunk).
+        - The dense embedding is computed using the dense embedder.
         - The sparse embedding is computed using BGEM3.
-
-        If if_hybrid_search is True, both embeddings are used to create a hybrid search request.
-        Otherwise, only the dense query is used.
+        - Both embeddings are used for hybrid search.
 
         Args:
-            queries (List[str]): Query texts.
+            query_embeddings (List[Embedding]): Query embeddings.
             top_k (int): Number of results to return per query.
-            keywords (Optional[List[str]]): Keywords for filtering (not used in this snippet).
-            filenames (Optional[List[str]]): Filenames for filtering (not used in this snippet).
+            keywords (Optional[List[str]]): Keywords for filtering.
+            filenames (Optional[List[str]]): Filenames for filtering.
+            hybrid_weighting (float): Weight for sparse vector in hybrid search (1-weight for dense).
 
         Returns:
             List[List[SearchResult]]: A list of search result lists.
         """
-
         filter_list = []
         if keywords:
             filter_list.append(f"TEXT_MATCH(text, '{' '.join(keywords)}')")

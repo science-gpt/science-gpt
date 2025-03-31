@@ -178,10 +178,12 @@ def edit_prompt(prompt, chunks, rewrite_prompt, key=0):
             pattern = (
                 r"Context\s*Source:\s*"
                 r"(?P<context_source>.+?)"
-                r"\s*-\s*Chunk\s*"
-                r"(?P<chunk_number>[\d_]+)"
-                r"\s*Document:\s*"
-                r"(?P<document>.+)"
+                r"(?:\s*-\s*Chunk\s*"
+                r"(?P<chunk_number>[\d_]+))?"
+                r"(?:\nDistance:\s*(?P<distance>.+?))?"
+                r"(?:\s*|\n)Document:\s*"
+                r"(?P<document>.+?)"
+                r"(?:Distance:\s*(?P<doc_distance>[\d.]+))?\s*$"
             )
 
             st.subheader("Chunks")
@@ -193,10 +195,20 @@ def edit_prompt(prompt, chunks, rewrite_prompt, key=0):
 
                 context_source = match.group("context_source")
                 chunk_number = match.group("chunk_number")
+                distance = match.group("doc_distance")
                 document = match.group("document")
 
+                if match.group("doc_distance") and document.endswith(
+                    f"Distance: {match.group('doc_distance')}"
+                ):
+                    document = document.rsplit("Distance:", 1)[0].strip()
+
                 st.markdown(f"##### Context Source: {context_source}")
-                st.markdown(f"##### Chunk {chunk_number}")
+                if chunk_number:
+                    st.markdown(
+                        f"##### Chunk {chunk_number}"
+                        + (f" | Distance: {distance}" if distance else "")
+                    )
                 st.markdown(f":blue-background[{document}]")
                 st.divider()
 
@@ -347,6 +359,16 @@ def sidebar():
                     max_value=20,
                     value=system_config.rag_params.top_k,
                     help="Number of text chunks to retrieve from the document database",
+                )
+
+                system_config.rag_params.reranker_model = st.selectbox(
+                    label="Reranker Model",
+                    options=system_config.rag_params.supported_rerankers,
+                    index=system_config.rag_params.supported_rerankers.index(
+                        system_config.rag_params.reranker_model
+                    ),
+                    help="Select the reranker model used to improve search result quality",
+                    key="sidebar_reranker_model",
                 )
 
                 system_config.rag_params.keywords = st_tags(
@@ -626,6 +648,16 @@ def search(search_tab):
             help="Weighting for Hybrid Search (0 only dense, 1 only sparse)",
         )
 
+        st.session_state.reranker_model = st.selectbox(
+            label="Reranker Model",
+            options=system_config.rag_params.supported_rerankers,
+            index=system_config.rag_params.supported_rerankers.index(
+                system_config.rag_params.reranker_model
+            ),
+            help="Select the reranker model used to improve search result quality",
+            key="search_tab_reranker_model",
+        )
+
         if len(query) > 0:
             search_results = st.session_state.databroker.search(
                 [query],
@@ -634,6 +666,7 @@ def search(search_tab):
                 keywords=st.session_state.keywords,
                 filenames=st.session_state.filenames,
                 hybrid_weighting=st.session_state.hybrid_weight,
+                reranker_model=st.session_state.reranker_model,
             )
 
             if len(search_results[0]) == 0:

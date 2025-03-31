@@ -107,6 +107,14 @@ rag_params:
   useknowledgebase: False 
   top_k: 5
   hybrid_weight: 0.5
+  reranker_model: "BAAI/bge-reranker-v2-m3"
+  supported_rerankers:
+    - "BAAI/bge-reranker-v2-m3"
+    - "BAAI/bge-reranker-base"
+    - "BAAI/bge-reranker-large"
+    - "BAAI/bge-re-anchor-v2-gemma"
+    - "BAAI/bge-reranker-v2-minicpm-layerwise"
+  
   keywords:
   filenames:
   
