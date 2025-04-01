@@ -1,6 +1,5 @@
 import torch
 from typing import Optional, List, Dict, Any, Tuple
-from pymilvus.model.reranker import BGERerankFunction
 
 # LLM-based layerwise reranker (e.g., BAAI/bge-reranker-v2-minicpm-layerwise)
 from FlagEmbedding import LayerWiseFlagLLMReranker
@@ -40,10 +39,11 @@ class Reranker:
         self.batch_size = batch_size
         self.normalize = normalize
 
-        # Setup device and fp16 settings
         self.device, self.use_fp16 = self.setup_device(device, use_fp16)
-
+        print("Current model name: ", self.model_name)
+        
         if "layerwise" in model_name:
+            print("start to load layerwise reranker")
             self.reranker = LayerWiseFlagLLMReranker(
                 model_name_or_path=self.model_name,
                 use_fp16=self.use_fp16,
@@ -51,12 +51,12 @@ class Reranker:
                 normalize=self.normalize,
                 trust_remote_code=True,
             )
+            print("layerwise reranker loaded")
             self.is_layerwise = True
             self.is_llm_based = True
-            # Default cutoff layer based on model docs
             self.cutoff_layers = [28]
             print(f"Initialized LayerWiseFlagLLMReranker with model {model_name}")
-            
+              
         elif "gemma" in model_name:
             self.reranker = FlagLLMReranker(
                 model_name_or_path=self.model_name,
@@ -121,77 +121,35 @@ class Reranker:
 
         docs = [result.document for result in results]
         doc_to_result = {result.document: result for result in results}
-
-        if self.is_layerwise:
-            pairs = [[query, doc] for doc in docs]
-            scores = self.reranker.compute_score(pairs, cutoff_layers=self.cutoff_layers, normalize=self.normalize)
-
-            scored_docs = list(zip(docs, scores))
-            scored_docs.sort(key=lambda x: x[1], reverse=True)
-            
-            print(f"Scores: {scores}")
-            
-            reranked_results = []
-            for doc, score in scored_docs[:top_k]:
-                original = doc_to_result[doc]
-                reranked_results.append(
-                    type(original)(
-                        id=original.id,
-                        distance=float(score),
-                        metadata=original.metadata,
-                        document=original.document,
-                        embedding=original.embedding,
-                    )
-                )
-            return reranked_results
-
+        pairs = [[query, doc] for doc in docs]
+        reranked_results = []
         
+        if self.is_layerwise:
+            # For LLM-based layerwise reranker: BAAI/bge-reranker-v2-minicpm-layerwise
+            scores = self.reranker.compute_score(pairs, cutoff_layers=self.cutoff_layers, normalize=self.normalize)
         elif self.is_llm_based:
-            # For LLM-based rerankers like BAAI/bge-reranker-v2-gemma
-            pairs = [[query, doc] for doc in docs]
+            # For LLM-based reranker: BAAI/bge-reranker-v2-gemma
             scores = self.reranker.compute_score(pairs, normalize=self.normalize)
-            
-            # Sort the documents by score
-            scored_docs = list(zip(docs, scores))
-            scored_docs.sort(key=lambda x: x[1], reverse=True)
-            
-            # Create reranked results
-            reranked_results = []
-            for doc, score in scored_docs[:top_k]:
-                original = doc_to_result[doc]
-                reranked_results.append(
-                    type(original)(
-                        id=original.id,
-                        distance=float(score),
-                        metadata=original.metadata,
-                        document=original.document,
-                        embedding=original.embedding,
-                    )
-                )
-            return reranked_results
         else:
-            # Standard reranking for normal models (or as fallback)
-            
-            # First try using compute_score if available (for FlagReranker)
-            pairs = [[query, doc] for doc in docs]
+            # Standard reranking for normal models (bge-reranker-base / bge-reranker-large / bge-reranker-v2-m3)
             scores = self.reranker.compute_score(pairs, normalize=self.normalize)
-            
-            # Sort the documents by score
-            scored_docs = list(zip(docs, scores))
-            scored_docs.sort(key=lambda x: x[1], reverse=True)
-            
-            # Create reranked results
-            reranked_results = []
-            for doc, score in scored_docs[:top_k]:
-                original = doc_to_result[doc]
-                reranked_results.append(
-                    type(original)(
-                        id=original.id,
-                        distance=float(score),
-                        metadata=original.metadata,
-                        document=original.document,
-                        embedding=original.embedding,
-                    )
+        
+        print("Current model is ", self.model_name, " and scores are: ", scores)
+        
+        
+        scored_docs = list(zip(docs, scores))
+        scored_docs.sort(key=lambda x: x[1], reverse=True) 
+        for doc, score in scored_docs[:top_k]:
+            original = doc_to_result[doc]
+            reranked_results.append(
+                type(original)(
+                    id=original.id,
+                    distance=float(score),
+                    metadata=original.metadata,
+                    document=original.document,
+                    embedding=original.embedding,
                 )
-            return reranked_results
+            )
+                
+        return reranked_results
         
