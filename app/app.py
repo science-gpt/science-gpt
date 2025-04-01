@@ -413,9 +413,11 @@ def sidebar():
                 )
 
                 # Initialize session state if needed
-                if 'use_reranker_sidebar' not in st.session_state:
-                    st.session_state.use_reranker_sidebar = system_config.rag_params.use_reranker
-                
+                if "use_reranker_sidebar" not in st.session_state:
+                    st.session_state.use_reranker_sidebar = (
+                        system_config.rag_params.use_reranker
+                    )
+
                 # First place the model selection UI
                 system_config.rag_params.reranker_model = st.selectbox(
                     label="Reranker Model",
@@ -427,14 +429,18 @@ def sidebar():
                     key="sidebar_reranker_model",
                     disabled=not st.session_state.use_reranker_sidebar,
                 )
-                
+
                 # Then add the toggle after the model selection
                 system_config.rag_params.use_reranker = st.toggle(
                     label="Enable Reranker",
                     value=st.session_state.use_reranker_sidebar,
                     help="Toggle to enable or disable the reranker. When enabled, the system refines search results by re-evaluating how well each chunk matches your query. This typically improves relevance but takes slightly longer. When disabled, raw retrieval results are used without this extra refinement step.",
                     key="use_reranker_toggle",
-                    on_change=lambda: setattr(st.session_state, 'use_reranker_sidebar', st.session_state.use_reranker_toggle),
+                    on_change=lambda: setattr(
+                        st.session_state,
+                        "use_reranker_sidebar",
+                        st.session_state.use_reranker_toggle,
+                    ),
                 )
 
                 system_config.rag_params.keywords = st_tags(
@@ -713,11 +719,11 @@ def search(search_tab):
             value=0.5,
             help="Weighting for Hybrid Search (0 only dense, 1 only sparse)",
         )
-        
+
         # Initialize session state if needed
-        if 'use_reranker_search' not in st.session_state:
+        if "use_reranker_search" not in st.session_state:
             st.session_state.use_reranker_search = system_config.rag_params.use_reranker
-        
+
         # Show model selection first
         st.session_state.reranker_model = st.selectbox(
             label="Reranker Model",
@@ -729,20 +735,28 @@ def search(search_tab):
             key="search_tab_reranker_model",
             disabled=not st.session_state.use_reranker_search,
         )
-        
+
         # Then add toggle after the model selection
         use_reranker = st.toggle(
             label="Enable Reranker",
             value=st.session_state.use_reranker_search,
             help="Toggle to enable or disable the reranker. When enabled, the system refines search results by re-evaluating how well each chunk matches your query. This typically improves relevance but takes slightly longer. When disabled, raw retrieval results are used without this extra refinement step.",
             key="search_tab_use_reranker_toggle",
-            on_change=lambda: setattr(st.session_state, 'use_reranker_search', st.session_state.search_tab_use_reranker_toggle),
+            on_change=lambda: setattr(
+                st.session_state,
+                "use_reranker_search",
+                st.session_state.search_tab_use_reranker_toggle,
+            ),
         )
 
         if len(query) > 0:
             # If reranker is disabled, use default model (won't be used anyway)
-            reranker_model = st.session_state.reranker_model if use_reranker else system_config.rag_params.reranker_model
-            
+            reranker_model = (
+                st.session_state.reranker_model
+                if use_reranker
+                else system_config.rag_params.reranker_model
+            )
+
             search_results = st.session_state.databroker.search(
                 [query],
                 system_config.rag_params.top_k + 10,

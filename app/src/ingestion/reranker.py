@@ -3,8 +3,10 @@ from typing import Optional, List, Dict, Any, Tuple
 
 # LLM-based layerwise reranker (e.g., BAAI/bge-reranker-v2-minicpm-layerwise)
 from FlagEmbedding import LayerWiseFlagLLMReranker
+
 # LLM-based reranker (e.g., BAAI/bge-reranker-v2-gemma)
 from FlagEmbedding import FlagLLMReranker
+
 # Normal reranker (e.g., BAAI/bge-reranker-base, BAAI/bge-reranker-large, BAAI/bge-reranker-v2-m3)
 from FlagEmbedding import FlagReranker
 
@@ -41,7 +43,7 @@ class Reranker:
 
         self.device, self.use_fp16 = self.setup_device(device, use_fp16)
         print("Current model name: ", self.model_name)
-        
+
         if "layerwise" in model_name:
             print("start to load layerwise reranker")
             self.reranker = LayerWiseFlagLLMReranker(
@@ -56,7 +58,7 @@ class Reranker:
             self.is_llm_based = True
             self.cutoff_layers = [28]
             print(f"Initialized LayerWiseFlagLLMReranker with model {model_name}")
-              
+
         elif "gemma" in model_name:
             self.reranker = FlagLLMReranker(
                 model_name_or_path=self.model_name,
@@ -67,7 +69,7 @@ class Reranker:
             self.is_layerwise = False
             self.is_llm_based = True
             print(f"Initialized FlagLLMReranker with model {model_name}")
-            
+
         else:
             self.reranker = FlagReranker(
                 model_name_or_path=self.model_name,
@@ -78,7 +80,6 @@ class Reranker:
             self.is_layerwise = False
             self.is_llm_based = False
             print(f"Initialized FlagReranker with model {model_name}")
-                
 
     def setup_device(
         self, device: Optional[str] = None, use_fp16: Optional[bool] = None
@@ -123,22 +124,23 @@ class Reranker:
         doc_to_result = {result.document: result for result in results}
         pairs = [[query, doc] for doc in docs]
         reranked_results = []
-        
+
         if self.is_layerwise:
             # For LLM-based layerwise reranker: BAAI/bge-reranker-v2-minicpm-layerwise
-            scores = self.reranker.compute_score(pairs, cutoff_layers=self.cutoff_layers, normalize=self.normalize)
+            scores = self.reranker.compute_score(
+                pairs, cutoff_layers=self.cutoff_layers, normalize=self.normalize
+            )
         elif self.is_llm_based:
             # For LLM-based reranker: BAAI/bge-reranker-v2-gemma
             scores = self.reranker.compute_score(pairs, normalize=self.normalize)
         else:
             # Standard reranking for normal models (bge-reranker-base / bge-reranker-large / bge-reranker-v2-m3)
             scores = self.reranker.compute_score(pairs, normalize=self.normalize)
-        
+
         print("Current model is ", self.model_name, " and scores are: ", scores)
-        
-        
+
         scored_docs = list(zip(docs, scores))
-        scored_docs.sort(key=lambda x: x[1], reverse=True) 
+        scored_docs.sort(key=lambda x: x[1], reverse=True)
         for doc, score in scored_docs[:top_k]:
             original = doc_to_result[doc]
             reranked_results.append(
@@ -150,6 +152,5 @@ class Reranker:
                     embedding=original.embedding,
                 )
             )
-                
+
         return reranked_results
-        

@@ -406,12 +406,12 @@ class DataBroker(metaclass=SingletonMeta):
             for i, query in enumerate(queries)
         ]
         query_embeddings = self.embedder(query_chunks)
-        
+
         print("The current reranker status is: ", use_reranker)
 
         # Retrieve more results than needed if using reranker
         search_top_k = top_k + 15 if use_reranker else top_k
-        
+
         raw_results = self.vectorstore[collection].search(
             query_embeddings,
             search_top_k,
