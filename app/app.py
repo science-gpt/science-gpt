@@ -205,10 +205,61 @@ def edit_prompt(prompt, chunks, rewrite_prompt, key=0):
 
                 st.markdown(f"##### Context Source: {context_source}")
                 if chunk_number:
-                    st.markdown(
-                        f"##### Chunk {chunk_number}"
-                        + (f" | Distance: {distance}" if distance else "")
-                    )
+                    # Create an inline distance with info icon
+                    distance_info = f"""
+                    <style>
+                    .distance-container {{
+                      display: flex;
+                      align-items: center;
+                      margin-bottom: 10px;
+                    }}
+                    .distance-info {{
+                      font-size: 1.1rem;
+                      font-weight: 600;
+                    }}
+                    .tooltip {{
+                      position: relative;
+                      margin-left: 8px;
+                      display: inline-block;
+                    }}
+                    .tooltip .icon {{
+                      cursor: pointer;
+                      color: #0066cc;
+                    }}
+                    .tooltip .tooltiptext {{
+                      visibility: hidden;
+                      width: 300px;
+                      background-color: #f0f2f6;
+                      color: #31333F;
+                      text-align: left;
+                      border-radius: 4px;
+                      padding: 10px;
+                      position: absolute;
+                      z-index: 1;
+                      top: -5px;
+                      left: 125%;
+                      opacity: 0;
+                      transition: opacity 0.3s;
+                      font-size: 0.85rem;
+                      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                      border: 1px solid #ddd;
+                    }}
+                    .tooltip:hover .tooltiptext,
+                    .tooltip.active .tooltiptext {{
+                      visibility: visible;
+                      opacity: 1;
+                    }}
+                    </style>
+                    
+                    <div class="distance-container">
+                      <div class="distance-info">Chunk {chunk_number} | Distance: {distance}</div>
+                      <div class="tooltip" onclick="this.classList.toggle('active')">
+                        <div class="icon">ℹ️</div>
+                        <div class="tooltiptext">Higher similarity scores indicate stronger alignment between the query and such chunks.</div>
+                      </div>
+                    </div>
+                    """
+                    st.markdown(distance_info, unsafe_allow_html=True)
                 st.markdown(f":blue-background[{document}]")
                 st.divider()
 
@@ -361,6 +412,11 @@ def sidebar():
                     help="Number of text chunks to retrieve from the document database",
                 )
 
+                # Initialize session state if needed
+                if 'use_reranker_sidebar' not in st.session_state:
+                    st.session_state.use_reranker_sidebar = system_config.rag_params.use_reranker
+                
+                # First place the model selection UI
                 system_config.rag_params.reranker_model = st.selectbox(
                     label="Reranker Model",
                     options=system_config.rag_params.supported_rerankers,
@@ -369,6 +425,16 @@ def sidebar():
                     ),
                     help="Select the reranker model used to improve search result quality",
                     key="sidebar_reranker_model",
+                    disabled=not st.session_state.use_reranker_sidebar,
+                )
+                
+                # Then add the toggle after the model selection
+                system_config.rag_params.use_reranker = st.toggle(
+                    label="Enable Reranker",
+                    value=st.session_state.use_reranker_sidebar,
+                    help="Toggle to enable or disable the reranker. When enabled, the system refines search results by re-evaluating how well each chunk matches your query. This typically improves relevance but takes slightly longer. When disabled, raw retrieval results are used without this extra refinement step.",
+                    key="use_reranker_toggle",
+                    on_change=lambda: setattr(st.session_state, 'use_reranker_sidebar', st.session_state.use_reranker_toggle),
                 )
 
                 system_config.rag_params.keywords = st_tags(
@@ -647,7 +713,12 @@ def search(search_tab):
             value=0.5,
             help="Weighting for Hybrid Search (0 only dense, 1 only sparse)",
         )
-
+        
+        # Initialize session state if needed
+        if 'use_reranker_search' not in st.session_state:
+            st.session_state.use_reranker_search = system_config.rag_params.use_reranker
+        
+        # Show model selection first
         st.session_state.reranker_model = st.selectbox(
             label="Reranker Model",
             options=system_config.rag_params.supported_rerankers,
@@ -656,9 +727,22 @@ def search(search_tab):
             ),
             help="Select the reranker model used to improve search result quality",
             key="search_tab_reranker_model",
+            disabled=not st.session_state.use_reranker_search,
+        )
+        
+        # Then add toggle after the model selection
+        use_reranker = st.toggle(
+            label="Enable Reranker",
+            value=st.session_state.use_reranker_search,
+            help="Toggle to enable or disable the reranker. When enabled, the system refines search results by re-evaluating how well each chunk matches your query. This typically improves relevance but takes slightly longer. When disabled, raw retrieval results are used without this extra refinement step.",
+            key="search_tab_use_reranker_toggle",
+            on_change=lambda: setattr(st.session_state, 'use_reranker_search', st.session_state.search_tab_use_reranker_toggle),
         )
 
         if len(query) > 0:
+            # If reranker is disabled, use default model (won't be used anyway)
+            reranker_model = st.session_state.reranker_model if use_reranker else system_config.rag_params.reranker_model
+            
             search_results = st.session_state.databroker.search(
                 [query],
                 system_config.rag_params.top_k + 10,
@@ -666,7 +750,8 @@ def search(search_tab):
                 keywords=st.session_state.keywords,
                 filenames=st.session_state.filenames,
                 hybrid_weighting=st.session_state.hybrid_weight,
-                reranker_model=st.session_state.reranker_model,
+                reranker_model=reranker_model,
+                use_reranker=use_reranker,
             )
 
             if len(search_results[0]) == 0:

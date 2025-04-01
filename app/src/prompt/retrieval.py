@@ -114,6 +114,7 @@ class ContextRetrieval(PromptDecorator):
             filenames=self.config.rag_params.filenames,
             hybrid_weighting=self.config.rag_params.hybrid_weight,
             reranker_model=self.config.rag_params.reranker_model,
+            use_reranker=self.config.rag_params.use_reranker,
         )
 
         # No results were returned.
