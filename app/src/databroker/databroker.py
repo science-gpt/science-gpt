@@ -382,6 +382,7 @@ class DataBroker(metaclass=SingletonMeta):
         keywords: Optional[list[str]] = None,
         filenames: Optional[list[str]] = None,
         reranker_model: str = "BAAI/bge-reranker-v2-m3",
+        use_reranker: bool = True,
     ) -> List[List[SearchResult]]:
         """
         Searches the vector store for the most relevant docs based on the given queries.
@@ -394,6 +395,7 @@ class DataBroker(metaclass=SingletonMeta):
             keywords (List[str], optional): List of keywords to search for. Defaults to None.
             filenames (List[str], optional): List of filenames to search for. Defaults to None.
             reranker_model (str, optional): Name of the reranker model to use. Defaults to "BAAI/bge-reranker-v2-m3".
+            use_reranker (bool, optional): Whether to use reranking. Defaults to True.
 
         Returns:
             List[List[SearchResult]]: A list of lists of SearchResult objects containing
@@ -405,9 +407,14 @@ class DataBroker(metaclass=SingletonMeta):
         ]
         query_embeddings = self.embedder(query_chunks)
 
+        print("The current reranker status is: ", use_reranker)
+
+        # Retrieve more results than needed if using reranker
+        search_top_k = top_k + 15 if use_reranker else top_k
+
         raw_results = self.vectorstore[collection].search(
             query_embeddings,
-            top_k + 15,  # Get more results than needed for reranking
+            search_top_k,
             keywords,
             filenames,
             hybrid_weighting,
@@ -417,6 +424,10 @@ class DataBroker(metaclass=SingletonMeta):
             self.reranker = self._create_reranker(model_name=reranker_model)
             self.current_reranker_model = reranker_model
             print("Current reranker model: ", self.current_reranker_model)
+
+        # If reranker is disabled, return raw results limited to top_k
+        if not use_reranker:
+            return raw_results
 
         reranked_results = []
 
