@@ -746,21 +746,21 @@ def search(search_tab):
 
             # for i, r in enumerate(search_results[0]):
 
-        #     if r.distance < st.session_state.edge_thresh:
-        #         continue
+            #     if r.distance < st.session_state.edge_thresh:
+            #         continue
 
-        #     with st.card(f"Chunk {i} (Page {r.metadata['page']})"):
-        # # Add score as a colored metric
-        #         st.metric("Relevance Score", f"{r.distance:.2f}", delta_color="normal")
+            #     with st.card(f"Chunk {i} (Page {r.metadata['page']})"):
+            # # Add score as a colored metric
+            #         st.metric("Relevance Score", f"{r.distance:.2f}", delta_color="normal")
 
-        # # Display chunk text
-        #         st.markdown("**Text:**")
-        #         st.markdown(r.metadata["document"])
+            # # Display chunk text
+            #         st.markdown("**Text:**")
+            #         st.markdown(r.metadata["document"])
 
-        #         # Additional metadata
-        #         st.markdown("**Source:**")
-        #         st.markdown("**heading:**")
-        #         st.markdown(r.metadata["metadata"]["heading"])
+            #         # Additional metadata
+            #         st.markdown("**Source:**")
+            #         st.markdown("**heading:**")
+            #         st.markdown(r.metadata["metadata"]["heading"])
 
             col1, col2 = st.columns(2)
 

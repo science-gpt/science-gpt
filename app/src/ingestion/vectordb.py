@@ -21,7 +21,7 @@ from pymilvus import (
     utility,
 )
 
-from .embedding import Embedding, BGEM3Embedder
+from .embedding import BGEM3Embedder, Embedding
 
 # Get a logger for this module.
 logger = logging.getLogger(__name__)

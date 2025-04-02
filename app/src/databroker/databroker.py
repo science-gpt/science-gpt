@@ -26,8 +26,8 @@ from ingestion.extraction import (
     PyPDF2Extract,
 )
 from ingestion.raw_data import Data
-from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB
 from ingestion.reranker import Reranker
+from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB
 from orchestrator.utils import SingletonMeta
 from tqdm import tqdm
 

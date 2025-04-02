@@ -1,5 +1,6 @@
+from typing import Any, Dict, List, Optional, Tuple
+
 import torch
-from typing import Optional, List, Dict, Any, Tuple
 from pymilvus.model.reranker import BGERerankFunction
 
 
