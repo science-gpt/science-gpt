@@ -26,8 +26,8 @@ from ingestion.extraction import (
     PyPDF2Extract,
 )
 from ingestion.raw_data import Data
-from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB
 from ingestion.reranker import Reranker
+from ingestion.vectordb import ChromaDB, MilvusDB, SearchResult, VectorDB
 from orchestrator.utils import SingletonMeta
 from tqdm import tqdm
 
@@ -354,8 +354,9 @@ class DataBroker(metaclass=SingletonMeta):
         for chunk in chunks:
             if chunk.name not in existing_ids:
                 new_chunks.append(chunk)
-                metadatum.append({"source": data.name, "id": chunk.name})
-
+                metadatum.append(
+                    {"source": data.name, "id": chunk.name, **chunk.metadata}
+                )
         self.data_cache[collection][collection_name][data.name] = chunks
 
         if len(new_chunks) > 0:

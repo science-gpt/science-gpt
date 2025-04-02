@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from collections import defaultdict
+from dataclasses import dataclass, field
 from typing import List
 
 import nltk
@@ -26,6 +27,7 @@ class Chunk(Data):
     """
 
     text: str
+    metadata: defaultdict[dict] = field(default_factory=lambda: defaultdict(dict))
 
     def __post_init__(self):
         super().__init__(name=self.name, data_type=self.data_type)
@@ -105,6 +107,9 @@ class RecursiveCharacterChunker(Chunker):
         ]
 
 
+# TODO: decide how we want to handle metadata -> do we concatenate it to the text or keep it separate?
+
+
 class DoclingHierarchicalChunker(Chunker):
     """
     A Chunker implementation that uses Docling's HierarchicalChunker to split a DoclingDocument into chunks.
@@ -137,9 +142,36 @@ class DoclingHierarchicalChunker(Chunker):
                 text=chunk.text,
                 name=f"{content.name} - Chunk {i+1}",
                 data_type=content.data_type,
+                metadata={
+                    "headings": chunk.meta.headings[0] if chunk.meta.headings else "",
+                    "captions": chunk.meta.captions if chunk.meta.captions else "",
+                    **(
+                        chunk.meta.doc_items[0].model_dump()["prov"][0]["bbox"]
+                        if chunk.meta.doc_items
+                        else {}
+                    ),
+                    "coord_origin": (
+                        str(
+                            chunk.meta.doc_items[0]
+                            .model_dump()["prov"][0]["bbox"]
+                            .get("coord_origin", "UNKNOWN")
+                        )
+                        if chunk.meta.doc_items
+                        else "UNKNOWN"
+                    ),
+                    "page_no": (
+                        chunk.meta.doc_items[0]
+                        .model_dump()["prov"][0]
+                        .get("page_no", "UNKNOWN")
+                        if chunk.meta.doc_items
+                        else ""
+                    ),
+                },
             )
             for i, chunk in tqdm(enumerate(chunks_iter))
         ]
+
+        print(chunks[0].metadata)
         return chunks
 
 
@@ -157,6 +189,8 @@ class DoclingHybridChunker(Chunker):
         self.chunker = HybridChunker(
             tokenizer=self.tokenizer, max_tokens=8192, merge_peers=True
         )
+
+        # TODO: edit the max_tokens and allow better overlap to fix the truncation issues
 
     def __call__(self, content: DoclingDocument) -> List[Chunk]:
         """
@@ -186,38 +220,80 @@ class DoclingHybridChunker(Chunker):
         # Generate chunk data with headings, captions, and metadata
         for i, chunk in tqdm(enumerate(chunk_iter)):
             chunk_text = chunk.text
-            headings = chunk.meta.headings or []
-            captions = chunk.meta.captions or []
-            metadata = chunk.meta.dict()
 
-            # Concatenate headings and captions into the text (add them at the start or end)
-            combined_text = chunk_text
-            if headings:
-                combined_text = (
-                    f"Headings: {headings}\n" + combined_text
-                )  # Add headings at the top
-            if captions:
-                combined_text = (
-                    f"Captions: {captions}\n" + combined_text
-                )  # Add captions after headings
-            # if metadata:
-            #     combined_text += f"\nMetadata: {json.dumps(metadata)}"  # Add metadata at the end
+            # serena: added a metadata field to the chunk
+            # metadata = dict(chunk.meta.model_dump())
+            # print(metadata)
 
-            # Prepare chunk data
-            chunk_data = {
-                "text": combined_text,
-                "headings": headings,
-                "captions": captions,
-                # "metadata": metadata,
-                "document_name": content.name,
-            }
-
-            # Create the chunk with the combined text
             chunks.append(
                 Chunk(
-                    text=chunk_data["text"],
+                    text=chunk.text,
                     name=f"{content.name} - Chunk {i+1}",
-                    data_type=content.data_type,  # Assuming 'data_type' exists in content
+                    data_type=content.data_type,
+                    metadata={
+                        "headings": (
+                            chunk.meta.headings[0] if chunk.meta.headings else ""
+                        ),
+                        "captions": chunk.meta.captions if chunk.meta.captions else "",
+                        **(
+                            chunk.meta.doc_items[0].model_dump()["prov"][0]["bbox"]
+                            if chunk.meta.doc_items
+                            else {}
+                        ),
+                        "coord_origin": (
+                            str(
+                                chunk.meta.doc_items[0]
+                                .model_dump()["prov"][0]["bbox"]
+                                .get("coord_origin", "UNKNOWN")
+                            )
+                            if chunk.meta.doc_items
+                            else "UNKNOWN"
+                        ),
+                        "page_no": (
+                            chunk.meta.doc_items[0]
+                            .model_dump()["prov"][0]
+                            .get("page_no", "UNKNOWN")
+                            if chunk.meta.doc_items
+                            else ""
+                        ),
+                    },
                 )
             )
+
+            # headings = chunk.meta.headings or []
+            # captions = chunk.meta.captions or []
+            # metadata = (
+            #     chunk.meta.dict()
+            # )  # serena: this will overwrite the metadata field with the metadata from the chunk.meta object
+
+            # # Concatenate headings and captions into the text (add them at the start or end)
+            # combined_text = chunk_text
+            # if headings:
+            #     combined_text = (
+            #         f"Headings: {headings}\n" + combined_text
+            #     )  # Add headings at the top
+            # if captions:
+            #     combined_text = (
+            #         f"Captions: {captions}\n" + combined_text
+            #     )  # Add captions after headings
+            # # if metadata:
+            # #     combined_text += f"\nMetadata: {json.dumps(metadata)}"  # Add metadata at the end
+
+            # # Prepare chunk data
+            # chunk_data = {
+            #     "text": combined_text,
+            #     "headings": headings,
+            #     "captions": captions,
+            #     # "metadata": metadata,
+            #     "document_name": content.name,
+            # }
+
+            # # Create the chunk with the combined text
+            # chunks.append(
+            #     Chunk(
+            #         text=chunk_data["text"],
+            #         name=f"{content.name} - Chunk {i+1}",
+            #         data_type=content.data_type,  # Assuming 'data_type' exists in content
+            #     )
+            # )
         return chunks

@@ -161,7 +161,7 @@ def send_prompt(prompt):
     )
 
 
-def edit_prompt(prompt, chunks, rewrite_prompt, key=0):
+def edit_prompt(prompt, context, rewrite_prompt, key=0):
     """
     This is the textbox that allows the user to view and modify the prompt
     """
@@ -474,6 +474,14 @@ def sidebar():
 
                 # FINALLY trigger callback
                 database_callback(st.session_state.database_config)
+
+                # st.button(
+                # "Clear Database",
+                # on_click=lambda: clear_database_callback(st.session_state.database_config),
+                # type="secondary",
+                # help="Warning: This will delete all vectors from the database"
+                # )
+
             selected_file = st.selectbox(
                 "Show files from the data folder:",
                 options=(
@@ -616,29 +624,35 @@ def search(search_tab):
         #     maxtags=15,  # max number of tags
         #     key="filename_tags",
         # )
-        st.session_state.filenames = st.multiselect(
-            "Select files for filtering:",
-            options=(
-                [
-                    os.path.splitext(f)[0]
-                    for f in os.listdir("/usr/src/app/data")
-                    if f.endswith(".pdf")
-                ]
-                if os.path.exists("/usr/src/app/data")
-                else []
-            ),
-            default=st.session_state.get("filenames", []),
-            help="Choose one or more files from the list to filter results.",
-            key="searchtab_filenames",
-        )
-        st.session_state.keywords = st_tags(
-            label="Keyword Filtered Retrieval",
-            text="Enter keywords and press enter",
-            value=st.session_state.get("keywords", []),
-            suggestions=["Toxicology", "Regulation", "Environment"],
-            maxtags=10,  # max number of tags
-            key="keyword_tags",
-        )
+
+        st.session_state.edge_thresh = st.slider("Edge Threshold", 0.0, 1.0, 0.5)
+
+        with st.form("Advanced Search"):
+            st.write("Adavanced Search Options")
+            st.session_state.filenames = st.multiselect(
+                "Select files for filtering:",
+                options=(
+                    [
+                        os.path.splitext(f)[0]
+                        for f in os.listdir("/usr/src/app/data")
+                        if f.endswith(".pdf")
+                    ]
+                    if os.path.exists("/usr/src/app/data")
+                    else []
+                ),
+                default=st.session_state.get("filenames", []),
+                help="Choose one or more files from the list to filter results.",
+                key="searchtab_filenames",
+            )
+
+            st.session_state.keywords = st_tags(
+                label="Keyword Filtered Retrieval",
+                text="Enter keywords and press enter",
+                value=st.session_state.get("keywords", []),
+                suggestions=["Toxicology", "Regulation", "Environment"],
+                maxtags=10,  # max number of tags
+                key="keyword_tags",
+            )
 
         st.session_state.hybrid_weight = st.slider(
             label="Hybrid Search Weighting",
@@ -658,6 +672,8 @@ def search(search_tab):
             key="search_tab_reranker_model",
         )
 
+        submitted = st.form_submit_button("Submit")
+
         if len(query) > 0:
             search_results = st.session_state.databroker.search(
                 [query],
@@ -668,6 +684,7 @@ def search(search_tab):
                 hybrid_weighting=st.session_state.hybrid_weight,
                 reranker_model=st.session_state.reranker_model,
             )
+            print(search_results)
 
             if len(search_results[0]) == 0:
                 st.header("No Results")
@@ -727,7 +744,23 @@ def search(search_tab):
 
             df = pd.DataFrame(results)
 
-            st.session_state.edge_thresh = st.slider("Edge Threshold", 0.0, 1.0, 0.5)
+            # for i, r in enumerate(search_results[0]):
+
+            #     if r.distance < st.session_state.edge_thresh:
+            #         continue
+
+            #     with st.card(f"Chunk {i} (Page {r.metadata['page']})"):
+            # # Add score as a colored metric
+            #         st.metric("Relevance Score", f"{r.distance:.2f}", delta_color="normal")
+
+            # # Display chunk text
+            #         st.markdown("**Text:**")
+            #         st.markdown(r.metadata["document"])
+
+            #         # Additional metadata
+            #         st.markdown("**Source:**")
+            #         st.markdown("**heading:**")
+            #         st.markdown(r.metadata["metadata"]["heading"])
 
             col1, col2 = st.columns(2)
 

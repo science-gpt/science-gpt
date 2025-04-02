@@ -21,7 +21,7 @@ from pymilvus import (
     utility,
 )
 
-from .embedding import Embedding, BGEM3Embedder
+from .embedding import BGEM3Embedder, Embedding
 
 # Get a logger for this module.
 logger = logging.getLogger(__name__)
@@ -107,6 +107,13 @@ class VectorDB(ABC):
         """
         pass
 
+    @abstractmethod
+    def pretty_print(self, embeddings: List[List[SearchResult]]) -> List[str]:
+        """
+        Pretty print the contents of the database.
+        """
+        pass
+
 
 class ChromaDB(VectorDB):
     """
@@ -142,6 +149,7 @@ class ChromaDB(VectorDB):
         ids = [embedding.name for embedding in embeddings]
         # Convert each dense vector row into a list.
         vectors = [embedding.dense_vector.tolist() for embedding in embeddings]
+        metadatum = [embedding.metadata for embedding in embeddings]
         self.collection.add(
             ids=ids,
             embeddings=vectors,
@@ -156,22 +164,39 @@ class ChromaDB(VectorDB):
         keywords: Optional[List[str]] = None,
         filenames: Optional[List[str]] = None,
         hybrid_weighting: float = 0.5,
+        page_no: Optional[int] = None,
+        component=Optional[str],
     ) -> List[List[SearchResult]]:
         """
         Process query strings internally to compute embeddings, then perform the search.
         """
         where_document = None
+        filters = []
+
         if keywords:
-            if len(keywords) > 1:
-                where_document = {"$or": [{"$contains": kw} for kw in keywords]}
-            else:
-                where_document = {"$contains": keywords[0]}
-        where = {"source": {"$in": filenames}} if filenames else None
+            # if len(keywords) > 1:
+            #     where_document = {
+            #         "$or": [{"$contains": keyword} for keyword in keywords]
+            #     }
+            # else:
+            #     where_document = {"$contains": keywords[0]}
+            where_document = {"$in": keywords}
+            filters.append({"headings": {"$contains": keywords}})
 
-        dense_vectors = [
-            embedding.dense_vector.tolist() for embedding in query_embeddings
-        ]
+        if filenames:
+            if len(filenames) > 0:
+                filters.append({"source": {"$in": filenames}})
 
+        if page_no:
+            filters.append({"page_no": {"$eq": page_no}})
+
+        # TODO: filter by component
+
+        where = (
+            {"$and": filters} if len(filters) > 1 else filters[0] if filters else None
+        )
+
+        query_embeddings = [vector.tolist() for vector in query_vectors]
         results = self.collection.query(
             query_embeddings=dense_vectors,
             n_results=top_k,
@@ -231,6 +256,25 @@ class ChromaDB(VectorDB):
         all_ids = self.get_all_ids()
         if all_ids:
             self.collection.delete(ids=all_ids)
+
+    def pretty_print(self, results: List[List[SearchResult]]) -> None:
+        """
+        Pretty print the contents of the database.
+        """
+
+        if results:
+            print("Search Results:")
+            for i, query_results in enumerate(results):
+                print(f"Query {i}:")
+                for result in query_results:
+                    print(
+                        f"  ID: {result.id}\n Distance: {result.distance}\n Document: {result.document}"
+                    )
+
+                if result.metadata:
+                    print("Metadata:")
+                    for key, value in result.metadata.items():
+                        print(f"  {key}: {value}")
 
 
 class MilvusDB(VectorDB):
@@ -302,6 +346,14 @@ class MilvusDB(VectorDB):
             ]
             schema = CollectionSchema(fields, "Hybrid search collection")
 
+            schema.add_field(
+                field_name="metadata",
+                datatype=DataType.JSON,
+                max_length=65535,
+                enable_analyzer=True,
+                enable_match=True,
+            )
+
             # Create index params
             index_params = self.client.prepare_index_params()
 
@@ -351,6 +403,7 @@ class MilvusDB(VectorDB):
                 "filename": metadata["source"],
                 "dense_vector": embedding.dense_vector.tolist(),
                 "sparse_vector": embedding.sparse_vector,
+                "metadata": embedding.metadata,
             }
             for embedding, metadata in zip(embeddings, metadatum)
         ]
@@ -370,6 +423,8 @@ class MilvusDB(VectorDB):
         keywords: Optional[List[str]] = None,
         filenames: Optional[List[str]] = None,
         hybrid_weighting: float = 0.5,
+        page_no: Optional[int] = None,
+        component: Optional[str] = None,
     ) -> List[List[SearchResult]]:
         """
         Searches Milvus for relevant documents.
@@ -390,11 +445,24 @@ class MilvusDB(VectorDB):
             List[List[SearchResult]]: A list of search result lists.
         """
         filter_list = []
+        # check the document and the headings for keywords
         if keywords:
-            filter_list.append(f"TEXT_MATCH(text, '{' '.join(keywords)}')")
+            filter_list.extend(
+                [
+                    f"TEXT_MATCH(text, '{' '.join(keywords)}')",
+                    f"JSON_CONTAINS(metadata, '{keywords}', '$.headings')",
+                ]
+            )
 
         if filenames:
             filter_list.append(f"TEXT_MATCH(filename, '{' '.join(filenames)}')")
+
+        if page_no:
+            filter_list.append(
+                f"TEXT_MATCH(metadata, '{' '.join(page_no)}', '$.page_no')"
+            )
+
+        # TODO: filter by component
 
         filter_expr = " AND ".join(filter_list) if len(filter_list) > 0 else None
 
@@ -420,7 +488,7 @@ class MilvusDB(VectorDB):
             reqs=[sparse_req, dense_req],
             ranker=WeightedRanker(hybrid_weighting, 1 - hybrid_weighting),
             limit=top_k,
-            output_fields=["id", "text", "filename", "dense_vector"],
+            output_fields=["id", "text", "filename", "dense_vector", "metadata"],
         )
 
         # Process the search results.
@@ -430,13 +498,16 @@ class MilvusDB(VectorDB):
             for hit in hits:
                 query_results.append(
                     SearchResult(
-                        id=str(hit["id"]),
-                        distance=hit["distance"],
-                        metadata={"filename": hit["entity"].get("filename", "")},
-                        document=hit["entity"].get("text", ""),
-                        embedding=hit["entity"].get("dense_vector", []),
+                        id=str(hit.get("id")),
+                        distance=hit.get("distance"),
+                        metadata=hit.get("entity", {}).get("metadata", {}),
+                        document=hit.get("entity", {}).get("text"),
+                        embedding=hit.get("entity", {}).get("dense_vector"),
                     )
                 )
+                print(list(hit.keys()))
+                print(list((hit.get("entity", {}).keys())))
+                print(hit.get("entity", {}.get("metadata")))
             all_results.append(query_results)
 
         return all_results
@@ -465,3 +536,22 @@ class MilvusDB(VectorDB):
     def clear(self) -> None:
         """Clears all documents from the collection."""
         self.client.delete(collection_name=self.collection_name, expr='id != "NULL"')
+
+    def pretty_print(self, results: List[List[SearchResult]]) -> None:
+        """
+        Pretty print the contents of the database.
+        """
+
+        if results:
+            print("Search Results:")
+            for i, query_results in enumerate(results):
+                print(f"Query {i}:")
+                for result in query_results:
+                    print(
+                        f"  ID: {result.id}\n Distance: {result.distance}\n Document: {result.document}"
+                    )
+
+                if result.metadata:
+                    print("Metadata:")
+                    for key, value in result.metadata.items():
+                        print(f"  {key}: {value}")

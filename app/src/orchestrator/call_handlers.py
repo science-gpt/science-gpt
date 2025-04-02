@@ -1,3 +1,4 @@
+from models.models import ChatModel
 from orchestrator.config import SystemConfig
 from prompt.base_prompt import PromptComponent
 from reasoning.agents import (
@@ -8,8 +9,6 @@ from reasoning.agents import (
     WikipediaTool,
 )
 from reasoning.llms import AzureChatOpenAI
-
-from models.models import ChatModel
 
 
 class LLMCallHandler:

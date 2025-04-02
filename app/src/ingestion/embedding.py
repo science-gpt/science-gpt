@@ -1,7 +1,8 @@
 import random
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Dict, List, Optional
+from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 import numpy as np
 import torch
@@ -31,6 +32,7 @@ class Embedding(Data):
     docs: str
     dense_vector: np.ndarray
     sparse_vector: Optional[Dict[str, float]] = None
+    metadata: defaultdict[dict] = field(default_factory=lambda: defaultdict(dict))
 
     def __post_init__(self):
         # This calls the __init__ of Data to properly initialize name and data_type.
@@ -122,6 +124,7 @@ class HuggingFaceEmbedder(Embedder):
                 docs=chunk.text,
                 dense_vector=dense_vectors[i],
                 sparse_vector=sparse_vectors[i],
+                metadata=chunk.metadata,
             )
             for i, chunk in enumerate(chunks)
         ]
@@ -240,6 +243,7 @@ class BGEM3Embedder(Embedder):
                 docs=chunk.text,
                 dense_vector=dense_vectors[i],
                 sparse_vector=sparse_vectors[i],
+                metadata=chunk.metadata,
             )
             for i, chunk in enumerate(chunks)
         ]
